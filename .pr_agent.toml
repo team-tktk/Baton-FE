@@ -1,0 +1,9 @@
+[config]
+response_language = "ko-KR"
+
+[pr_reviewer]
+extra_instructions = """
+React, TypeScript, Vite 프로젝트 관점에서 실제 장애로 이어질 수 있는 문제를 우선 검토하세요.
+런타임 오류, 타입 안정성, React 상태 및 렌더링 문제, 라우팅, 접근성, 보안, 성능을 확인하세요.
+ESLint가 처리할 단순 포맷이나 취향 차이는 지적하지 말고, 실행 가능한 피드백만 한국어로 작성하세요.
+"""
