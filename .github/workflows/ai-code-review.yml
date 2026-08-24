@@ -1,7 +1,7 @@
 name: AI Code Review
 
 on:
-  pull_request:
+  pull_request_target:
     branches:
       - develop
       - main
@@ -29,8 +29,9 @@ jobs:
       github.event.sender.type != 'Bot' &&
       (
         (
-          github.event_name == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.repository
+          github.event_name == 'pull_request_target' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.event.pull_request.draft == false
         ) ||
         (
           github.event_name == 'issue_comment' &&
@@ -43,14 +44,84 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      - name: Check manual review target branch
+        id: target-branch
+        if: github.event_name == 'issue_comment'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          base_ref="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.base.ref')"
+
+          if [[ "$base_ref" == "develop" || "$base_ref" == "main" ]]; then
+            echo "allowed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "allowed=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping review for unsupported target branch: $base_ref"
+          fi
+
+      - name: Capture existing review state
+        id: review_context
+        if: >-
+          github.event_name == 'pull_request_target' ||
+          steps.target-branch.outputs.allowed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+        run: |
+          previous_review="$(
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" \
+              --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("PR Reviewer Guide")))] | sort_by(.updated_at) | last // {id: "", updated_at: ""} | [.id, .updated_at] | @tsv'
+          )"
+
+          IFS=$'\t' read -r previous_comment_id previous_updated_at <<< "$previous_review"
+          echo "previous_comment_id=$previous_comment_id" >> "$GITHUB_OUTPUT"
+          echo "previous_updated_at=$previous_updated_at" >> "$GITHUB_OUTPUT"
+
       - name: Review pull request
-        uses: The-PR-Agent/pr-agent@8e4d32e5497defd43c023a404f73560c62728961 # v0.39.0
+        if: >-
+          github.event_name == 'pull_request_target' ||
+          steps.target-branch.outputs.allowed == 'true'
+        uses: docker://pragent/pr-agent@sha256:b253845caa8c7ff5ce8be78f32996647982bdd4890826a962b78eff2e385a825
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_AI_STUDIO.GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           config.model: gemini/gemini-3.1-flash-lite
           config.fallback_models: '[]'
+          config.custom_model_max_tokens: '1048576'
           github_action_config.auto_review: 'true'
           github_action_config.auto_describe: 'false'
           github_action_config.auto_improve: 'false'
           github_action_config.pr_actions: '["opened", "reopened", "ready_for_review"]'
+
+      - name: Verify review was published
+        if: >-
+          github.event_name == 'pull_request_target' ||
+          steps.target-branch.outputs.allowed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          PREVIOUS_COMMENT_ID: ${{ steps.review_context.outputs.previous_comment_id }}
+          PREVIOUS_UPDATED_AT: ${{ steps.review_context.outputs.previous_updated_at }}
+        run: |
+          latest_review="$(
+            gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" \
+              --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("PR Reviewer Guide")))] | sort_by(.updated_at) | last // {id: "", updated_at: ""} | [.id, .updated_at] | @tsv'
+          )"
+
+          IFS=$'\t' read -r latest_comment_id latest_updated_at <<< "$latest_review"
+
+          if [[ -z "$latest_comment_id" ]]; then
+            echo "PR-Agent did not publish a review during this run."
+            exit 1
+          fi
+
+          if [[ "$latest_comment_id" == "$PREVIOUS_COMMENT_ID" && "$latest_updated_at" == "$PREVIOUS_UPDATED_AT" ]]; then
+            echo "PR-Agent did not create or update its review during this run."
+            exit 1
+          fi
+
+          echo "PR-Agent review comment $latest_comment_id was published or updated."
