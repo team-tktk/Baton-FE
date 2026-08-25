@@ -1,6 +1,13 @@
 import { ApiError } from './ApiError'
 
 const SAFE_HTTP_ERROR_MESSAGE = '요청을 처리하지 못했어요.'
+const CSRF_HEADER = 'X-XSRF-TOKEN'
+const CSRF_SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
+
+function readCsrfToken() {
+  const match = /(?:^|;\s*)XSRF-TOKEN=([^;]+)/.exec(document.cookie)
+  return match ? decodeURIComponent(match[1]) : null
+}
 
 function readErrorMessage(payload: unknown) {
   if (!payload || typeof payload !== 'object') return SAFE_HTTP_ERROR_MESSAGE
@@ -32,6 +39,10 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
   const headers = new Headers(init.headers)
   headers.set('Accept', 'application/json')
   if (init.body != null && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+  if (!CSRF_SAFE_METHODS.has(init.method?.toUpperCase() ?? 'GET')) {
+    const csrfToken = readCsrfToken()
+    if (csrfToken) headers.set(CSRF_HEADER, csrfToken)
+  }
 
   let response: Response
   try {
