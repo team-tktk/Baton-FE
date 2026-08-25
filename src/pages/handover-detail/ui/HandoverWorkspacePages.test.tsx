@@ -16,7 +16,7 @@ function renderPage(element: React.ReactNode, path: string) {
 describe('handover workspace pages', () => {
   beforeEach(() => { Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() }) })
 
-  it('shows the read-only document and explains fixture attachment downloads', async () => {
+  it('shows the read-only document and explains that downloads are not ready', async () => {
     const user = userEvent.setup()
     renderPage(<HandoverWorkspacePage />, '/handovers/handover-moastore-operations')
     expect(await screen.findByRole('heading', { name: '업무 인수인계' })).toBeInTheDocument()
@@ -27,7 +27,7 @@ describe('handover workspace pages', () => {
     expect(screen.getByRole('heading', { name: '주요 관계자' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '첨부 문서' })).toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: /가을_할인전_준비_메모.docx/ })[0]!)
-    expect(screen.getByRole('status')).toHaveTextContent('목업 파일이라 실제 다운로드는 제공하지 않아요')
+    expect(screen.getByRole('status')).toHaveTextContent('파일 다운로드는 아직 준비 중이에요')
   })
 
   it('opens the handover AI in a dismissible side panel', async () => {

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import type { Handover } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
+import { ApiError } from '@/shared/api'
 import { RepositoryError } from '@/shared/lib/async'
 import { Badge } from '@/shared/ui/badge'
 import { Icon } from '@/shared/ui/icon'
@@ -37,7 +38,20 @@ export function ReviewDetailPage() {
     if (pendingRef.current) return
     pendingRef.current = true
     setPending(true)
-    try { await work() } finally { pendingRef.current = false; setPending(false) }
+    try {
+      await work()
+    } catch (caught) {
+      // 승인은 체크리스트가 완료되지 않으면 409로 막힌다. 서버 문구를 그대로 보여 준다.
+      showToast(caught instanceof ApiError ? caught.message : '요청을 처리하지 못했어요.')
+    } finally { pendingRef.current = false; setPending(false) }
+  }
+
+  const toggleChecklist = (itemId: string, checked: boolean) => {
+    if (!handover || !handoverId) return
+    const items = handover.review.checklist.map((item) => item.id === itemId ? { ...item, checked } : item)
+    setHandover({ ...handover, review: { ...handover.review, checklist: items } })
+    void repository.saveReviewChecklist(handoverId, items.map(({ label, checked: value }) => ({ label, checked: value })))
+      .catch(() => showToast('체크리스트를 저장하지 못했어요'))
   }
 
   if (!handover || !handoverId) return <><AppHeader /><main className={styles.state}>{error || '검토 문서를 불러오고 있어요…'}</main></>
@@ -47,6 +61,6 @@ export function ReviewDetailPage() {
       <button type="button" onClick={() => navigate('/reviews')}><Icon name="back" /> 검토 목록</button>
       <div><Badge tone={approved ? 'green' : 'yellow'}>{approved ? '승인 완료' : '승인 대기'}</Badge><strong>{handover.title}</strong><small>{handover.owner.name} → {handover.recipient.name} · {handover.deliveredAtLabel} 제출</small></div>
     </header>
-    <ReviewWorkspace handover={handover} pending={pending} onAttachmentOpen={() => showToast('목업 파일이라 실제 다운로드는 제공하지 않아요')} onComment={(comment) => mutate(async () => { const created = await repository.addReviewComment(handoverId, comment); setHandover((current) => current ? { ...current, review: { ...current.review, comments: [...current.review.comments, created] } } : current); showToast('검토 코멘트를 남겼어요') })} onRevision={() => mutate(async () => { setHandover(await repository.requestRevision(handoverId)); showToast('보완을 요청했어요') })} onApprove={() => mutate(async () => { setHandover(await repository.approveHandover(handoverId)); showToast('인수인계를 승인했어요') })} />
+    <ReviewWorkspace handover={handover} pending={pending} onAttachmentOpen={() => showToast('목업 파일이라 실제 다운로드는 제공하지 않아요')} onComment={(comment) => mutate(async () => { const created = await repository.addReviewComment(handoverId, comment); setHandover((current) => current ? { ...current, review: { ...current.review, comments: [...current.review.comments, created] } } : current); showToast('검토 코멘트를 남겼어요') })} onRevision={() => mutate(async () => { setHandover(await repository.requestRevision(handoverId)); showToast('보완을 요청했어요') })} onToggleChecklist={toggleChecklist} onApprove={() => mutate(async () => { setHandover(await repository.approveHandover(handoverId)); showToast('인수인계를 승인했어요') })} />
   </main>
 }

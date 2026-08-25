@@ -31,11 +31,14 @@ export interface HandoverRepository {
   completeQuestions(id: HandoverId): Promise<void>
   getDocument(id: HandoverId): Promise<HandoverDocument>
   saveDocument(id: HandoverId, document: HandoverDocument): Promise<void>
+  acknowledgeHandover(id: HandoverId): Promise<void>
+  completeHandover(id: HandoverId): Promise<Handover>
   updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover>
   submitHandover(id: HandoverId): Promise<Handover>
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer>
   listReviews(): Promise<ReviewSummary[]>
   addReviewComment(id: HandoverId, comment: string): Promise<ReviewComment>
+  saveReviewChecklist(id: HandoverId, items: Array<{ label: string; checked: boolean }>): Promise<void>
   requestRevision(id: HandoverId): Promise<Handover>
   approveHandover(id: HandoverId): Promise<Handover>
 }
