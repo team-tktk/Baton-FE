@@ -133,6 +133,9 @@ export const test = base.extend<{ stubbedBackend: void }>({
       if (pathname.endsWith('/acknowledge') || pathname.endsWith('/complete')) {
         return json({ id: HANDOVER_ID, title: '프로모션 운영', status: 'COMPLETED', owner: OWNER, participants: PARTICIPANTS, workScopes: WORK_SCOPES, createdAt: '2026-08-25T00:00:00Z', updatedAt: '2026-09-11T00:00:00Z' })
       }
+      if (pathname.endsWith('/chat/suggested-questions')) {
+        return json(['첫날 가장 먼저 할 일은?', '배송 답변이 늦으면 누구에게 물어봐요?'])
+      }
       if (pathname.endsWith('/chat/messages')) {
         if (method === 'GET') return json({ items: chatHistory, hasNext: false })
         const body = JSON.parse(route.request().postData() ?? '{}') as { question?: string }

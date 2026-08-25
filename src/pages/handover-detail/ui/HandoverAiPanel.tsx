@@ -6,7 +6,6 @@ import { Icon } from '@/shared/ui/icon'
 
 import styles from './HandoverWorkspacePages.module.css'
 
-const suggestions = ['첫날 가장 먼저 할 일은?', '배송 답변이 늦으면 누구에게 물어봐요?']
 
 export function HandoverAiPanel({ attachmentCount, handoverId, open, onClose, returnFocusRef }: {
   attachmentCount: number
@@ -15,7 +14,7 @@ export function HandoverAiPanel({ attachmentCount, handoverId, open, onClose, re
   onClose: () => void
   returnFocusRef?: RefObject<HTMLElement | null>
 }) {
-  const { messages, send, status } = useHandoverChat(handoverId)
+  const { messages, send, status, suggestions } = useHandoverChat(handoverId)
   const endRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [messages, status])
 
