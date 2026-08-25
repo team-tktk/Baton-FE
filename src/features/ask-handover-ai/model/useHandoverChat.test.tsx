@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { HandoverAnswer, HandoverRepository } from '@/entities/handover'
+import type { HandoverAnswer, HandoverChatExchange, HandoverRepository } from '@/entities/handover'
 import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
 
 import { useHandoverChat } from './useHandoverChat'
@@ -44,5 +44,32 @@ describe('useHandoverChat', () => {
     const { result } = renderHook(() => useHandoverChat('handover-moastore-operations'), { wrapper })
     await act(async () => { expect(await result.current.send('   ')).toBe(false) })
     expect(askQuestion).not.toHaveBeenCalled()
+  })
+
+  it('keeps a question sent before the history arrives', async () => {
+    const history = deferred<HandoverChatExchange[]>()
+    const answer = deferred<HandoverAnswer>()
+    const repository = new MockHandoverRepository()
+    vi.spyOn(repository, 'listChatMessages').mockReturnValue(history.promise)
+    vi.spyOn(repository, 'askQuestion').mockReturnValue(answer.promise)
+    const wrapper = ({ children }: React.PropsWithChildren) => <HandoverRepositoryProvider repository={repository as HandoverRepository}>{children}</HandoverRepositoryProvider>
+    const { result } = renderHook(() => useHandoverChat('handover-moastore-operations'), { wrapper })
+
+    await act(async () => { void result.current.send('배송이 늦으면요?') })
+    expect(result.current.status).toBe('sending')
+
+    await act(async () => {
+      history.resolve([{ id: 'past', question: '지난 질문', answer: { text: '지난 답변', grounded: true, citations: [] } }])
+      await history.promise
+    })
+
+    // 이력은 인사말 뒤에, 방금 보낸 질문은 맨 끝에 남아야 한다.
+    expect(result.current.messages.map((message) => message.text)).toEqual([
+      result.current.messages[0].text,
+      '지난 질문',
+      '지난 답변',
+      '배송이 늦으면요?',
+    ])
+    expect(result.current.status).toBe('sending')
   })
 })

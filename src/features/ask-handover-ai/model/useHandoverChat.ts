@@ -22,8 +22,12 @@ const initialState: State = { messages: [{ id: 'assistant-greeting', role: 'assi
 function reducer(state: State, action: Action): State {
   if (action.type === 'user') return { messages: [...state.messages, action.message], status: 'sending' }
   if (action.type === 'answer') return { messages: [...state.messages, action.message], status: 'idle' }
-  // 이전 대화는 인사말 뒤에 붙여 시간순을 유지한다.
-  if (action.type === 'history') return { messages: [...initialState.messages, ...action.messages], status: 'idle' }
+  // 이전 대화는 인사말 뒤에 끼운다. 이력이 늦게 도착해도 그사이 보낸 질문과 전송 상태는 그대로 둔다.
+  if (action.type === 'history') {
+    const greeting = state.messages.slice(0, initialState.messages.length)
+    const added = state.messages.slice(initialState.messages.length)
+    return { ...state, messages: [...greeting, ...action.messages, ...added] }
+  }
   return { ...state, status: 'error' }
 }
 
