@@ -60,7 +60,7 @@ export function ReviewDetailPage() {
   }
 
   if (!handover || !handoverId) return <><AppHeader /><main className={styles.state}>{error || '검토 문서를 불러오고 있어요…'}</main></>
-  const approved = handover.status === 'approved'
+  const approved = handover.status === 'approved' || handover.status === 'completed'
   return <main className={styles.main}>
     <header>
       <button type="button" onClick={() => navigate('/reviews')}><Icon name="back" /> 검토 목록</button>

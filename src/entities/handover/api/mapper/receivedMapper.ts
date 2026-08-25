@@ -18,13 +18,13 @@ export function formatListDate(value: string | undefined, now = new Date()): str
  * 완료됐으면 완료, 아직 열어보지 않았으면 확인 전, 그 사이는 진행 중으로 본다.
  */
 function toReceivedStatus(summary: HandoverSummaryResponse): HandoverStatus {
-  if (summary.status === 'COMPLETED') return 'approved'
+  if (summary.status === 'COMPLETED') return 'completed'
   const receipt = summary.receiptStatus?.toUpperCase()
   return !receipt || receipt === 'UNREAD' ? 'submitted' : 'in-progress'
 }
 
 const RECEIVED_LABEL: Record<string, { label: string; tone: HandoverSummary['tone'] }> = {
-  approved: { label: '확인 완료', tone: 'green' },
+  completed: { label: '확인 완료', tone: 'green' },
   'in-progress': { label: '진행 중', tone: 'yellow' },
   submitted: { label: '확인 전', tone: 'blue' },
 }

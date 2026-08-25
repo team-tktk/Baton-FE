@@ -16,7 +16,7 @@ interface ReviewActionsProps {
 
 export function ReviewActions({ handover, pending, onApprove, onComment, onRevision, onToggleChecklist }: ReviewActionsProps) {
   const [comment, setComment] = useState('')
-  const approved = handover.status === 'approved'
+  const approved = handover.status === 'approved' || handover.status === 'completed'
   const submitComment = async () => {
     const value = comment.trim()
     if (!value || pending) return
