@@ -1,17 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import type { HandoverParticipant, InterviewQuestion } from '@/entities/handover'
+import type { Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, HandoverProgress, InterviewWizard, MockFileUploader, RecipientPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
+import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
 import { useToast } from '@/shared/ui/toast'
 import { AppHeader } from '@/widgets/app-header'
 
 import styles from './HandoverCreatePage.module.css'
+import { CompletionStep } from './CompletionStep'
+import { DocumentStep } from './DocumentStep'
 
-interface HandoverCreatePageProps { step: 'setup' | 'upload' | 'analyzing' | 'interview' }
+interface HandoverCreatePageProps { step: 'setup' | 'upload' | 'analyzing' | 'interview' | 'document' | 'complete' }
 
 export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const navigate = useNavigate()
@@ -22,6 +25,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [query, setQuery] = useState('')
   const [pending, setPending] = useState(false)
   const [questions, setQuestions] = useState<InterviewQuestion[]>([])
+  const [draft, setDraft] = useState<Handover | null>(null)
   const params = useParams()
 
   useEffect(() => {
@@ -41,6 +45,13 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     repository.getHandover(state.draftId ?? 'handover-moastore-operations').then((handover) => {
       if (!ignore) setQuestions(handover.interviewQuestions)
     })
+    return () => { ignore = true }
+  }, [repository, state.draftId, step])
+
+  useEffect(() => {
+    if (step !== 'document' || !state.draftId) return
+    let ignore = false
+    repository.getHandover(state.draftId).then((handover) => { if (!ignore) setDraft(handover) })
     return () => { ignore = true }
   }, [repository, state.draftId, step])
 
@@ -65,10 +76,25 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     } finally { setPending(false) }
   }
 
+  const visibleDocument = draft ? mergeDocumentChanges(draft, state.documentEdits, state.confirmations) : null
+
+  const submitDocument = async () => {
+    if (!visibleDocument || !state.draftId) return
+    setPending(true)
+    try {
+      const updated = await repository.updateDraft(state.draftId, { attachments: state.attachments, document: visibleDocument.document })
+      const completed = state.submittedHandover ? updated : await repository.submitHandover(state.draftId)
+      setDraft(completed)
+      dispatch({ type: 'submission/completed', handover: completed })
+      navigate('/handovers/new/complete')
+      showToast(state.submittedHandover ? '변경사항을 저장했어요' : `${completed.recipient.name}님에게 인수인계를 전달했어요`)
+    } finally { setPending(false) }
+  }
+
   return (
     <>
       <AppHeader />
-      {step !== 'analyzing' && <HandoverProgress current={step === 'setup' ? 1 : step === 'upload' ? 2 : 3} />}
+      {step !== 'analyzing' && <HandoverProgress current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : step === 'document' ? 4 : 5} />}
       {step === 'analyzing' && <main className={styles.main}><AnalysisProgress fileCount={state.attachments.length} onComplete={analysisComplete} /></main>}
       {step === 'interview' && (() => {
         const currentStep = Number(params.step)
@@ -77,6 +103,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
         const question = questions[currentStep - 1]
         return question ? <InterviewWizard key={currentStep} answer={state.interviewAnswers[currentStep] ?? ''} currentStep={currentStep} question={question} total={questions.length} onBack={() => navigate(`/handovers/new/interview/${currentStep - 1}`)} onSkip={() => navigate('/handovers/new/document')} onSubmit={(answer) => { dispatch({ type: 'interview/answered', step: currentStep, answer }); navigate(currentStep === questions.length ? '/handovers/new/document' : `/handovers/new/interview/${currentStep + 1}`) }} /> : null
       })()}
+      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} confirmations={state.confirmations} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onBack={() => navigate('/handovers/new/interview/3')} onConfirm={(criterionId, value) => dispatch({ type: 'criterion/confirmed', criterionId, value })} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
+      {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onFeedback={showToast} onHome={() => navigate('/')} />}
       {(step === 'setup' || step === 'upload') && (
       <main className={styles.main}>
         {step === 'setup' ? (

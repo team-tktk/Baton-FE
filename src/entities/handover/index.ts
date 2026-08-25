@@ -15,6 +15,7 @@ export type {
   HandoverParticipant,
   HandoverStatus,
   HandoverSummary,
+  HandoverTask,
   InterviewQuestion,
   ReviewComment,
   ReviewSummary,

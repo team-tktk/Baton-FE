@@ -1,0 +1,2 @@
+.field { border: 1px dashed var(--blue); border-radius: 12px; background: var(--blue-soft); padding: 12px 14px; outline: 0; line-height: 1.7; }
+.field:focus { border-style: solid; box-shadow: 0 0 0 3px rgba(47, 111, 237, .12); }
