@@ -10,13 +10,14 @@ import type {
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
+  InterviewQuestion,
   ReviewComment,
   ReviewSummary,
   UpdateHandoverInput,
 } from '../model/types'
-import type { AnalysisJobResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, MemberPageResponse } from './dto/types'
+import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, MemberPageResponse, QuestionAnswerRequest } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
-import { toAnalysisJob, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
+import { toAnalysisJob, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
 
 /**
@@ -99,6 +100,32 @@ export class HttpHandoverRepository implements HandoverRepository {
 
   async retryAnalysis(id: HandoverId): Promise<AnalysisJob> {
     return toAnalysisJob(await apiRequest<AnalysisJobResponse>(`/api/v1/handovers/${id}/analysis/retry`, { method: 'POST' }))
+  }
+
+  async listQuestions(id: HandoverId): Promise<InterviewQuestion[]> {
+    const questions = await apiRequest<ClarificationQuestionResponse[]>(`/api/v1/handovers/${id}/questions`)
+    return questions.map(toInterviewQuestion)
+  }
+
+  answerQuestion(id: HandoverId, questionId: string, answer: string): Promise<void> {
+    const body: QuestionAnswerRequest = { answer, skipped: false }
+    return apiRequest<void>(`/api/v1/handovers/${id}/questions/${questionId}/answer`, {
+      body: JSON.stringify(body),
+      method: 'PUT',
+    })
+  }
+
+  skipQuestion(id: HandoverId, questionId: string): Promise<void> {
+    // 건너뛸 때 answer를 함께 보내면 서버 검증에 걸린다. 빈 문자열도 안 된다.
+    const body: QuestionAnswerRequest = { skipped: true }
+    return apiRequest<void>(`/api/v1/handovers/${id}/questions/${questionId}/answer`, {
+      body: JSON.stringify(body),
+      method: 'PUT',
+    })
+  }
+
+  async completeQuestions(id: HandoverId): Promise<void> {
+    await apiRequest<unknown>(`/api/v1/handovers/${id}/questions/complete`, { method: 'POST' })
   }
 
   listReceivedHandovers(): Promise<HandoverSummary[]> {

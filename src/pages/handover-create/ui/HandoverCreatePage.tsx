@@ -27,7 +27,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [recipientQuery, setRecipientQuery] = useState('')
   const [reviewerQuery, setReviewerQuery] = useState('')
   const [pending, setPending] = useState(false)
-  const [questions, setQuestions] = useState<InterviewQuestion[]>([])
+  const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null)
   const [draft, setDraft] = useState<Handover | null>(null)
   const [analysis, setAnalysis] = useState<AnalysisJob | null>(null)
   const params = useParams()
@@ -66,13 +66,20 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }, [hasProcessingFile, refreshFiles, step])
 
   useEffect(() => {
-    if (step !== 'interview') return
+    if (step !== 'interview' || !draftId) return
     let ignore = false
-    repository.getHandover(state.draftId ?? 'handover-moastore-operations').then((handover) => {
-      if (!ignore) setQuestions(handover.interviewQuestions)
-    })
+    repository.listQuestions(draftId)
+      .then((items) => { if (!ignore) setQuestions(items) })
+      .catch(() => { if (!ignore) showToast('확인 질문을 불러오지 못했어요') })
     return () => { ignore = true }
-  }, [repository, state.draftId, step])
+  }, [draftId, repository, showToast, step])
+
+  // 질문이 하나도 없으면 답변 단계를 건너뛰고 초안으로 간다. 조용히 넘어가면 오동작처럼 보여 안내를 남긴다.
+  useEffect(() => {
+    if (step !== 'interview' || questions === null || questions.length > 0) return
+    showToast('자료만으로 초안을 만들 수 있어 확인 질문은 건너뛰었어요')
+    navigate('/handovers/new/document', { replace: true })
+  }, [navigate, questions, showToast, step])
 
   useEffect(() => {
     if (step !== 'document' || !state.draftId) return
@@ -163,6 +170,42 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     } finally { setPending(false) }
   }
 
+  // 남은 미응답 질문을 건너뛰기로 정리해야 완료 호출이 통과한다(서버가 409로 막는다).
+  const completeInterview = async () => {
+    if (!draftId) return
+    // 로컬 상태가 서버보다 낡아 있으면 미응답 질문을 놓쳐 완료가 409로 막힌다. 서버 기준으로 다시 확인한다.
+    const latest = await repository.listQuestions(draftId)
+    for (const question of latest) {
+      if (question.status === 'pending') await repository.skipQuestion(draftId, question.id)
+    }
+    await repository.completeQuestions(draftId)
+    navigate('/handovers/new/document')
+  }
+
+  const answerQuestion = async (questionId: string, currentStep: number, answer: string) => {
+    if (!draftId || pending) return
+    setPending(true)
+    try {
+      await repository.answerQuestion(draftId, questionId, answer)
+      setQuestions((current) => current?.map((item) => item.id === questionId ? { ...item, status: 'answered', answer } : item) ?? current)
+      dispatch({ type: 'interview/answered', step: currentStep, answer })
+      if (currentStep === (questions?.length ?? 0)) await completeInterview()
+      else navigate(`/handovers/new/interview/${currentStep + 1}`)
+    } catch {
+      showToast('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요')
+    } finally { setPending(false) }
+  }
+
+  const skipRemainingQuestions = async () => {
+    if (!draftId || pending) return
+    setPending(true)
+    try {
+      await completeInterview()
+    } catch {
+      showToast('건너뛰기를 반영하지 못했어요. 잠시 후 다시 시도해 주세요')
+    } finally { setPending(false) }
+  }
+
   const visibleDocument = draft ? mergeDocumentChanges(draft, state.documentEdits, state.confirmations) : null
 
   const submitDocument = async () => {
@@ -183,12 +226,22 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       {(step === 'setup' || step === 'upload' || step === 'document') ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
       {step !== 'analyzing' && step !== 'complete' && <HandoverProgress compact={step === 'setup' || step === 'upload' || step === 'document'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : 4} />}
       {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} job={analysis} onRetry={retryAnalysis} /></main>}
-      {step === 'interview' && (() => {
+      {step === 'interview' && questions !== null && questions.length > 0 && (() => {
         const currentStep = Number(params.step)
         const validStep = Number.isInteger(currentStep) && currentStep >= 1 && currentStep <= questions.length
-        if (questions.length && !validStep) { navigate('/handovers/new/interview/1', { replace: true }); return null }
+        if (!validStep) { navigate('/handovers/new/interview/1', { replace: true }); return null }
         const question = questions[currentStep - 1]
-        return question ? <InterviewWizard key={currentStep} answer={state.interviewAnswers[currentStep] ?? ''} currentStep={currentStep} question={question} total={questions.length} onBack={() => navigate(`/handovers/new/interview/${currentStep - 1}`)} onSkip={() => navigate('/handovers/new/document')} onSubmit={(answer) => { dispatch({ type: 'interview/answered', step: currentStep, answer }); navigate(currentStep === questions.length ? '/handovers/new/document' : `/handovers/new/interview/${currentStep + 1}`) }} /> : null
+        return <InterviewWizard
+          key={currentStep}
+          answer={state.interviewAnswers[currentStep] ?? question.answer ?? ''}
+          currentStep={currentStep}
+          pending={pending}
+          question={question}
+          total={questions.length}
+          onBack={() => navigate(`/handovers/new/interview/${currentStep - 1}`)}
+          onSkip={() => { void skipRemainingQuestions() }}
+          onSubmit={(answer) => { void answerQuestion(question.id, currentStep, answer) }}
+        />
       })()}
       {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} confirmations={state.confirmations} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onConfirm={(criterionId, value) => dispatch({ type: 'criterion/confirmed', criterionId, value })} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onHome={() => navigate('/')} />}
