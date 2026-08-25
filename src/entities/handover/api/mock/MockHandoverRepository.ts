@@ -7,6 +7,7 @@ import type {
   Handover,
   HandoverAnswer,
   HandoverAttachment,
+  HandoverChatExchange,
   HandoverDocument,
   HandoverId,
   HandoverParticipant,
@@ -199,11 +200,20 @@ export class MockHandoverRepository implements HandoverRepository {
     return this.changeStatus(id, 'submitted')
   }
 
+  async listChatMessages(): Promise<HandoverChatExchange[]> {
+    return []
+  }
+
   async askQuestion(_id: HandoverId, question: string): Promise<HandoverAnswer> {
     const value = question.trim()
     if (!value) throw new RepositoryError('VALIDATION', '질문을 입력해 주세요.')
     const match = qaResponseRules.find((rule) => rule.keywords.some((keyword) => value.includes(keyword)))
-    return clone(match ? { text: match.text, source: match.source } : fallbackQaResponse)
+    if (!match) return clone(fallbackQaResponse)
+    return clone({
+      text: match.text,
+      grounded: true,
+      citations: [{ sourceId: match.source, title: match.source, locator: '' }],
+    })
   }
 
   async listReviews(): Promise<ReviewSummary[]> {
