@@ -7,6 +7,7 @@ import type {
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
+  InterviewQuestion,
   ReviewComment,
   ReviewSummary,
   UpdateHandoverInput,
@@ -23,6 +24,10 @@ export interface HandoverRepository {
   startAnalysis(id: HandoverId): Promise<AnalysisJob>
   getAnalysis(id: HandoverId): Promise<AnalysisJob>
   retryAnalysis(id: HandoverId): Promise<AnalysisJob>
+  listQuestions(id: HandoverId): Promise<InterviewQuestion[]>
+  answerQuestion(id: HandoverId, questionId: string, answer: string): Promise<void>
+  skipQuestion(id: HandoverId, questionId: string): Promise<void>
+  completeQuestions(id: HandoverId): Promise<void>
   updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover>
   submitHandover(id: HandoverId): Promise<Handover>
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer>

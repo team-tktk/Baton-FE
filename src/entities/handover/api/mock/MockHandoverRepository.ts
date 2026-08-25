@@ -10,6 +10,7 @@ import type {
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
+  InterviewQuestion,
   ReviewComment,
   ReviewSummary,
   UpdateHandoverInput,
@@ -123,6 +124,33 @@ export class MockHandoverRepository implements HandoverRepository {
 
   async retryAnalysis(id: HandoverId): Promise<AnalysisJob> {
     return this.startAnalysis(id)
+  }
+
+  async listQuestions(id: HandoverId): Promise<InterviewQuestion[]> {
+    const handover = await this.getMutable(id)
+    return clone(handover.interviewQuestions)
+  }
+
+  async answerQuestion(id: HandoverId, questionId: string, answer: string): Promise<void> {
+    const question = (await this.getMutable(id)).interviewQuestions.find((item) => item.id === questionId)
+    if (!question) throw new RepositoryError('NOT_FOUND', '질문을 찾을 수 없어요.')
+    if (!answer.trim()) throw new RepositoryError('VALIDATION', '답변을 입력해 주세요.')
+    question.status = 'answered'
+    question.answer = answer.trim()
+  }
+
+  async skipQuestion(id: HandoverId, questionId: string): Promise<void> {
+    const question = (await this.getMutable(id)).interviewQuestions.find((item) => item.id === questionId)
+    if (!question) throw new RepositoryError('NOT_FOUND', '질문을 찾을 수 없어요.')
+    question.status = 'skipped'
+    question.answer = null
+  }
+
+  async completeQuestions(id: HandoverId): Promise<void> {
+    const handover = await this.getMutable(id)
+    if (handover.interviewQuestions.some((question) => question.status === 'pending')) {
+      throw new RepositoryError('VALIDATION', '아직 답하지 않은 질문이 있어요.')
+    }
   }
 
   async updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover> {

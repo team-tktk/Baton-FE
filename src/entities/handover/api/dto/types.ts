@@ -103,3 +103,24 @@ export interface AnalysisJobResponse {
   error?: string | null
   updatedAt: string
 }
+
+export interface QuestionOptionDto {
+  label: string
+  description?: string
+}
+
+export interface ClarificationQuestionResponse {
+  id: string
+  type: 'INTERVIEW' | 'CONFLICT'
+  questionText: string
+  reason?: string
+  evidence?: string
+  options?: QuestionOptionDto[]
+  status: 'PENDING' | 'ANSWERED' | 'SKIPPED'
+  answer?: string | null
+}
+
+export interface QuestionAnswerRequest {
+  answer?: string
+  skipped: boolean
+}

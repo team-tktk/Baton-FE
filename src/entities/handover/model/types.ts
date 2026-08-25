@@ -38,11 +38,15 @@ export interface InterviewOption {
   description: string
 }
 
+export type QuestionStatus = 'pending' | 'answered' | 'skipped'
+
 export interface InterviewQuestion {
   id: string
   question: string
   help: string
   options: InterviewOption[]
+  status: QuestionStatus
+  answer: string | null
 }
 
 export interface HandoverTask {
