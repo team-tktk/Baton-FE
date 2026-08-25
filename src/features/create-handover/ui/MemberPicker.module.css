@@ -2,6 +2,8 @@
 .heading h2 { margin: 0 0 7px; font-size: 23px; letter-spacing: -.035em; }
 .heading p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .picker { position: relative; z-index: 8; }
+/* 두 picker가 같은 z-index면 뒤에 오는 쪽이 앞 picker의 목록을 덮는다. 열린 쪽을 위로 올린다. */
+.pickerOpen { z-index: 9; }
 .search { display: flex; min-height: 64px; align-items: center; gap: 12px; border: 1px solid #cfd8e3; border-radius: 17px; background: #fbfcfd; padding: 10px 20px; color: var(--muted); cursor: text; transition: .18s ease; }
 .search:focus-within { border-color: #79b1fa; background: #fff; box-shadow: 0 0 0 4px rgb(49 130 246 / 9%); }
 .search > svg { width: 21px; height: 21px; flex: 0 0 auto; }

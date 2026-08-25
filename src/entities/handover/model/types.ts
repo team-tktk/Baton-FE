@@ -10,7 +10,7 @@ export type HandoverStatus =
 export interface HandoverParticipant {
   id: string
   name: string
-  organization: string
+  position: string
   team: string
 }
 
@@ -141,6 +141,7 @@ export interface HandoverAnswer {
 
 export interface CreateHandoverInput {
   recipientIds: string[]
+  reviewerIds: string[]
   workItems: string[]
 }
 

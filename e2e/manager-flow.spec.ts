@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './support/backend'
 
 test('comments, approves, and sees the updated review list', async ({ page }) => {
   await page.goto('/reviews')

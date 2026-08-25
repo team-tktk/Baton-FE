@@ -31,6 +31,7 @@ describe('MockHandoverRepository', () => {
     const repository = new MockHandoverRepository()
     await repository.createDraft({
       recipientIds: ['user-jung-haneul'],
+      reviewerIds: [],
       workItems: ['프로모션 운영'],
     })
 
@@ -46,6 +47,7 @@ describe('MockHandoverRepository', () => {
 
     await repository.createDraft({
       recipientIds: ['user-jung-haneul'],
+      reviewerIds: [],
       workItems: ['프로모션 운영', '배송업체 협업'],
     })
 

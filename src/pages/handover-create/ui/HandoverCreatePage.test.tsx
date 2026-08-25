@@ -1,6 +1,6 @@
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
@@ -8,6 +8,9 @@ import { CreateHandoverProvider } from '@/features/create-handover'
 import { ToastProvider } from '@/shared/ui/toast'
 
 import { HandoverCreatePage } from './HandoverCreatePage'
+
+const RECIPIENTS = '업무를 받는 사람'
+const REVIEWERS = '검토하는 사람'
 
 function renderFlow(initialPath: string, repository = new MockHandoverRepository()) {
   const router = createMemoryRouter([
@@ -25,6 +28,14 @@ function renderFlow(initialPath: string, repository = new MockHandoverRepository
   return router
 }
 
+const picker = (name: string) => within(screen.getByRole('region', { name }))
+
+async function pickMember(user: UserEvent, pickerName: string, member: RegExp) {
+  const scope = picker(pickerName)
+  await user.click(scope.getByRole('combobox'))
+  await user.click(await scope.findByRole('option', { name: member }))
+}
+
 describe('HandoverCreatePage setup and upload', () => {
   it('uses the five-step setup chrome and returns home', async () => {
     const user = userEvent.setup()
@@ -37,75 +48,93 @@ describe('HandoverCreatePage setup and upload', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   })
 
+  it('starts with nobody selected in either picker', async () => {
+    renderFlow('/handovers/new/setup')
+
+    await waitFor(() => expect(picker(RECIPIENTS).getByText('0명 선택')).toBeInTheDocument())
+    expect(picker(REVIEWERS).getByText('0명 선택')).toBeInTheDocument()
+  })
+
   it('opens and filters the recipient popover while keeping all mock members', async () => {
     const user = userEvent.setup()
     renderFlow('/handovers/new/setup')
+    const scope = picker(RECIPIENTS)
 
-    expect(await screen.findByRole('button', { name: '정하늘 선택 해제' })).toBeInTheDocument()
-    expect(screen.queryByRole('listbox', { name: '멤버 목록' })).not.toBeInTheDocument()
-
-    const combobox = screen.getByRole('combobox', { name: '이름 또는 팀 검색' })
+    expect(scope.queryByRole('listbox')).not.toBeInTheDocument()
+    const combobox = scope.getByRole('combobox', { name: `${RECIPIENTS} 검색` })
     expect(combobox).toHaveAttribute('aria-expanded', 'false')
 
     await user.click(combobox.parentElement!.parentElement!)
     expect(combobox).toHaveFocus()
-    expect(await screen.findByRole('listbox', { name: '멤버 목록' })).toBeInTheDocument()
+    expect(await scope.findByRole('listbox', { name: `${RECIPIENTS} 목록` })).toBeInTheDocument()
     expect(combobox).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getAllByRole('option')).toHaveLength(8)
+    await waitFor(() => expect(scope.getAllByRole('option')).toHaveLength(8))
 
     await user.type(combobox, '상품팀')
-    expect(screen.getAllByRole('option')).toHaveLength(1)
-    expect(screen.getByRole('option', { name: /김민준/ })).toBeInTheDocument()
+    expect(scope.getAllByRole('option')).toHaveLength(1)
+    expect(scope.getByRole('option', { name: /김민준/ })).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
-    expect(screen.queryByRole('listbox', { name: '멤버 목록' })).not.toBeInTheDocument()
+    expect(scope.queryByRole('listbox')).not.toBeInTheDocument()
   })
 
   it('updates removable recipient chips from the member popover', async () => {
     const user = userEvent.setup()
     renderFlow('/handovers/new/setup')
 
-    await user.click(await screen.findByRole('button', { name: '정하늘 선택 해제' }))
-    expect(screen.getByText('0명 선택')).toBeInTheDocument()
+    await pickMember(user, RECIPIENTS, /김민준/)
 
-    await user.click(screen.getByRole('combobox', { name: '이름 또는 팀 검색' }))
-    await user.click(screen.getByRole('option', { name: /김민준/ }))
+    const scope = picker(RECIPIENTS)
+    expect(scope.getByRole('button', { name: '김민준 선택 해제' })).toBeInTheDocument()
+    expect(scope.getByText('1명 선택')).toBeInTheDocument()
+    expect(scope.getByRole('combobox')).toHaveValue('')
 
-    expect(screen.getByRole('button', { name: '김민준 선택 해제' })).toBeInTheDocument()
-    expect(screen.getByText('1명 선택')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: '이름 또는 팀 검색' })).toHaveValue('')
+    await user.click(scope.getByRole('button', { name: '김민준 선택 해제' }))
+    expect(scope.getByText('0명 선택')).toBeInTheDocument()
+  })
 
-    await user.click(screen.getByRole('heading', { name: '넘길 업무' }))
-    expect(screen.queryByRole('listbox', { name: '멤버 목록' })).not.toBeInTheDocument()
+  it('keeps the reviewer picker independent from the recipient picker', async () => {
+    const user = userEvent.setup()
+    renderFlow('/handovers/new/setup')
+
+    await pickMember(user, RECIPIENTS, /정하늘/)
+    await pickMember(user, REVIEWERS, /이도현/)
+
+    expect(picker(RECIPIENTS).getByRole('button', { name: '정하늘 선택 해제' })).toBeInTheDocument()
+    expect(picker(RECIPIENTS).getByText('1명 선택')).toBeInTheDocument()
+    expect(picker(REVIEWERS).getByRole('button', { name: '이도현 선택 해제' })).toBeInTheDocument()
+    expect(picker(REVIEWERS).getByText('1명 선택')).toBeInTheDocument()
   })
 
   it('supports keyboard navigation and restores focus when the popup closes', async () => {
     const user = userEvent.setup()
     renderFlow('/handovers/new/setup')
-    const combobox = screen.getByRole('combobox', { name: '이름 또는 팀 검색' })
+    const scope = picker(RECIPIENTS)
+    const combobox = scope.getByRole('combobox')
 
     await user.click(combobox)
+    await waitFor(() => expect(scope.getAllByRole('option').length).toBeGreaterThan(0))
     await user.keyboard('{ArrowDown}')
     expect(combobox).toHaveAttribute('aria-activedescendant', expect.stringContaining('member-option-'))
 
     await user.keyboard('{Enter}')
-    expect(screen.getByText('2명 선택')).toBeInTheDocument()
+    expect(scope.getByText('1명 선택')).toBeInTheDocument()
 
     await user.keyboard('{Escape}')
-    expect(screen.queryByRole('listbox', { name: '멤버 목록' })).not.toBeInTheDocument()
+    expect(scope.queryByRole('listbox')).not.toBeInTheDocument()
     expect(combobox).toHaveFocus()
   })
 
   it('leaves the combobox without tabbing through listbox options', async () => {
     const user = userEvent.setup()
     renderFlow('/handovers/new/setup')
-    const combobox = screen.getByRole('combobox', { name: '이름 또는 팀 검색' })
+    const combobox = picker(RECIPIENTS).getByRole('combobox')
 
     await user.click(combobox)
     await user.tab()
 
-    expect(screen.getByRole('textbox', { name: '1번 업무' })).toHaveFocus()
-    expect(screen.queryByRole('listbox', { name: '멤버 목록' })).not.toBeInTheDocument()
+    expect(picker(REVIEWERS).getByRole('combobox')).toHaveFocus()
+    expect(picker(RECIPIENTS).queryByRole('listbox')).not.toBeInTheDocument()
   })
 
   it('loads setup members and starter attachments only once', async () => {
@@ -116,7 +145,7 @@ describe('HandoverCreatePage setup and upload', () => {
 
     const router = renderFlow('/handovers/new/setup', repository)
 
-    expect(await screen.findByRole('button', { name: '정하늘 선택 해제' })).toBeInTheDocument()
+    await pickMember(user, RECIPIENTS, /정하늘/)
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
 
     await waitFor(() => {
@@ -130,17 +159,35 @@ describe('HandoverCreatePage setup and upload', () => {
     })
   })
 
-  it('creates a draft from selected recipients and work items', async () => {
+  it('creates a draft from the selected recipient, reviewer and work items', async () => {
     const user = userEvent.setup()
-    const router = renderFlow('/handovers/new/setup')
+    const repository = new MockHandoverRepository()
+    const createDraft = vi.spyOn(repository, 'createDraft')
+    const router = renderFlow('/handovers/new/setup', repository)
 
-    expect(await screen.findByRole('button', { name: '정하늘 선택 해제' })).toBeInTheDocument()
+    await pickMember(user, RECIPIENTS, /정하늘/)
+    await pickMember(user, REVIEWERS, /이도현/)
     await user.click(screen.getByRole('button', { name: '+ 업무 추가' }))
     await user.type(screen.getAllByPlaceholderText('업무를 입력하세요').at(-1)!, '신규 파트너 안내')
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/handovers/new/upload'))
+    expect(createDraft).toHaveBeenCalledWith({
+      recipientIds: ['user-jung-haneul'],
+      reviewerIds: ['user-lee-dohyeon'],
+      workItems: ['프로모션 운영', '주문 현황 관리', '배송업체 협업', '신규 파트너 안내'],
+    })
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+  })
+
+  it('asks for a recipient before creating a draft', async () => {
+    const user = userEvent.setup()
+    const router = renderFlow('/handovers/new/setup')
+
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('받는 사람과 업무를 한 개 이상 입력해 주세요')
+    expect(router.state.location.pathname).toBe('/handovers/new/setup')
   })
 
   it('redirects a direct upload visit without a draft', async () => {

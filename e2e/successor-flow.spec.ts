@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './support/backend'
 
 test('opens a received handover and asks the sourced AI', async ({ page }) => {
   await page.goto('/handovers/received')

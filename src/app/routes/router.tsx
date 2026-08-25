@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 
+import { RequireAuth } from '@/features/auth'
 import { HomePage } from '@/pages/home'
 import { HandoverCreatePage } from '@/pages/handover-create'
 import { HandoverArrivalPage, HandoverChatPage, HandoverOverviewPage, HandoverWorkspacePage } from '@/pages/handover-detail'
@@ -13,19 +14,19 @@ export const router = createBrowserRouter([
     path: '/',
     element: <HomePage />,
   },
-  { path: '/handovers/new/setup', element: <HandoverCreatePage step="setup" /> },
-  { path: '/handovers/new/upload', element: <HandoverCreatePage step="upload" /> },
-  { path: '/handovers/new/analyzing', element: <HandoverCreatePage step="analyzing" /> },
-  { path: '/handovers/new/interview/:step', element: <HandoverCreatePage step="interview" /> },
-  { path: '/handovers/new/document', element: <HandoverCreatePage step="document" /> },
-  { path: '/handovers/new/complete', element: <HandoverCreatePage step="complete" /> },
-  { path: '/handovers/received', element: <HandoverInboxPage /> },
-  { path: '/handovers/:handoverId/arrival', element: <HandoverArrivalPage /> },
-  { path: '/handovers/:handoverId/overview', element: <HandoverOverviewPage /> },
-  { path: '/handovers/:handoverId/chat', element: <HandoverChatPage /> },
-  { path: '/handovers/:handoverId', element: <HandoverWorkspacePage /> },
-  { path: '/reviews', element: <ReviewInboxPage /> },
-  { path: '/reviews/:handoverId', element: <ReviewDetailPage /> },
+  { path: '/handovers/new/setup', element: <RequireAuth><HandoverCreatePage step="setup" /></RequireAuth> },
+  { path: '/handovers/new/upload', element: <RequireAuth><HandoverCreatePage step="upload" /></RequireAuth> },
+  { path: '/handovers/new/analyzing', element: <RequireAuth><HandoverCreatePage step="analyzing" /></RequireAuth> },
+  { path: '/handovers/new/interview/:step', element: <RequireAuth><HandoverCreatePage step="interview" /></RequireAuth> },
+  { path: '/handovers/new/document', element: <RequireAuth><HandoverCreatePage step="document" /></RequireAuth> },
+  { path: '/handovers/new/complete', element: <RequireAuth><HandoverCreatePage step="complete" /></RequireAuth> },
+  { path: '/handovers/received', element: <RequireAuth><HandoverInboxPage /></RequireAuth> },
+  { path: '/handovers/:handoverId/arrival', element: <RequireAuth><HandoverArrivalPage /></RequireAuth> },
+  { path: '/handovers/:handoverId/overview', element: <RequireAuth><HandoverOverviewPage /></RequireAuth> },
+  { path: '/handovers/:handoverId/chat', element: <RequireAuth><HandoverChatPage /></RequireAuth> },
+  { path: '/handovers/:handoverId', element: <RequireAuth><HandoverWorkspacePage /></RequireAuth> },
+  { path: '/reviews', element: <RequireAuth><ReviewInboxPage /></RequireAuth> },
+  { path: '/reviews/:handoverId', element: <RequireAuth><ReviewDetailPage /></RequireAuth> },
   { path: '/404', element: <NotFoundPage /> },
   {
     path: '*',

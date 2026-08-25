@@ -3,6 +3,7 @@ export {
   HandoverRepositoryProvider,
 } from './api/HandoverRepositoryProvider'
 export { useHandoverRepository } from './api/useHandoverRepository'
+export { HttpHandoverRepository } from './api/HttpHandoverRepository'
 export { MockHandoverRepository } from './api/mock/MockHandoverRepository'
 export { AttachmentList } from './ui/AttachmentList'
 export { HandoverStatusBadge } from './ui/HandoverStatusBadge'

@@ -3,6 +3,7 @@ import type { Handover, HandoverAttachment } from '@/entities/handover'
 export interface CreateHandoverState {
   draftId: string | null
   recipientIds: string[]
+  reviewerIds: string[]
   workItems: string[]
   attachments: HandoverAttachment[]
   interviewAnswers: Record<number, string>
@@ -13,6 +14,7 @@ export interface CreateHandoverState {
 
 export type CreateHandoverAction =
   | { type: 'recipient/toggled'; recipientId: string }
+  | { type: 'reviewer/toggled'; reviewerId: string }
   | { type: 'work/added' }
   | { type: 'work/changed'; index: number; value: string }
   | { type: 'work/removed'; index: number }
@@ -29,7 +31,8 @@ export type CreateHandoverAction =
 export function createInitialCreateHandoverState(): CreateHandoverState {
   return {
     draftId: null,
-    recipientIds: ['user-jung-haneul'],
+    recipientIds: [],
+    reviewerIds: [],
     workItems: ['프로모션 운영', '주문 현황 관리', '배송업체 협업'],
     attachments: [],
     interviewAnswers: {},
@@ -50,6 +53,13 @@ export function createHandoverReducer(
         recipientIds: state.recipientIds.includes(action.recipientId)
           ? state.recipientIds.filter((id) => id !== action.recipientId)
           : [...state.recipientIds, action.recipientId],
+      }
+    case 'reviewer/toggled':
+      return {
+        ...state,
+        reviewerIds: state.reviewerIds.includes(action.reviewerId)
+          ? state.reviewerIds.filter((id) => id !== action.reviewerId)
+          : [...state.reviewerIds, action.reviewerId],
       }
     case 'work/added':
       return { ...state, workItems: [...state.workItems, ''] }
