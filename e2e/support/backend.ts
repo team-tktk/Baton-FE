@@ -122,6 +122,18 @@ export const test = base.extend<{ stubbedBackend: void }>({
         files = files.filter((file) => !pathname.endsWith(file.id))
         return route.fulfill({ status: 204, body: '' })
       }
+      if (pathname.endsWith('/submit')) {
+        return json({
+          id: '00000000-0000-0000-0000-0000000000bb',
+          title: '프로모션 운영',
+          status: 'PENDING_REVIEW',
+          owner: { id: USER.id, name: USER.name, team: USER.team, position: USER.position },
+          participants: [{ userId: 'user-jung-haneul', name: '정하늘', team: '운영팀', position: '주임', role: 'RECIPIENT' }],
+          workScopes: [{ id: 'scope-1', title: '프로모션 운영' }],
+          createdAt: '2026-08-25T00:00:00Z',
+          updatedAt: '2026-09-11T00:00:00Z',
+        })
+      }
       if (pathname.endsWith('/questions/complete')) return json({ content: DRAFT, updatedAt: '2026-09-11T00:00:00Z' })
       if (pathname.endsWith('/document')) return json({ content: DRAFT, updatedAt: '2026-09-11T00:00:00Z' })
       if (/\/questions\/[^/]+\/answer$/.test(pathname)) {

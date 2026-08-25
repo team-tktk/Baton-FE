@@ -19,11 +19,11 @@ describe('mergeDocumentChanges', () => {
       [`person.${person.id}.responsibility`]: '수정한 역할',
       'tool.0': '새 도구',
       'checklist.0': '새 체크 항목',
-    }, { [criterion.id]: '확정 답변' })
+    })
 
     expect(merged.document.title).toBe('새 문서 제목')
     expect(merged.document.activeTasks[0].title).toBe('수정한 업무')
-    expect(merged.document.criteria[0]).toMatchObject({ defaultText: '수정한 기준', confirmedValue: '확정 답변' })
+    expect(merged.document.criteria[0]).toMatchObject({ defaultText: '수정한 기준' })
     expect(merged.document.people[0].responsibility).toBe('수정한 역할')
     expect(merged.document.tools[0]).toBe('새 도구')
     expect(merged.document.checklist[0]).toBe('새 체크 항목')

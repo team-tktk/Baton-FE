@@ -19,7 +19,7 @@ import type {
 import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, HandoverDraftResponse, MemberPageResponse, QuestionAnswerRequest, UpdateDraftRequest } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
 import { toDraftContent, toHandoverDocument } from './mapper/documentMapper'
-import { toAnalysisJob, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
+import { toAnalysisJob, toHandoverStatus, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
 
 function formatUpdatedAt(value: string | undefined) {
@@ -181,8 +181,11 @@ export class HttpHandoverRepository implements HandoverRepository {
     return this.pending.updateDraft(id, changes)
   }
 
-  submitHandover(id: HandoverId): Promise<Handover> {
-    return this.pending.submitHandover(id)
+  /** 서버는 상태만 바꿔 주므로, 화면이 쓰는 나머지 정보는 현재 초안에서 가져온다. 재호출해도 멱등이다. */
+  async submitHandover(id: HandoverId): Promise<Handover> {
+    const submitted = await apiRequest<HandoverResponse>(`/api/v1/handovers/${id}/submit`, { method: 'POST' })
+    const current = await this.pending.getHandover(id)
+    return { ...current, status: toHandoverStatus(submitted.status) }
   }
 
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer> {
