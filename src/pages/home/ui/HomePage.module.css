@@ -32,3 +32,6 @@
 .primary .cardCopy em { color: rgb(255 255 255 / 78%); }
 @media (max-width: 900px) { .landing { grid-template-columns: 1fr; align-content: center; gap: 38px; padding: 110px max(5vw, 24px) 48px; } .copy { justify-self: center; text-align: center; } .copy h1 { font-size: clamp(46px, 8vw, 64px); } .copy p { border-left: 0; padding-left: 0; } .actions { width: min(620px, 100%); justify-self: center; } }
 @media (max-width: 560px) { .landing { gap: 28px; padding: 110px 20px 40px; } .brand { left: 20px; top: 24px; } .brand > span:last-child { display: none; } .auth { top: 24px; right: 20px; } .auth > button { height: 40px; padding: 0 13px; } .copy h1 { margin-bottom: 16px; font-size: clamp(38px, 11vw, 48px); } .copy p { font-size: 13px; } .card { min-height: 102px; gap: 13px; border-radius: 20px; padding: 17px 18px; } .roleIcon { width: 46px; height: 46px; } .cardCopy strong { font-size: 18px; } }
+@media (max-width: 1200px) { .copy { display: flex; min-height: 440px; flex-direction: column; align-items: flex-start; justify-content: center; } .copy h1 { font-size: 56px; } }
+@media (max-width: 900px) { .copy { align-items: center; } }
+@media (max-width: 560px) { .landing { min-height: calc(100svh - 62px); padding: 34px 20px 40px; } .copy p br { display: none; } }

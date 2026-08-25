@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
-import { primaryHandoverFixture } from '@/entities/handover/api/mock/fixtures/handovers'
+import { getPrimaryHandover } from '@/test/handoverFactory'
 
 import { ExportHandoverActions } from './ExportHandoverActions'
 
@@ -11,7 +11,7 @@ describe('ExportHandoverActions', () => {
     const user = userEvent.setup()
     const onFeedback = vi.fn()
     const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
-    render(<ExportHandoverActions handover={primaryHandoverFixture} onFeedback={onFeedback} />)
+    render(<ExportHandoverActions handover={await getPrimaryHandover()} onFeedback={onFeedback} />)
 
     await user.click(screen.getByRole('button', { name: 'Markdown 복사' }))
 

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { primaryHandoverFixture } from '@/entities/handover/api/mock/fixtures/handovers'
+import { getPrimaryHandover } from '@/test/handoverFactory'
 
 import { buildHandoverMarkdown, handoverMarkdownFilename } from './buildHandoverMarkdown'
 
 describe('buildHandoverMarkdown', () => {
-  it('builds the Korean handover sections in a deterministic order', () => {
-    const markdown = buildHandoverMarkdown(primaryHandoverFixture)
+  it('builds the Korean handover sections in a deterministic order', async () => {
+    const markdown = buildHandoverMarkdown(await getPrimaryHandover())
 
     expect(markdown.indexOf('## 인계 범위')).toBeLessThan(markdown.indexOf('## 진행 중인 업무'))
     expect(markdown.indexOf('## 진행 중인 업무')).toBeLessThan(markdown.indexOf('## 확인된 업무 기준'))
