@@ -34,6 +34,10 @@ function reducer(state: State, action: Action): State {
 /** 추천 질문을 못 불러왔을 때 쓰는 문구. 특정 인수인계 내용에 기대지 않는다. */
 const FALLBACK_SUGGESTIONS = ['첫날 가장 먼저 할 일은?', '업무 기준 중 꼭 알아야 할 게 있나요?', '막히면 누구에게 물어보면 되나요?']
 
+/**
+ * 대화와 추천 질문은 인수인계 하나에 묶인다.
+ * handoverId가 바뀔 때 상태를 비우기 위해, 이 훅을 쓰는 컴포넌트에는 key={handoverId}를 준다.
+ */
 export function useHandoverChat(handoverId: string) {
   const repository = useHandoverRepository()
   const [state, dispatch] = useReducer(reducer, initialState)

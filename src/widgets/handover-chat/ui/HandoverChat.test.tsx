@@ -31,4 +31,34 @@ describe('HandoverChat', () => {
     expect(await screen.findByRole('button', { name: '첫날 가장 먼저 할 일은?' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '막히면 누구에게 물어보면 되나요?' })).toBeInTheDocument()
   })
+
+  it('drops the previous handover conversation when the id changes', async () => {
+    const repository = new MockHandoverRepository()
+    // 첫 렌더가 A, key가 바뀐 뒤 렌더가 B를 불러온다.
+    vi.spyOn(repository, 'listSuggestedQuestions')
+      .mockResolvedValueOnce(['A 인수인계 질문'])
+      .mockResolvedValueOnce(['B 인수인계 질문'])
+    vi.spyOn(repository, 'listChatMessages')
+      .mockResolvedValueOnce([{ id: 'a-1', question: 'A 지난 질문', answer: { text: 'A 지난 답변', grounded: true, citations: [] } }])
+      .mockResolvedValueOnce([])
+
+    const view = render(
+      <HandoverRepositoryProvider repository={repository}>
+        <HandoverChat key="handover-a" handoverId="handover-a" />
+      </HandoverRepositoryProvider>,
+    )
+    expect(await screen.findByText('A 지난 질문')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'A 인수인계 질문' })).toBeInTheDocument()
+
+    // key가 바뀌면 이전 인수인계의 대화와 추천 질문이 남으면 안 된다.
+    view.rerender(
+      <HandoverRepositoryProvider repository={repository}>
+        <HandoverChat key="handover-b" handoverId="handover-b" />
+      </HandoverRepositoryProvider>,
+    )
+
+    expect(await screen.findByRole('button', { name: 'B 인수인계 질문' })).toBeInTheDocument()
+    expect(screen.queryByText('A 지난 질문')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'A 인수인계 질문' })).not.toBeInTheDocument()
+  })
 })

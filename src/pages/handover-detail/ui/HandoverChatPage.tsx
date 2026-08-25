@@ -12,5 +12,5 @@ export function HandoverChatPage() {
   const navigate = useNavigate()
   const { error, handover, retry } = useHandoverDetail()
   if (!handover) return <><AppHeader /><DetailState error={error} onRetry={retry} /></>
-  return <><AppHeader /><main className={styles.chatPage}><button type="button" onClick={() => navigate(`/handovers/${handover.id}`)}><Icon name="back" /> 인수인계 문서로</button><header><span>AI 업무 도우미</span><h1>{handover.document.scope}에 대해 물어보세요</h1></header><HandoverChat handoverId={handover.id} /></main></>
+  return <><AppHeader /><main className={styles.chatPage}><button type="button" onClick={() => navigate(`/handovers/${handover.id}`)}><Icon name="back" /> 인수인계 문서로</button><header><span>AI 업무 도우미</span><h1>{handover.document.scope}에 대해 물어보세요</h1></header><HandoverChat key={handover.id} handoverId={handover.id} /></main></>
 }
