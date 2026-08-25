@@ -85,3 +85,21 @@ export interface FileUploadResponse {
   fileName: string
   status: FileStatusDto
 }
+
+export type AnalysisStatusDto =
+  | 'QUEUED'
+  | 'PARSING'
+  | 'INDEXING'
+  | 'GENERATING_QUESTIONS'
+  | 'GENERATING_DRAFT'
+  | 'COMPLETED'
+  | 'FAILED'
+
+export interface AnalysisJobResponse {
+  jobId: string
+  status: AnalysisStatusDto
+  progress: number
+  currentStep?: string
+  error?: string | null
+  updatedAt: string
+}

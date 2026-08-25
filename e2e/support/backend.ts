@@ -65,6 +65,17 @@ export const test = base.extend<{ stubbedBackend: void }>({
         files = files.filter((file) => !pathname.endsWith(file.id))
         return route.fulfill({ status: 204, body: '' })
       }
+      // 시작은 진행 중으로, 첫 폴링에서 완료로 넘긴다(폴링 경로까지 실제로 태우기 위함).
+      if (pathname.endsWith('/analysis/retry')) {
+        return json({ jobId: 'job-1', status: 'QUEUED', progress: 0, currentStep: '다시 분석하는 중', error: null, updatedAt: '2026-08-25T00:00:00Z' }, 202)
+      }
+      if (pathname.endsWith('/analysis')) {
+        if (method === 'POST') {
+          return json({ jobId: 'job-1', status: 'GENERATING_DRAFT', progress: 80, currentStep: '초안을 만드는 중', error: null, updatedAt: '2026-08-25T00:00:00Z' }, 202)
+        }
+        return json({ jobId: 'job-1', status: 'COMPLETED', progress: 100, currentStep: '초안 준비 완료', error: null, updatedAt: '2026-08-25T00:00:00Z' })
+      }
+
       if (pathname.endsWith('/handovers')) {
         return json({
           id: '00000000-0000-0000-0000-0000000000bb',

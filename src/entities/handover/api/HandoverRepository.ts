@@ -1,4 +1,5 @@
 import type {
+  AnalysisJob,
   CreateHandoverInput,
   Handover,
   HandoverAnswer,
@@ -19,6 +20,9 @@ export interface HandoverRepository {
   listFiles(id: HandoverId): Promise<HandoverAttachment[]>
   uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment>
   deleteFile(id: HandoverId, fileId: string): Promise<void>
+  startAnalysis(id: HandoverId): Promise<AnalysisJob>
+  getAnalysis(id: HandoverId): Promise<AnalysisJob>
+  retryAnalysis(id: HandoverId): Promise<AnalysisJob>
   updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover>
   submitHandover(id: HandoverId): Promise<Handover>
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer>

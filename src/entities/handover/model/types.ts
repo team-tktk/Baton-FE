@@ -16,6 +16,15 @@ export interface HandoverParticipant {
 
 export type AttachmentStatus = 'processing' | 'ready' | 'failed'
 
+export type AnalysisStatus = 'running' | 'completed' | 'failed'
+
+export interface AnalysisJob {
+  status: AnalysisStatus
+  progress: number
+  currentStep: string
+  error: string | null
+}
+
 export interface HandoverAttachment {
   id: string
   name: string

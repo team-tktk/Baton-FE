@@ -1,5 +1,5 @@
-import type { AttachmentStatus, HandoverAttachment, HandoverParticipant, HandoverStatus } from '../../model/types'
-import type { FileMetadataResponse, FileStatusDto, HandoverStatusDto, MemberResponse, ParticipantDto } from '../dto/types'
+import type { AnalysisJob, AttachmentStatus, HandoverAttachment, HandoverParticipant, HandoverStatus } from '../../model/types'
+import type { AnalysisJobResponse, FileMetadataResponse, FileStatusDto, HandoverStatusDto, MemberResponse, ParticipantDto } from '../dto/types'
 
 const STATUS_BY_DTO: Record<HandoverStatusDto, HandoverStatus> = {
   DRAFT: 'draft',
@@ -51,5 +51,14 @@ export function toHandoverAttachment(file: FileMetadataResponse): HandoverAttach
     mimeType: file.mimeType,
     size: file.size,
     status: toAttachmentStatus(file.status),
+  }
+}
+
+export function toAnalysisJob(job: AnalysisJobResponse): AnalysisJob {
+  return {
+    status: job.status === 'COMPLETED' ? 'completed' : job.status === 'FAILED' ? 'failed' : 'running',
+    progress: Math.min(100, Math.max(0, job.progress ?? 0)),
+    currentStep: job.currentStep?.trim() || '업무 자료를 살펴보는 중',
+    error: job.error ?? null,
   }
 }
