@@ -4,7 +4,17 @@ import { ApiError, apiRequest } from './index'
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
 })
+
+function okFetchSpy() {
+  const fetchSpy = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ ok: true }), {
+    headers: { 'Content-Type': 'application/json' },
+    status: 200,
+  }))
+  vi.stubGlobal('fetch', fetchSpy)
+  return fetchSpy
+}
 
 describe('apiRequest', () => {
   it('sends JSON requests with session credentials and preserves custom headers', async () => {
@@ -83,6 +93,28 @@ describe('apiRequest', () => {
 
     expect(error).toBeInstanceOf(ApiError)
     expect(error).toMatchObject({ code: 'network', status: null })
+  })
+
+  it('sends the XSRF cookie as a CSRF header on state-changing requests', async () => {
+    document.cookie = 'XSRF-TOKEN=csrf-token-value'
+    const fetchSpy = okFetchSpy()
+
+    await apiRequest('/api/v1/auth/login', { body: '{}', method: 'POST' })
+
+    const [, init] = fetchSpy.mock.calls[0]
+    expect(new Headers(init?.headers).get('X-XSRF-TOKEN')).toBe('csrf-token-value')
+  })
+
+  it('omits the CSRF header on safe methods and when the cookie is missing', async () => {
+    document.cookie = 'XSRF-TOKEN=csrf-token-value'
+    const readSpy = okFetchSpy()
+    await apiRequest('/api/v1/auth/me')
+    expect(new Headers(readSpy.mock.calls[0][1]?.headers).get('X-XSRF-TOKEN')).toBeNull()
+
+    document.cookie = 'XSRF-TOKEN=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    const writeSpy = okFetchSpy()
+    await apiRequest('/api/v1/auth/logout', { method: 'POST' })
+    expect(new Headers(writeSpy.mock.calls[0][1]?.headers).get('X-XSRF-TOKEN')).toBeNull()
   })
 
   it('rejects absolute URLs before making a request', async () => {
