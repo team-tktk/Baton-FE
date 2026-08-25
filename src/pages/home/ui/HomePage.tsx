@@ -64,15 +64,21 @@ export function HomePage() {
           <h1>업무는 남기고,<br /><span>인수인계는 자동으로.</span></h1>
           <p>흩어진 업무 자료를 AI가 정리해<br />다음 담당자가 바로 이어서 일할 수 있어요.</p>
         </div>
-        <section aria-label="인수인계 메뉴" className={styles.actions}>
-          {roles.map((role) => (
-            <button className={`${styles.card} ${role.primary ? styles.primary : ''}`} key={role.title} type="button" onClick={() => navigate(role.path)}>
-              <span className={styles.roleIcon}><Icon name={role.icon} /></span>
-              <span className={styles.cardCopy}><small>{role.kicker}</small><strong>{role.title}</strong><em>{role.description}</em></span>
-              <Icon name="arrow" />
-            </button>
-          ))}
-        </section>
+        {status === 'authenticated' ? (
+          <section aria-label="인수인계 메뉴" className={styles.actions}>
+            {roles.map((role) => (
+              <button className={`${styles.card} ${role.primary ? styles.primary : ''}`} key={role.title} type="button" onClick={() => navigate(role.path)}>
+                <span className={styles.roleIcon}><Icon name={role.icon} /></span>
+                <span className={styles.cardCopy}><small>{role.kicker}</small><strong>{role.title}</strong><em>{role.description}</em></span>
+                <Icon name="arrow" />
+              </button>
+            ))}
+          </section>
+        ) : (
+          <div className={styles.hero}>
+            <img alt="흩어진 인수인계 자료가 하나의 흐름으로 정리되는 과정" src="/baton-hero-flow.svg" />
+          </div>
+        )}
       </section>
       <AuthModal
         key={`${authMode}-${loginEmail}`}

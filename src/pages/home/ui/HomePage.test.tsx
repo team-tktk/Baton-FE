@@ -45,16 +45,31 @@ describe('HomePage', () => {
     expect(screen.queryByText('BATON TOUCH')).not.toBeInTheDocument()
   })
 
+  it('shows the hero illustration instead of the menu when signed out', async () => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ message: 'Unauthorized' }, 401)))
+    renderHome()
+
+    expect(await screen.findByRole('img', { name: /하나의 흐름으로/ })).toHaveAttribute('src', '/baton-hero-flow.svg')
+    expect(screen.queryByRole('button', { name: /인수인계 하기/ })).not.toBeInTheDocument()
+  })
+
   it.each([
     ['인수인계 하기', '/handovers/new/setup'],
     ['인수인계 받기', '/handovers/received'],
     ['인수인계 확인하기', '/reviews'],
-  ])('navigates %s to its role start route', async (name, pathname) => {
-    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ message: 'Unauthorized' }, 401)))
+  ])('navigates %s to its role start route when signed in', async (name, pathname) => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({
+      createdAt: '2026-08-25T12:00:00Z',
+      email: 'haneul@moastore.co.kr',
+      id: 'f22d04eb-e4f9-4899-953a-86ad86f00dd3',
+      name: '정하늘',
+      position: '매니저',
+      team: '운영팀',
+    })))
     const user = userEvent.setup()
     const router = renderHome()
 
-    await user.click(screen.getByRole('button', { name: new RegExp(name) }))
+    await user.click(await screen.findByRole('button', { name: new RegExp(name) }))
 
     expect(router.state.location.pathname).toBe(pathname)
   })
