@@ -7,6 +7,7 @@ import { Icon } from '@/shared/ui/icon'
 import styles from './MemberPicker.module.css'
 
 interface MemberPickerProps {
+  separated?: boolean
   title: string
   description: string
   members: HandoverParticipant[]
@@ -16,7 +17,7 @@ interface MemberPickerProps {
   onToggle: (id: string) => void
 }
 
-export function MemberPicker({ description, members, onQueryChange, onToggle, query, selectedIds, title }: MemberPickerProps) {
+export function MemberPicker({ description, members, onQueryChange, onToggle, query, selectedIds, separated = false, title }: MemberPickerProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const rootRef = useRef<HTMLElement>(null)
@@ -74,7 +75,7 @@ export function MemberPicker({ description, members, onQueryChange, onToggle, qu
   }
 
   return (
-    <section aria-label={title} ref={rootRef}>
+    <section aria-label={title} className={separated ? styles.separated : undefined} ref={rootRef}>
       <div className={styles.heading}><div><h2>{title}</h2><p>{description}</p></div><Badge tone="blue">{selectedIds.length}명 선택</Badge></div>
       <div className={`${styles.picker} ${open ? styles.pickerOpen : ''}`.trim()}>
         <div className={styles.search} onClick={() => { setOpen(true); inputRef.current?.focus() }}>

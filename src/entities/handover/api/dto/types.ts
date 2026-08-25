@@ -33,8 +33,18 @@ export type HandoverStatusDto =
   | 'APPROVED'
   | 'COMPLETED'
 
+export interface UserSummaryResponse {
+  id: string
+  name: string
+  team: string
+  position: string
+}
+
 export interface ParticipantDto {
   userId: string
+  name: string
+  team: string
+  position: string
   role: 'RECIPIENT' | 'REVIEWER'
   receiptStatus?: string
 }
@@ -49,7 +59,7 @@ export interface HandoverResponse {
   id: string
   title: string
   status: HandoverStatusDto
-  ownerId: string
+  owner: UserSummaryResponse
   viewerRole?: string
   participants: ParticipantDto[]
   workScopes: WorkScopeDto[]

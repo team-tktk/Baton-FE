@@ -14,10 +14,8 @@ import type {
 } from '../model/types'
 import type { CreateHandoverRequest, HandoverResponse, MemberPageResponse } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
-import { toHandoverParticipant } from './mapper/handoverMapper'
+import { toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
-
-const MEMBER_PAGE_SIZE = 100
 
 /**
  * 실제 API로 옮긴 기능만 서버를 호출하고, 아직 옮기지 않은 기능은 목업에 위임한다.
@@ -28,7 +26,7 @@ export class HttpHandoverRepository implements HandoverRepository {
   private members: HandoverParticipant[] = []
 
   async listMembers(): Promise<HandoverParticipant[]> {
-    const page = await apiRequest<MemberPageResponse>(`/api/v1/members?size=${MEMBER_PAGE_SIZE}`)
+    const page = await apiRequest<MemberPageResponse>('/api/v1/members')
     this.members = page.items.map(toHandoverParticipant)
     return this.members
   }
@@ -50,9 +48,12 @@ export class HttpHandoverRepository implements HandoverRepository {
       method: 'POST',
     })
 
-    const recipient = this.members.find((member) => member.id === input.recipientIds[0])
-      ?? { id: input.recipientIds[0], name: '받는 사람', position: '', team: '' }
-    return this.pending.seedDraft(created.id, recipient, workItems)
+    const recipient = created.participants.find((participant) => participant.role === 'RECIPIENT')
+    const seedRecipient = recipient
+      ? toParticipantFromDto(recipient)
+      : this.members.find((member) => member.id === input.recipientIds[0])
+        ?? { id: input.recipientIds[0], name: '받는 사람', position: '', team: '' }
+    return this.pending.seedDraft(created.id, seedRecipient, workItems)
   }
 
   listReceivedHandovers(): Promise<HandoverSummary[]> {

@@ -1,5 +1,5 @@
 import type { HandoverParticipant, HandoverStatus } from '../../model/types'
-import type { HandoverStatusDto, MemberResponse } from '../dto/types'
+import type { HandoverStatusDto, MemberResponse, ParticipantDto } from '../dto/types'
 
 const STATUS_BY_DTO: Record<HandoverStatusDto, HandoverStatus> = {
   DRAFT: 'draft',
@@ -18,6 +18,15 @@ export function toHandoverParticipant(member: MemberResponse): HandoverParticipa
     name: member.name,
     position: member.position,
     team: member.team,
+  }
+}
+
+export function toParticipantFromDto(participant: ParticipantDto): HandoverParticipant {
+  return {
+    id: participant.userId,
+    name: participant.name,
+    position: participant.position,
+    team: participant.team,
   }
 }
 
