@@ -13,8 +13,11 @@ describe('HandoverInbox', () => {
     render(<MemoryRouter><HandoverInbox handovers={await getReceivedHandovers()} onOpen={vi.fn()} /></MemoryRouter>)
 
     expect(screen.getAllByRole('article')).toHaveLength(3)
-    await user.click(screen.getByRole('button', { name: /확인 완료/ }))
+    expect(screen.getByRole('button', { name: '전체 3' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText('최서윤님에게 받은 인수인계')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '완료 1' }))
     expect(screen.getAllByRole('article')).toHaveLength(1)
-    expect(screen.getByText('월간 정산 · 세금계산서 · 비용 보고')).toBeInTheDocument()
+    expect(screen.getByText('운영지원팀 · 월간 정산 · 세금계산서 · 비용 보고')).toBeInTheDocument()
   })
 })
