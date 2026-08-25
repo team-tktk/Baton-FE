@@ -11,6 +11,14 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  server: {
+    proxy: {
+      '/api': {
+        changeOrigin: true,
+        target: 'http://43.201.71.229:8080',
+      },
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
