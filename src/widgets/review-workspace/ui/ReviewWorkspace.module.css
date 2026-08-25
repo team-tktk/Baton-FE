@@ -1,0 +1,2 @@
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 330px; align-items: start; gap: 16px; }
+@media (max-width: 900px) { .workspace { grid-template-columns: 1fr; } }

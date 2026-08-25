@@ -5,7 +5,8 @@ import { HandoverCreatePage } from '@/pages/handover-create'
 import { HandoverArrivalPage, HandoverChatPage, HandoverOverviewPage, HandoverWorkspacePage } from '@/pages/handover-detail'
 import { HandoverInboxPage } from '@/pages/handover-inbox'
 import { NotFoundPage } from '@/pages/not-found'
-import { RoutePlaceholder } from './RoutePlaceholder'
+import { ReviewDetailPage } from '@/pages/review-detail'
+import { ReviewInboxPage } from '@/pages/review-inbox'
 
 export const router = createBrowserRouter([
   {
@@ -23,8 +24,8 @@ export const router = createBrowserRouter([
   { path: '/handovers/:handoverId/overview', element: <HandoverOverviewPage /> },
   { path: '/handovers/:handoverId/chat', element: <HandoverChatPage /> },
   { path: '/handovers/:handoverId', element: <HandoverWorkspacePage /> },
-  { path: '/reviews', element: <RoutePlaceholder /> },
-  { path: '/reviews/:handoverId', element: <RoutePlaceholder /> },
+  { path: '/reviews', element: <ReviewInboxPage /> },
+  { path: '/reviews/:handoverId', element: <ReviewDetailPage /> },
   { path: '/404', element: <NotFoundPage /> },
   {
     path: '*',
