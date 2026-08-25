@@ -19,8 +19,11 @@ permissions:
   pull-requests: write
 
 concurrency:
+  # PR 이벤트와 댓글 이벤트가 같은 그룹으로 묶인다.
+  # 취소를 켜면 Vercel 봇 배포 댓글이 만든 실행이 진행 중인 리뷰를 죽인다.
+  # (job의 if로 봇을 걸러도 동시성 취소가 먼저 일어난다.)
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.issue.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   review:
