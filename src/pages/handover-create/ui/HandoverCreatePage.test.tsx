@@ -88,7 +88,7 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(combobox).toHaveFocus()
     expect(await scope.findByRole('listbox', { name: `${RECIPIENTS} 목록` })).toBeInTheDocument()
     expect(combobox).toHaveAttribute('aria-expanded', 'true')
-    await waitFor(() => expect(scope.getAllByRole('option')).toHaveLength(8))
+    await waitFor(() => expect(scope.getAllByRole('option')).toHaveLength(10))
 
     await user.type(combobox, '상품팀')
     expect(scope.getAllByRole('option')).toHaveLength(1)

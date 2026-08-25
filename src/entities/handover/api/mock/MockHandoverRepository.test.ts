@@ -94,4 +94,25 @@ describe('MockHandoverRepository', () => {
       new RepositoryError('NOT_FOUND', '인수인계를 찾을 수 없어요.'),
     )
   })
+
+  it('returns distinct detail fixtures for every demo list item', async () => {
+    const repository = new MockHandoverRepository()
+
+    const cs = await repository.getHandover('handover-cs-support')
+    const settlement = await repository.getHandover('handover-monthly-settlement')
+
+    expect(cs.team).toBe('CS팀')
+    expect(cs.document.scope).toContain('환불 처리')
+    expect(cs.review.comments).toHaveLength(1)
+    expect(settlement.team).toBe('운영지원팀')
+    expect(settlement.document.scope).toContain('세금계산서')
+    expect(settlement.status).toBe('approved')
+  })
+
+  it('keeps the presentation scenario focused on one handover', async () => {
+    const repository = new MockHandoverRepository({ scenarioOnly: true })
+
+    await expect(repository.listReceivedHandovers()).resolves.toHaveLength(1)
+    await expect(repository.listReviews()).resolves.toHaveLength(1)
+  })
 })

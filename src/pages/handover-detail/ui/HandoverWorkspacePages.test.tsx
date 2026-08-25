@@ -1,22 +1,27 @@
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
+import { AuthProvider } from '@/features/auth'
+import { DEMO_ROLE_KEY, DEMO_SESSION_KEY } from '@/features/auth/model/demoAuth'
 import { ToastProvider } from '@/shared/ui/toast'
 
 import { HandoverChatPage } from './HandoverChatPage'
 import { HandoverWorkspacePage } from './HandoverWorkspacePage'
 
 function renderPage(element: React.ReactNode, path: string) {
-  render(<HandoverRepositoryProvider repository={new MockHandoverRepository()}><ToastProvider><MemoryRouter initialEntries={[path]}><Routes><Route path="/handovers/:handoverId/*" element={element} /></Routes></MemoryRouter></ToastProvider></HandoverRepositoryProvider>)
+  sessionStorage.setItem(DEMO_SESSION_KEY, 'active')
+  sessionStorage.setItem(DEMO_ROLE_KEY, 'recipient')
+  render(<AuthProvider><HandoverRepositoryProvider repository={new MockHandoverRepository()}><ToastProvider><MemoryRouter initialEntries={[path]}><Routes><Route path="/handovers/:handoverId/*" element={element} /><Route path="/" element={<p>홈 화면</p>} /></Routes></MemoryRouter></ToastProvider></HandoverRepositoryProvider></AuthProvider>)
 }
 
 describe('handover workspace pages', () => {
   beforeEach(() => { Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() }) })
+  afterEach(() => { sessionStorage.clear() })
 
-  it('shows the read-only document and explains fixture attachment downloads', async () => {
+  it('shows the read-only document and confirms attachment selection', async () => {
     const user = userEvent.setup()
     renderPage(<HandoverWorkspacePage />, '/handovers/handover-moastore-operations')
     expect(await screen.findByRole('heading', { name: '업무 인수인계' })).toBeInTheDocument()
@@ -27,7 +32,7 @@ describe('handover workspace pages', () => {
     expect(screen.getByRole('heading', { name: '주요 관계자' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '첨부 문서' })).toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: /가을_할인전_준비_메모.docx/ })[0]!)
-    expect(screen.getByRole('status')).toHaveTextContent('목업 파일이라 실제 다운로드는 제공하지 않아요')
+    expect(screen.getByRole('status')).toHaveTextContent('첨부 문서를 확인했어요')
   })
 
   it('opens the handover AI in a dismissible side panel', async () => {
@@ -44,6 +49,17 @@ describe('handover workspace pages', () => {
 
     await user.click(screen.getByRole('button', { name: 'AI 질문 패널 닫기' }))
     expect(screen.queryByRole('dialog', { name: '문서에 대해 물어보세요' })).not.toBeInTheDocument()
+  })
+
+  it('returns home after the recipient confirms the handover', async () => {
+    const user = userEvent.setup()
+    renderPage(<HandoverWorkspacePage />, '/handovers/handover-moastore-operations')
+
+    await user.click(await screen.findByRole('button', { name: /내용 확인 완료/ }))
+
+    expect(screen.getByText('홈 화면')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('정하늘님이 인수인계 내용을 확인했어요')
+    expect(sessionStorage.getItem(DEMO_ROLE_KEY)).toBe('recipient')
   })
 
   it('renders the dedicated chat route', async () => {

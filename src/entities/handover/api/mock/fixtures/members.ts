@@ -9,4 +9,6 @@ export const memberFixtures = [
   { id: 'user-oh-sejin', name: '오세진', position: '주임', team: '물류팀' },
   { id: 'user-park-jimin', name: '박지민', position: '매니저', team: 'CS팀' },
   { id: 'user-lee-seojin', name: '이서진', position: '주임', team: '운영지원팀' },
+  { id: 'user-kim-suhyeon', name: '김수현', position: '주임', team: 'CS팀' },
+  { id: 'user-han-yujin', name: '한유진', position: '주임', team: '운영지원팀' },
 ] satisfies HandoverParticipant[]

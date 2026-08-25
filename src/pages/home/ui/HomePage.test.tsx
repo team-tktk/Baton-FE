@@ -33,6 +33,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 afterEach(() => {
+  sessionStorage.clear()
   vi.unstubAllGlobals()
 })
 
@@ -103,5 +104,20 @@ describe('HomePage', () => {
     expect(screen.getByText('haneul@moastore.co.kr')).toBeInTheDocument()
     expect(screen.getByText('운영팀 · 매니저')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
+  })
+
+  it('starts the prepared handover scenario from the top action', async () => {
+    const user = userEvent.setup()
+    const fetchSpy = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ message: 'Unauthorized' }, 401))
+    vi.stubGlobal('fetch', fetchSpy)
+    const router = renderHome()
+
+    await user.click(await screen.findByRole('button', { name: /바로 시작하기/ }))
+
+    expect(router.state.location.pathname).toBe('/handovers/new/setup')
+    expect(screen.getByText('전임자 시작')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('최서윤님의 운영 업무 인수인계를 시작합니다')
+    expect(screen.queryByText(/데모|체험용/)).not.toBeInTheDocument()
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 })

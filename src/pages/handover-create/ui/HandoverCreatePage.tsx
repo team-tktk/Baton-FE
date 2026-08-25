@@ -249,7 +249,11 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
         />
       })()}
       {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} confirmations={state.confirmations} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onConfirm={(criterionId, value) => dispatch({ type: 'criterion/confirmed', criterionId, value })} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
-      {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onHome={() => navigate('/')} />}
+      {step === 'complete' && state.submittedHandover && <CompletionStep
+        handover={state.submittedHandover}
+        onEdit={() => navigate('/handovers/new/document')}
+        onNext={() => navigate('/')}
+      />}
       {(step === 'setup' || step === 'upload') && (
       <main className={step === 'setup' ? styles.setupMain : styles.uploadMain}>
         {step === 'setup' ? (

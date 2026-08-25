@@ -13,6 +13,14 @@ const attachment: HandoverAttachment = {
 }
 
 describe('createHandoverReducer', () => {
+  it('prepares one consistent operating handover scenario', () => {
+    const state = createInitialCreateHandoverState(true)
+
+    expect(state.recipientIds).toEqual(['user-jung-haneul'])
+    expect(state.reviewerIds).toEqual(['user-lee-dohyeon'])
+    expect(state.workItems).toEqual(['프로모션 운영', '주문 관리', '배송업체 협업'])
+  })
+
   it('starts empty so nothing demo-shaped reaches the server', () => {
     const state = createInitialCreateHandoverState()
 

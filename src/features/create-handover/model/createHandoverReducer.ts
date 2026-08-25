@@ -28,12 +28,12 @@ export type CreateHandoverAction =
   | { type: 'submission/completed'; handover: Handover }
   | { type: 'reset' }
 
-export function createInitialCreateHandoverState(): CreateHandoverState {
+export function createInitialCreateHandoverState(useScenario = false): CreateHandoverState {
   return {
     draftId: null,
-    recipientIds: [],
-    reviewerIds: [],
-    workItems: [''],
+    recipientIds: useScenario ? ['user-jung-haneul'] : [],
+    reviewerIds: useScenario ? ['user-lee-dohyeon'] : [],
+    workItems: useScenario ? ['프로모션 운영', '주문 관리', '배송업체 협업'] : [''],
     attachments: [],
     interviewAnswers: {},
     documentEdits: {},

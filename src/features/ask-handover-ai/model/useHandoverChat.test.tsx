@@ -1,10 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { HandoverRepository } from '@/entities/handover'
 import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
 
-import { useHandoverChat } from './useHandoverChat'
+import { AI_RESPONSE_DELAY_MS, useHandoverChat } from './useHandoverChat'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -13,7 +13,10 @@ function deferred<T>() {
 }
 
 describe('useHandoverChat', () => {
+  afterEach(() => { vi.useRealTimers() })
+
   it('keeps user order, blocks duplicate sends, and appends sourced answers', async () => {
+    vi.useFakeTimers()
     const answer = deferred<{ text: string; source: string | null }>()
     const repository = new MockHandoverRepository()
     repository.askQuestion = vi.fn().mockReturnValue(answer.promise)
@@ -29,7 +32,16 @@ describe('useHandoverChat', () => {
     expect(repository.askQuestion).toHaveBeenCalledTimes(1)
 
     answer.resolve({ text: '물류팀에 먼저 알려주세요.', source: '문제 상황 대응 방법' })
-    await act(async () => { await first })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AI_RESPONSE_DELAY_MS - 1)
+    })
+    expect(result.current.status).toBe('sending')
+    expect(result.current.messages.at(-1)).toMatchObject({ role: 'user' })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+      await first
+    })
     expect(result.current.messages.at(-1)).toMatchObject({ role: 'assistant', source: '문제 상황 대응 방법' })
     expect(result.current.status).toBe('idle')
   })

@@ -11,6 +11,8 @@
 .authLoading { width: 112px; height: 44px; border-radius: 12px; background: linear-gradient(90deg, #e9edf3 25%, #f7f9fc 50%, #e9edf3 75%); background-size: 200% 100%; animation: auth-loading 1.2s ease-in-out infinite; }
 .sessionWarning { position: absolute; z-index: 4; top: 88px; right: max(6vw, 32px); margin: 0; color: #9a6700; font-size: 11px; }
 .login { background: transparent; color: var(--sub); }
+.start { display: flex; align-items: center; gap: 7px; background: var(--blue) !important; color: #fff; box-shadow: 0 9px 22px rgb(49 130 246 / 24%); }
+.start svg { width: 15px; height: 15px; }
 .signup { background: #172033; color: #fff; box-shadow: 0 8px 20px rgb(23 32 51 / 12%); }
 .profile { display: flex; align-items: center; gap: 9px; border: 1px solid rgb(25 31 40 / 9%) !important; background: rgb(255 255 255 / 88%); color: #263244; box-shadow: 0 7px 22px rgb(31 50 80 / 6%); }
 .profile i { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9px; background: var(--blue-soft); color: var(--blue-dark); font-size: 11px; font-style: normal; font-weight: 850; }

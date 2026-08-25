@@ -7,6 +7,7 @@
 .workspaceTools { display: flex; align-items: center; justify-self: end; gap: 10px; }
 .workspaceTools > button { display: flex; min-height: 42px; align-items: center; gap: 8px; border: 0; border-radius: 12px; background: var(--blue); color: #fff; cursor: pointer; padding: 0 15px; font-size: 12px; font-weight: 800; box-shadow: 0 9px 22px rgba(49, 130, 246, .18); }
 .workspaceTools > button svg { width: 17px; height: 17px; }
+.workspaceTools > .completeReceipt { background: #172033; box-shadow: 0 9px 22px rgb(23 32 51 / 18%); }
 .workspaceDocument { width: min(1080px, 100%); margin: 0 auto; }
 .aiScrim { position: fixed; z-index: 70; inset: 0; border: 0; background: rgba(23, 34, 48, .16); cursor: default; backdrop-filter: blur(2px); }
 .aiPanel { position: fixed; z-index: 80; top: 0; right: 0; display: flex; width: min(440px, calc(100vw - 40px)); height: 100vh; flex-direction: column; overflow: hidden; border-left: 1px solid #d8e6f7; background: #fff; box-shadow: -24px 0 60px rgba(31, 50, 80, .16); transform: translateX(105%); transition: transform .24s ease; }

@@ -17,37 +17,39 @@ import type {
   UpdateHandoverInput,
 } from '../../model/types'
 import { memberFixtures } from './fixtures/members'
-import { primaryHandoverFixture, receivedHandoverFixtures } from './fixtures/handovers'
+import { csSupportHandoverFixture, monthlySettlementHandoverFixture, primaryHandoverFixture, receivedHandoverFixtures } from './fixtures/handovers'
 import { fallbackQaResponse, qaResponseRules } from './fixtures/qa-responses'
 import { reviewSummaryFixtures } from './fixtures/reviews'
 
 const clone = <T,>(value: T): T => structuredClone(value)
 
 export class MockHandoverRepository implements HandoverRepository {
+  private readonly scenarioOnly: boolean
   private readonly members = clone(memberFixtures)
   private readonly handovers = new Map<HandoverId, Handover>([
     [primaryHandoverFixture.id, clone(primaryHandoverFixture)],
+    [csSupportHandoverFixture.id, clone(csSupportHandoverFixture)],
+    [monthlySettlementHandoverFixture.id, clone(monthlySettlementHandoverFixture)],
   ])
   private readonly received = clone(receivedHandoverFixtures)
   private readonly reviews = clone(reviewSummaryFixtures)
   private analysisProgress = 0
+
+  constructor(options: { scenarioOnly?: boolean } = {}) {
+    this.scenarioOnly = options.scenarioOnly ?? false
+  }
 
   async listMembers(): Promise<HandoverParticipant[]> {
     return clone(this.members)
   }
 
   async listReceivedHandovers(): Promise<HandoverSummary[]> {
-    return clone(this.received)
+    return clone(this.scenarioOnly ? this.received.filter((item) => item.id === primaryHandoverFixture.id) : this.received)
   }
 
   async getHandover(id: HandoverId): Promise<Handover> {
     const handover = this.handovers.get(id)
-    if (!handover) {
-      if (id === 'handover-cs-support' || id === 'handover-monthly-settlement') {
-        return clone({ ...primaryHandoverFixture, id })
-      }
-      throw new RepositoryError('NOT_FOUND', '인수인계를 찾을 수 없어요.')
-    }
+    if (!handover) throw new RepositoryError('NOT_FOUND', '인수인계를 찾을 수 없어요.')
     return clone(handover)
   }
 
@@ -199,7 +201,7 @@ export class MockHandoverRepository implements HandoverRepository {
   }
 
   async listReviews(): Promise<ReviewSummary[]> {
-    return clone(this.reviews)
+    return clone(this.scenarioOnly ? this.reviews.filter((item) => item.id === primaryHandoverFixture.id) : this.reviews)
   }
 
   async addReviewComment(id: HandoverId, comment: string): Promise<ReviewComment> {

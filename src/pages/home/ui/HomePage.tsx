@@ -17,7 +17,7 @@ type AuthMode = 'login' | 'signup'
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { sessionCheckFailed, status, user } = useAuth()
+  const { isDemo, sessionCheckFailed, startDemo, status, switchDemoRole, user } = useAuth()
   const { showToast } = useToast()
   const [authMode, setAuthMode] = useState<AuthMode | null>(null)
   const [loginEmail, setLoginEmail] = useState('')
@@ -35,6 +35,21 @@ export function HomePage() {
     showToast('회원가입이 완료됐어요. 로그인해 주세요.')
   }
 
+  const startScenario = () => {
+    startDemo()
+    navigate('/handovers/new/setup')
+    showToast('최서윤님의 운영 업무 인수인계를 시작합니다')
+  }
+
+  const openRole = (path: string) => {
+    if (isDemo) {
+      if (path === '/handovers/new/setup') switchDemoRole('owner')
+      else if (path === '/handovers/received') switchDemoRole('recipient')
+      else if (path === '/reviews') switchDemoRole('reviewer')
+    }
+    navigate(path)
+  }
+
   return (
     <main className={styles.main}>
       <section className={styles.landing}>
@@ -47,6 +62,7 @@ export function HomePage() {
             <span aria-label="로그인 상태 확인 중" className={styles.authLoading} role="status" />
           ) : status === 'anonymous' ? (
             <>
+              <button className={styles.start} type="button" onClick={startScenario}><Icon name="spark" /> 바로 시작하기</button>
               <button className={styles.login} type="button" onClick={(event) => openAuth(event, 'login')}>로그인</button>
               <button className={styles.signup} type="button" onClick={(event) => openAuth(event, 'signup')}>회원가입</button>
             </>
@@ -55,7 +71,7 @@ export function HomePage() {
               <button className={styles.profile} type="button" onClick={() => setProfileOpen((value) => !value)}>
                 <i>{user.name.slice(0, 1)}</i><span>{user.name}</span><Icon name="chevron" />
               </button>
-              {profileOpen && <ProfileMenu onHandovers={() => navigate('/handovers/received')} />}
+              {profileOpen && <ProfileMenu onHandovers={() => openRole('/handovers/received')} />}
             </>
           ) : null}
         </nav>
@@ -66,7 +82,7 @@ export function HomePage() {
         </div>
         <section aria-label="인수인계 메뉴" className={styles.actions}>
           {roles.map((role) => (
-            <button className={`${styles.card} ${role.primary ? styles.primary : ''}`} key={role.title} type="button" onClick={() => navigate(role.path)}>
+            <button className={`${styles.card} ${role.primary ? styles.primary : ''}`} key={role.title} type="button" onClick={() => openRole(role.path)}>
               <span className={styles.roleIcon}><Icon name={role.icon} /></span>
               <span className={styles.cardCopy}><small>{role.kicker}</small><strong>{role.title}</strong><em>{role.description}</em></span>
               <Icon name="arrow" />

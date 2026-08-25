@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { AuthProvider } from './AuthProvider'
+import { DEMO_ROLE_KEY, DEMO_SESSION_KEY, demoUser, demoUsers } from './demoAuth'
 import { useAuth } from './useAuth'
 
 const authenticatedUser = {
@@ -24,6 +25,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 afterEach(() => {
+  sessionStorage.clear()
   vi.unstubAllGlobals()
 })
 
@@ -99,5 +101,44 @@ describe('AuthProvider', () => {
 
     expect(result.current.status).toBe('authenticated')
     expect(result.current.user).toEqual(authenticatedUser)
+  })
+
+  it('starts and ends a demo session without calling the auth API', async () => {
+    const fetchSpy = vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ message: 'Unauthorized' }, 401))
+    vi.stubGlobal('fetch', fetchSpy)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('anonymous'))
+
+    act(() => result.current.startDemo())
+
+    expect(result.current.isDemo).toBe(true)
+    expect(result.current.user).toEqual(demoUser)
+    expect(sessionStorage.getItem(DEMO_SESSION_KEY)).toBe('active')
+    expect(sessionStorage.getItem(DEMO_ROLE_KEY)).toBe('owner')
+
+    act(() => result.current.switchDemoRole('recipient'))
+    expect(result.current.user).toEqual(demoUsers.recipient)
+    expect(sessionStorage.getItem(DEMO_ROLE_KEY)).toBe('recipient')
+
+    await act(() => result.current.logout())
+
+    expect(result.current.status).toBe('anonymous')
+    expect(result.current.isDemo).toBe(false)
+    expect(sessionStorage.getItem(DEMO_ROLE_KEY)).toBeNull()
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('restores demo mode on refresh without checking the backend session', async () => {
+    sessionStorage.setItem(DEMO_SESSION_KEY, 'active')
+    sessionStorage.setItem(DEMO_ROLE_KEY, 'reviewer')
+    const fetchSpy = vi.fn<typeof fetch>()
+    vi.stubGlobal('fetch', fetchSpy)
+
+    const { result } = renderHook(() => useAuth(), { wrapper })
+
+    await waitFor(() => expect(result.current.status).toBe('authenticated'))
+    expect(result.current.isDemo).toBe(true)
+    expect(result.current.user).toEqual(demoUsers.reviewer)
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 })
