@@ -1,0 +1,40 @@
+import type { ReviewSummary } from '../../../model/types'
+
+export const reviewSummaryFixtures: ReviewSummary[] = [
+  {
+    id: 'handover-moastore-operations',
+    title: '모아스토어 운영팀 업무 인수인계',
+    from: '최서윤 → 정하늘',
+    team: '운영팀',
+    date: '오늘 14:30',
+    status: 'submitted',
+    statusLabel: '승인 대기',
+    tone: 'yellow',
+    tasks: 3,
+    files: 3,
+  },
+  {
+    id: 'handover-cs-support',
+    title: '고객 문의 대응 업무 인수인계',
+    from: '박지민 → 김수현',
+    team: 'CS팀',
+    date: '어제 17:20',
+    status: 'revision-requested',
+    statusLabel: '보완 요청',
+    tone: 'yellow',
+    tasks: 5,
+    files: 4,
+  },
+  {
+    id: 'handover-monthly-settlement',
+    title: '월간 정산 업무 인수인계',
+    from: '이서진 → 한유진',
+    team: '운영지원팀',
+    date: '8월 18일',
+    status: 'approved',
+    statusLabel: '승인 완료',
+    tone: 'green',
+    tasks: 4,
+    files: 2,
+  },
+]
