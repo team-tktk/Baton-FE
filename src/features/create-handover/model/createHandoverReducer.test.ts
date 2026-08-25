@@ -12,20 +12,30 @@ const attachment: HandoverAttachment = {
 }
 
 describe('createHandoverReducer', () => {
-  it('starts with the demo recipient and three work items', () => {
+  it('starts without preselected people and with three work items', () => {
     const state = createInitialCreateHandoverState()
 
-    expect(state.recipientIds).toEqual(['user-jung-haneul'])
+    expect(state.recipientIds).toEqual([])
+    expect(state.reviewerIds).toEqual([])
     expect(state.workItems).toEqual(['프로모션 운영', '주문 현황 관리', '배송업체 협업'])
   })
 
   it('toggles recipients without duplicates', () => {
     const initial = createInitialCreateHandoverState()
     const added = createHandoverReducer(initial, { type: 'recipient/toggled', recipientId: 'user-kim-minjun' })
-    const removed = createHandoverReducer(added, { type: 'recipient/toggled', recipientId: 'user-jung-haneul' })
+    const readded = createHandoverReducer(added, { type: 'recipient/toggled', recipientId: 'user-kim-minjun' })
 
-    expect(added.recipientIds).toEqual(['user-jung-haneul', 'user-kim-minjun'])
-    expect(removed.recipientIds).toEqual(['user-kim-minjun'])
+    expect(added.recipientIds).toEqual(['user-kim-minjun'])
+    expect(readded.recipientIds).toEqual([])
+  })
+
+  it('toggles reviewers independently from recipients', () => {
+    const initial = createInitialCreateHandoverState()
+    const withRecipient = createHandoverReducer(initial, { type: 'recipient/toggled', recipientId: 'user-jung-haneul' })
+    const withReviewer = createHandoverReducer(withRecipient, { type: 'reviewer/toggled', reviewerId: 'user-lee-dohyeon' })
+
+    expect(withReviewer.recipientIds).toEqual(['user-jung-haneul'])
+    expect(withReviewer.reviewerIds).toEqual(['user-lee-dohyeon'])
   })
 
   it('never removes the final work row', () => {

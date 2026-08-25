@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './support/backend'
 
 test('guards create routes and maps unknown paths to 404', async ({ page }) => {
   await page.goto('/handovers/new/upload')
@@ -26,13 +26,13 @@ test('matches the setup flow layout and recipient interaction', async ({ page, v
 
   await expect(page.getByRole('button', { name: '홈으로' })).toBeVisible()
   await expect(page.getByText('1 / 5')).toBeVisible()
-  await expect(page.getByRole('button', { name: '정하늘 선택 해제' })).toBeVisible()
-  await expect(page.getByRole('listbox', { name: '멤버 목록' })).toBeHidden()
+  await expect(page.getByRole('listbox', { name: '업무를 받는 사람 목록' })).toBeHidden()
 
-  const recipientCombobox = page.getByRole('combobox', { name: '이름 또는 팀 검색' })
+  const recipientCombobox = page.getByRole('combobox', { name: '업무를 받는 사람 검색' })
   await recipientCombobox.click()
-  await expect(page.getByRole('listbox', { name: '멤버 목록' })).toBeVisible()
+  await expect(page.getByRole('listbox', { name: '업무를 받는 사람 목록' })).toBeVisible()
   await expect(page.getByRole('option')).toHaveCount(8)
+  await page.getByRole('option', { name: /정하늘/ }).click()
 
   if ((viewport?.width ?? 0) >= 1200) {
     const setupCard = await page.getByRole('region', { name: '인수인계 기본 정보' }).boundingBox()
@@ -83,6 +83,8 @@ test('matches the setup flow layout and recipient interaction', async ({ page, v
 
 test('matches the DEMO upload layout and file metadata', async ({ page, viewport }) => {
   await page.goto('/handovers/new/setup')
+  await page.getByRole('combobox', { name: '업무를 받는 사람 검색' }).click()
+  await page.getByRole('option', { name: /정하늘/ }).click()
   await page.getByRole('button', { name: '업무 자료 올리기' }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
 

@@ -1,15 +1,18 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './support/backend'
 
 test('creates, confirms, and delivers a handover', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /인수인계 하기/ }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/setup$/)
 
-  await page.getByRole('button', { name: '정하늘 선택 해제' }).click()
   await page.getByRole('button', { name: /업무 자료 올리기/ }).click()
   await expect(page.getByRole('status')).toContainText('받는 사람과 업무를 한 개 이상')
-  await page.getByRole('combobox', { name: '이름 또는 팀 검색' }).click()
+  await page.getByRole('combobox', { name: '업무를 받는 사람 검색' }).click()
   await page.getByRole('option', { name: /정하늘/ }).click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('combobox', { name: '검토하는 사람 검색' }).click()
+  await page.getByRole('option', { name: /이도현/ }).click()
+  await page.keyboard.press('Escape')
   await page.getByRole('button', { name: /업무 자료 올리기/ }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
 

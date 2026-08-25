@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import type { Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
-import { AnalysisProgress, HandoverProgress, InterviewWizard, MockFileUploader, RecipientPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
+import { AnalysisProgress, HandoverProgress, InterviewWizard, MemberPicker, MockFileUploader, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
@@ -22,7 +22,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const { showToast } = useToast()
   const { dispatch, state } = useCreateHandover()
   const [members, setMembers] = useState<HandoverParticipant[]>([])
-  const [query, setQuery] = useState('')
+  const [recipientQuery, setRecipientQuery] = useState('')
+  const [reviewerQuery, setReviewerQuery] = useState('')
   const [pending, setPending] = useState(false)
   const [questions, setQuestions] = useState<InterviewQuestion[]>([])
   const [draft, setDraft] = useState<Handover | null>(null)
@@ -31,11 +32,11 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   useEffect(() => {
     if (step !== 'setup') return
     let ignore = false
-    repository.listMembers().then((nextMembers) => {
-      if (!ignore) setMembers(nextMembers)
-    })
+    repository.listMembers()
+      .then((nextMembers) => { if (!ignore) setMembers(nextMembers) })
+      .catch(() => { if (!ignore) showToast('구성원 목록을 불러오지 못했어요') })
     return () => { ignore = true }
-  }, [repository, step])
+  }, [repository, showToast, step])
 
   useEffect(() => {
     if (step !== 'setup' || state.attachments.length !== 0) return
@@ -76,7 +77,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     if (state.recipientIds.length === 0 || workItems.length === 0) return showToast('받는 사람과 업무를 한 개 이상 입력해 주세요')
     setPending(true)
     try {
-      const draft = await repository.createDraft({ recipientIds: state.recipientIds, workItems })
+      const draft = await repository.createDraft({ recipientIds: state.recipientIds, reviewerIds: state.reviewerIds, workItems })
       dispatch({ type: 'draft/created', draft: { ...draft, attachments: state.attachments } })
       navigate('/handovers/new/upload')
       showToast(`${draft.owner.name}님의 ${workItems[0]} 업무로 시작했어요`)
@@ -118,7 +119,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           <section>
             <header className={styles.heading}><div className={styles.kicker}><Icon name="users" /> 인수인계 하기 · 시작</div><h1>누구에게 어떤 업무를 넘기나요?</h1><p>받는 사람과 대표 업무를 알려주면 AI가 필요한 자료를 더 정확히 찾아요.</p></header>
             <div aria-label="인수인계 기본 정보" className={styles.card} role="region">
-              <RecipientPicker members={members} selectedIds={state.recipientIds} query={query} onQueryChange={setQuery} onToggle={(recipientId) => dispatch({ type: 'recipient/toggled', recipientId })} />
+              <MemberPicker description="이름이나 팀으로 검색하세요." members={members} query={recipientQuery} selectedIds={state.recipientIds} title="업무를 받는 사람" onQueryChange={setRecipientQuery} onToggle={(recipientId) => dispatch({ type: 'recipient/toggled', recipientId })} />
+              <MemberPicker separated description="인수인계 문서를 검토하고 승인할 사람이에요." members={members} query={reviewerQuery} selectedIds={state.reviewerIds} title="검토하는 사람" onQueryChange={setReviewerQuery} onToggle={(reviewerId) => dispatch({ type: 'reviewer/toggled', reviewerId })} />
               <WorkScopeEditor items={state.workItems} onAdd={() => dispatch({ type: 'work/added' })} onChange={(index, value) => dispatch({ type: 'work/changed', index, value })} onRemove={(index) => dispatch({ type: 'work/removed', index })} />
             </div>
             <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/')}>이전으로</Button><Button disabled={pending} onClick={createDraft}>업무 자료 올리기 <Icon name="arrow" /></Button></footer>

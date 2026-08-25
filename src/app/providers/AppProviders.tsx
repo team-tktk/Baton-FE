@@ -1,11 +1,11 @@
 import type { PropsWithChildren } from 'react'
 
-import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
+import { HandoverRepositoryProvider, HttpHandoverRepository } from '@/entities/handover'
 import { AuthProvider } from '@/features/auth'
 import { CreateHandoverProvider } from '@/features/create-handover'
 import { ToastProvider } from '@/shared/ui/toast'
 
-const repository = new MockHandoverRepository()
+const repository = new HttpHandoverRepository()
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (

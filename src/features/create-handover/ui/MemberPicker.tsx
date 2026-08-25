@@ -4,9 +4,12 @@ import type { HandoverParticipant } from '@/entities/handover'
 import { Badge } from '@/shared/ui/badge'
 import { Icon } from '@/shared/ui/icon'
 
-import styles from './RecipientPicker.module.css'
+import styles from './MemberPicker.module.css'
 
-interface RecipientPickerProps {
+interface MemberPickerProps {
+  separated?: boolean
+  title: string
+  description: string
   members: HandoverParticipant[]
   selectedIds: string[]
   query: string
@@ -14,7 +17,7 @@ interface RecipientPickerProps {
   onToggle: (id: string) => void
 }
 
-export function RecipientPicker({ members, onQueryChange, onToggle, query, selectedIds }: RecipientPickerProps) {
+export function MemberPicker({ description, members, onQueryChange, onToggle, query, selectedIds, separated = false, title }: MemberPickerProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const rootRef = useRef<HTMLElement>(null)
@@ -72,9 +75,9 @@ export function RecipientPicker({ members, onQueryChange, onToggle, query, selec
   }
 
   return (
-    <section ref={rootRef}>
-      <div className={styles.heading}><div><h2>업무를 받는 사람</h2><p>이름이나 팀으로 검색하세요.</p></div><Badge tone="blue">{selectedIds.length}명 선택</Badge></div>
-      <div className={styles.picker}>
+    <section aria-label={title} className={separated ? styles.separated : undefined} ref={rootRef}>
+      <div className={styles.heading}><div><h2>{title}</h2><p>{description}</p></div><Badge tone="blue">{selectedIds.length}명 선택</Badge></div>
+      <div className={`${styles.picker} ${open ? styles.pickerOpen : ''}`.trim()}>
         <div className={styles.search} onClick={() => { setOpen(true); inputRef.current?.focus() }}>
           <Icon name="users" />
           <div className={styles.value}>
@@ -90,7 +93,7 @@ export function RecipientPicker({ members, onQueryChange, onToggle, query, selec
               aria-autocomplete="list"
               aria-controls={listboxId}
               aria-expanded={open}
-              aria-label="이름 또는 팀 검색"
+              aria-label={`${title} 검색`}
               autoComplete="off"
               placeholder="이름 또는 팀 검색"
               ref={inputRef}
@@ -109,14 +112,14 @@ export function RecipientPicker({ members, onQueryChange, onToggle, query, selec
           </div>
         </div>
         {open && (
-          <div aria-label="멤버 목록" className={styles.popover} id={listboxId} role="listbox">
+          <div aria-label={`${title} 목록`} className={styles.popover} id={listboxId} role="listbox">
             <strong className={styles.listTitle}>멤버 목록</strong>
             <div className={styles.people}>
               {visible.map((member, index) => {
                 const selected = selectedIds.includes(member.id)
                 return (
                   <button aria-selected={selected} className={`${selected ? styles.selected : ''} ${activeIndex === index ? styles.active : ''}`.trim()} id={`${listboxId}-member-option-${member.id}`} key={member.id} role="option" tabIndex={-1} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => toggleMember(member.id)}>
-                    <span><strong>{member.name}</strong><small>{member.organization} · {member.team}</small></span><i><Icon name="check" /></i>
+                    <span><strong>{member.name}</strong><small>{member.position} · {member.team}</small></span><i><Icon name="check" /></i>
                   </button>
                 )
               })}

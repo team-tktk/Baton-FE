@@ -46,6 +46,20 @@ export class MockHandoverRepository implements HandoverRepository {
     return clone(handover)
   }
 
+  /**
+   * 실제 API가 만든 인수인계 id에 아직 연동되지 않은 화면용 목업 내용을 붙여 둔다.
+   * 알 수 없는 id는 계속 NOT_FOUND로 남겨 잘못된 경로 처리를 유지한다.
+   */
+  seedDraft(id: HandoverId, recipient: HandoverParticipant, workItems: string[]): Handover {
+    const draft = clone(primaryHandoverFixture)
+    draft.id = id
+    draft.status = 'draft'
+    draft.recipient = clone(recipient)
+    if (workItems.length > 0) draft.document.scope = workItems.join(' · ')
+    this.handovers.set(id, draft)
+    return clone(draft)
+  }
+
   async createDraft(input: CreateHandoverInput): Promise<Handover> {
     const workItems = input.workItems.map((item) => item.trim()).filter(Boolean)
     const recipient = this.members.find((member) => input.recipientIds.includes(member.id))

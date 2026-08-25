@@ -31,7 +31,7 @@ export function HandoverReadDocument({ handover, onAttachmentOpen }: { handover:
   const tasks = [...document.activeTasks, ...document.recurringTasks]
   return <>
     <article className={styles.document}>
-      <header><p>{handover.owner.organization} · {handover.team}</p><h1>{document.title}</h1><span>{document.intro}</span></header>
+      <header><p>모아스토어 · {handover.team}</p><h1>{document.title}</h1><span>{document.intro}</span></header>
       <dl className={styles.meta}><div><dt>인계자</dt><dd>{handover.owner.name}</dd></div><div><dt>인수자</dt><dd>{handover.recipient.name}</dd></div><div><dt>담당 업무</dt><dd>{document.scope}</dd></div><div><dt>업데이트</dt><dd>{document.updatedAtLabel}</dd></div></dl>
       <section><h2>업무 개요</h2><p>프로모션과 주문 운영이 담당자 변경 후에도 멈추지 않도록 행사 일정, 주문 현황, 배송 이슈 처리 기준을 정리했습니다.</p></section>
       <section><h2>먼저 이어서 할 일</h2><div className={styles.taskTable}>{tasks.map((task) => <TaskRow key={task.id} task={task} />)}</div></section>
