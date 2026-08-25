@@ -48,10 +48,15 @@ export function ReviewDetailPage() {
 
   const toggleChecklist = (itemId: string, checked: boolean) => {
     if (!handover || !handoverId) return
-    const items = handover.review.checklist.map((item) => item.id === itemId ? { ...item, checked } : item)
+    const previous = handover.review.checklist
+    const items = previous.map((item) => item.id === itemId ? { ...item, checked } : item)
     setHandover({ ...handover, review: { ...handover.review, checklist: items } })
     void repository.saveReviewChecklist(handoverId, items.map(({ label, checked: value }) => ({ label, checked: value })))
-      .catch(() => showToast('체크리스트를 저장하지 못했어요'))
+      .catch(() => {
+        // 되돌리지 않으면 화면은 완료인데 서버는 미완료라, 승인이 409로 막힐 때 원인을 알 수 없다.
+        setHandover((current) => current ? { ...current, review: { ...current.review, checklist: previous } } : current)
+        showToast('체크리스트를 저장하지 못했어요')
+      })
   }
 
   if (!handover || !handoverId) return <><AppHeader /><main className={styles.state}>{error || '검토 문서를 불러오고 있어요…'}</main></>
