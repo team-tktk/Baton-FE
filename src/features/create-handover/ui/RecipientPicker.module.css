@@ -1,10 +1,35 @@
-.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.heading h2 { margin: 0 0 6px; font-size: 18px; }.heading p { margin: 0; color: var(--muted); font-size: 11px; }
-.search { display: flex; align-items: center; gap: 10px; height: 52px; margin-top: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 0 14px; }
-.search input { min-width: 0; flex: 1; border: 0; background: transparent; outline: 0; }
-.listTitle { display: block; margin: 17px 0 9px; color: var(--sub); font-size: 11px; }
-.people { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
-.people button { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 13px; background: #fff; color: var(--text); cursor: pointer; padding: 13px; text-align: left; }
-.people button span strong, .people button span small { display: block; }.people button span strong { margin-bottom: 4px; font-size: 11px; }.people button span small { color: var(--muted); font-size: 8px; }
-.people button i { display: none; color: var(--blue); }.people button.selected { border-color: #9ac7ff; background: var(--blue-faint); }.people button.selected i { display: flex; }
-@media (max-width: 700px) { .people { grid-template-columns: 1fr; } }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.heading h2 { margin: 0 0 7px; font-size: 23px; letter-spacing: -.035em; }
+.heading p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.picker { position: relative; z-index: 8; }
+.search { display: flex; min-height: 64px; align-items: center; gap: 12px; border: 1px solid #cfd8e3; border-radius: 17px; background: #fbfcfd; padding: 10px 20px; color: var(--muted); cursor: text; transition: .18s ease; }
+.search:focus-within { border-color: #79b1fa; background: #fff; box-shadow: 0 0 0 4px rgb(49 130 246 / 9%); }
+.search > svg { width: 21px; height: 21px; flex: 0 0 auto; }
+.value { display: flex; min-width: 0; flex: 1; flex-wrap: wrap; align-items: center; gap: 7px; }
+.search input { width: auto; min-width: 150px; flex: 1 1 150px; border: 0; background: transparent; color: var(--text); font-size: 17px; outline: 0; }
+.search input::placeholder { color: #a3acb7; }
+.chips { display: contents; }
+.chips:empty { display: none; }
+.chips button { display: flex; min-height: 34px; align-items: center; gap: 7px; border: 0; border-radius: 10px; background: #eaf4ff; color: var(--blue-dark); cursor: pointer; padding: 0 10px; font-size: 12px; font-weight: 800; }
+.chips button span { color: #7595b8; font-size: 15px; font-weight: 500; }
+.popover { position: absolute; z-index: 20; top: calc(100% + 9px); right: 0; left: 0; border: 1px solid #d7e0ea; border-radius: 16px; background: #fff; padding: 9px; box-shadow: 0 24px 55px rgb(31 50 80 / 18%); }
+.listTitle { display: block; padding: 5px 7px 7px; color: var(--sub); font-size: 11px; }
+.people { display: flex; max-height: 260px; flex-direction: column; gap: 2px; overflow-y: auto; }
+.people button { display: grid; min-height: 52px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 11px; border: 0; border-radius: 10px; background: #fff; color: var(--text); cursor: pointer; padding: 6px 12px; text-align: left; transition: .18s ease; }
+.people button:hover { background: var(--blue-faint); }
+.people button.selected { background: #eef6ff; }
+.people button.active { box-shadow: inset 0 0 0 2px #79b1fa; }
+.people button span strong, .people button span small { display: block; }
+.people button span strong { margin-bottom: 3px; font-size: 13px; }
+.people button span small { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.people button i { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: #dfe4e9; color: #fff; }
+.people button.selected i { background: var(--blue); }
+.people button i svg { width: 13px; height: 13px; stroke-width: 2.5; }
+.empty { margin: 0; padding: 24px 12px; color: var(--muted); font-size: 12px; text-align: center; }
+
+@media (max-width: 560px) {
+  .heading h2 { font-size: 20px; }
+  .heading p { font-size: 12px; }
+  .search { padding-right: 14px; padding-left: 14px; }
+  .search input { min-width: 110px; font-size: 15px; }
+}

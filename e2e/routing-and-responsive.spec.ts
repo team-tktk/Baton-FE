@@ -20,3 +20,63 @@ test('keeps the app within the viewport and the workspace columns on desktop', a
     expect(documentBox?.x).toBeLessThan(chatBox?.x ?? 0)
   }
 })
+
+test('matches the setup flow layout and recipient interaction', async ({ page, viewport }) => {
+  await page.goto('/handovers/new/setup')
+
+  await expect(page.getByRole('button', { name: '홈으로' })).toBeVisible()
+  await expect(page.getByText('1 / 6')).toBeVisible()
+  await expect(page.getByRole('button', { name: '정하늘 선택 해제' })).toBeVisible()
+  await expect(page.getByRole('listbox', { name: '멤버 목록' })).toBeHidden()
+
+  const recipientCombobox = page.getByRole('combobox', { name: '이름 또는 팀 검색' })
+  await recipientCombobox.click()
+  await expect(page.getByRole('listbox', { name: '멤버 목록' })).toBeVisible()
+  await expect(page.getByRole('option')).toHaveCount(8)
+
+  if ((viewport?.width ?? 0) >= 1200) {
+    const setupCard = await page.getByRole('region', { name: '인수인계 기본 정보' }).boundingBox()
+    expect(setupCard?.width).toBeGreaterThan(1000)
+
+    const setupHeading = page.getByRole('heading', { name: '누구에게 어떤 업무를 넘기나요?' })
+    const setupHeadingStyle = await setupHeading.evaluate((element) => {
+      const style = getComputedStyle(element)
+
+      return {
+        fontSize: style.fontSize,
+        fontWeight: style.fontWeight,
+        lineHeight: style.lineHeight,
+      }
+    })
+
+    expect(setupHeadingStyle).toEqual({
+      fontSize: '54px',
+      fontWeight: '700',
+      lineHeight: '62.64px',
+    })
+    await expect(page.getByRole('heading', { name: '업무를 받는 사람' })).toHaveCSS('font-weight', '700')
+    await expect(page.getByRole('heading', { name: '넘길 업무' })).toHaveCSS('font-weight', '700')
+
+    const progressbar = page.getByRole('progressbar', { name: '기본 정보 단계' })
+    const trackBox = await progressbar.locator('span').boundingBox()
+    const fillBox = await progressbar.locator('i').boundingBox()
+
+    expect(trackBox?.width).toBeCloseTo(440, 0)
+    expect(trackBox?.height).toBe(2)
+    expect(fillBox?.width).toBeCloseTo(440 / 6, 0)
+
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: '업무 자료 올리기' }).click()
+    await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
+    const uploadHeadingSize = await page.getByRole('heading', { name: /업무 파일을 올려주세요/ }).evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))
+    expect(Number.parseFloat(setupHeadingStyle.fontSize)).toBeGreaterThan(uploadHeadingSize)
+    expect(uploadHeadingSize).toBeLessThanOrEqual(46)
+    return
+  }
+
+  while (await page.locator('[role="option"][aria-selected="false"]').count()) {
+    await page.locator('[role="option"][aria-selected="false"]').first().click()
+  }
+  await expect(page.getByText('8명 선택')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport?.width ?? 390)
+})

@@ -100,8 +100,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
 
   return (
     <>
-      <AppHeader />
-      {step !== 'analyzing' && <HandoverProgress current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : step === 'document' ? 4 : 5} />}
+      {step === 'setup' ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : <AppHeader />}
+      {step !== 'analyzing' && <HandoverProgress compact={step === 'setup'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : step === 'document' ? 4 : 5} total={step === 'setup' ? 6 : 5} />}
       {step === 'analyzing' && <main className={styles.main}><AnalysisProgress fileCount={state.attachments.length} onComplete={analysisComplete} /></main>}
       {step === 'interview' && (() => {
         const currentStep = Number(params.step)
@@ -113,11 +113,11 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} confirmations={state.confirmations} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onBack={() => navigate('/handovers/new/interview/3')} onConfirm={(criterionId, value) => dispatch({ type: 'criterion/confirmed', criterionId, value })} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onFeedback={showToast} onHome={() => navigate('/')} />}
       {(step === 'setup' || step === 'upload') && (
-      <main className={styles.main}>
+      <main className={step === 'setup' ? styles.setupMain : styles.main}>
         {step === 'setup' ? (
           <section>
             <header className={styles.heading}><div className={styles.kicker}><Icon name="users" /> 인수인계 하기 · 시작</div><h1>누구에게 어떤 업무를 넘기나요?</h1><p>받는 사람과 대표 업무를 알려주면 AI가 필요한 자료를 더 정확히 찾아요.</p></header>
-            <div className={styles.card}>
+            <div aria-label="인수인계 기본 정보" className={styles.card} role="region">
               <RecipientPicker members={members} selectedIds={state.recipientIds} query={query} onQueryChange={setQuery} onToggle={(recipientId) => dispatch({ type: 'recipient/toggled', recipientId })} />
               <WorkScopeEditor items={state.workItems} onAdd={() => dispatch({ type: 'work/added' })} onChange={(index, value) => dispatch({ type: 'work/changed', index, value })} onRemove={(index) => dispatch({ type: 'work/removed', index })} />
             </div>

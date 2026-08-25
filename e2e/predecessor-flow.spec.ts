@@ -5,11 +5,11 @@ test('creates, confirms, and delivers a handover', async ({ page }) => {
   await page.getByRole('button', { name: /인수인계 하기/ }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/setup$/)
 
-  const recipient = page.getByRole('button', { name: /정하늘/ })
-  await recipient.click()
+  await page.getByRole('button', { name: '정하늘 선택 해제' }).click()
   await page.getByRole('button', { name: /업무 자료 올리기/ }).click()
   await expect(page.getByRole('status')).toContainText('받는 사람과 업무를 한 개 이상')
-  await recipient.click()
+  await page.getByRole('combobox', { name: '이름 또는 팀 검색' }).click()
+  await page.getByRole('option', { name: /정하늘/ }).click()
   await page.getByRole('button', { name: /업무 자료 올리기/ }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
 
