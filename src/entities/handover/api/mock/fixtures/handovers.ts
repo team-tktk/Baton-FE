@@ -147,7 +147,7 @@ export const receivedHandoverFixtures: HandoverSummary[] = [
     team: '운영지원팀',
     scope: '월간 정산 · 세금계산서 · 비용 보고',
     date: '8월 18일',
-    status: 'approved',
+    status: 'completed',
     statusLabel: '확인 완료',
     tone: 'green',
     tasks: 4,

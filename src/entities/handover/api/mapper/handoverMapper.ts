@@ -9,7 +9,7 @@ const STATUS_BY_DTO: Record<HandoverStatusDto, HandoverStatus> = {
   PENDING_REVIEW: 'submitted',
   REVISION_REQUESTED: 'revision-requested',
   APPROVED: 'approved',
-  COMPLETED: 'approved',
+  COMPLETED: 'completed',
 }
 
 export function toHandoverParticipant(member: MemberResponse): HandoverParticipant {

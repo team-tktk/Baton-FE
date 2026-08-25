@@ -6,8 +6,8 @@ import { Icon } from '@/shared/ui/icon'
 
 import styles from './HandoverInbox.module.css'
 
-type Filter = 'all' | 'unread' | 'in-progress' | 'approved'
-const tabs: Array<{ filter: Filter; label: string }> = [{ filter: 'all', label: '전체' }, { filter: 'unread', label: '확인 전' }, { filter: 'in-progress', label: '진행 중' }, { filter: 'approved', label: '완료' }]
+type Filter = 'all' | 'unread' | 'in-progress' | 'completed'
+const tabs: Array<{ filter: Filter; label: string }> = [{ filter: 'all', label: '전체' }, { filter: 'unread', label: '확인 전' }, { filter: 'in-progress', label: '진행 중' }, { filter: 'completed', label: '완료' }]
 const matches = (status: HandoverStatus, filter: Filter) => filter === 'all' || (filter === 'unread' ? status === 'submitted' : status === filter)
 
 export function HandoverInbox({ handovers, onOpen }: { handovers: HandoverSummary[]; onOpen: (handover: HandoverSummary) => void }) {
