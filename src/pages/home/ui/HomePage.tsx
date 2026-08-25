@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { AuthModal, ProfileMenu, useAuth } from '@/features/auth'
+import { AuthModal, ProfileMenu, SignupModal, useAuth } from '@/features/auth'
 import { Icon, type IconName } from '@/shared/ui/icon'
 import { useToast } from '@/shared/ui/toast'
 
@@ -13,20 +13,27 @@ const roles: Array<{ icon: IconName; kicker: string; title: string; description:
   { icon: 'users', kicker: '진행 상황을 보고 싶나요?', title: '인수인계 확인하기', description: '빠진 업무와 전달 상태를 한눈에 확인해요', path: '/reviews' },
 ]
 
+type AuthMode = 'login' | 'signup'
+
 export function HomePage() {
   const navigate = useNavigate()
   const { sessionCheckFailed, status, user } = useAuth()
   const { showToast } = useToast()
-  const [authOpen, setAuthOpen] = useState(false)
+  const [authMode, setAuthMode] = useState<AuthMode | null>(null)
+  const [loginEmail, setLoginEmail] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
   const authTriggerRef = useRef<HTMLElement | null>(null)
 
-  const openAuth = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const openAuth = (event: React.MouseEvent<HTMLButtonElement>, mode: AuthMode) => {
     authTriggerRef.current = event.currentTarget
-    setAuthOpen(true)
+    setAuthMode(mode)
   }
 
-  const showSignupNotice = () => showToast('회원가입은 준비 중이에요.')
+  const completeSignup = (email: string) => {
+    setLoginEmail(email)
+    setAuthMode('login')
+    showToast('회원가입이 완료됐어요. 로그인해 주세요.')
+  }
 
   return (
     <main className={styles.main}>
@@ -40,8 +47,8 @@ export function HomePage() {
             <span aria-label="로그인 상태 확인 중" className={styles.authLoading} role="status" />
           ) : status === 'anonymous' ? (
             <>
-              <button className={styles.login} type="button" onClick={openAuth}>로그인</button>
-              <button className={styles.signup} type="button" onClick={showSignupNotice}>회원가입</button>
+              <button className={styles.login} type="button" onClick={(event) => openAuth(event, 'login')}>로그인</button>
+              <button className={styles.signup} type="button" onClick={(event) => openAuth(event, 'signup')}>회원가입</button>
             </>
           ) : user ? (
             <>
@@ -67,7 +74,22 @@ export function HomePage() {
           ))}
         </section>
       </section>
-      <AuthModal open={authOpen} returnFocusRef={authTriggerRef} onClose={() => setAuthOpen(false)} onSignup={showSignupNotice} />
+      <AuthModal
+        key={`${authMode}-${loginEmail}`}
+        initialEmail={loginEmail}
+        open={authMode === 'login'}
+        returnFocusRef={authTriggerRef}
+        onClose={() => setAuthMode(null)}
+        onSignup={() => setAuthMode('signup')}
+      />
+      <SignupModal
+        key={authMode === 'signup' ? 'signup-open' : 'signup-closed'}
+        open={authMode === 'signup'}
+        returnFocusRef={authTriggerRef}
+        onClose={() => setAuthMode(null)}
+        onLogin={() => setAuthMode('login')}
+        onSuccess={completeSignup}
+      />
     </main>
   )
 }

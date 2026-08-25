@@ -6,6 +6,14 @@ export interface LoginInput {
   password: string
 }
 
+export interface SignupInput {
+  email: string
+  password: string
+  name: string
+  team: string
+  position: string
+}
+
 export const authApi = {
   getCurrentUser() {
     return apiRequest<User>('/api/v1/auth/me')
@@ -18,5 +26,11 @@ export const authApi = {
   },
   logout() {
     return apiRequest<void>('/api/v1/auth/logout', { method: 'POST' })
+  },
+  signup(input: SignupInput) {
+    return apiRequest<User>('/api/v1/auth/signup', {
+      body: JSON.stringify(input),
+      method: 'POST',
+    })
   },
 }

@@ -3,6 +3,7 @@
 .eyebrow { display: block; margin: -6px 0 11px; color: var(--blue-dark); font-size: 11px; font-weight: 850; letter-spacing: .05em; }
 .description { margin: 0 0 27px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .form { display: flex; flex-direction: column; gap: 16px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .form label { display: flex; flex-direction: column; gap: 8px; color: #364152; font-size: 12px; font-weight: 750; }
 .form input { width: 100%; height: 50px; border: 1px solid #dfe4ea; border-radius: 13px; background: #fbfcfd; color: var(--text); outline: 0; padding: 0 15px; font-size: 14px; font-weight: 500; }
 .form input:focus { border-color: #8bbdff; background: #fff; box-shadow: 0 0 0 3px rgb(49 130 246 / 9%); }
@@ -12,3 +13,4 @@
 .submit:disabled { cursor: wait; opacity: .65; }
 .switcher { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 22px; color: var(--muted); font-size: 12px; }
 .switcher button { border: 0; background: transparent; color: var(--blue-dark); cursor: pointer; padding: 4px; font-weight: 800; }
+@media (max-width: 480px) { .row { grid-template-columns: 1fr; } }

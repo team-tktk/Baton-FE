@@ -7,15 +7,16 @@ import { useAuth } from '../model/useAuth'
 import styles from './AuthModal.module.css'
 
 interface AuthModalProps {
+  initialEmail?: string
   open: boolean
   onClose: () => void
   onSignup: () => void
   returnFocusRef: RefObject<HTMLElement | null>
 }
 
-export function AuthModal({ onClose, onSignup, open, returnFocusRef }: AuthModalProps) {
+export function AuthModal({ initialEmail = '', onClose, onSignup, open, returnFocusRef }: AuthModalProps) {
   const { login } = useAuth()
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(initialEmail)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
