@@ -10,7 +10,7 @@ interface ReviewWorkspaceProps {
   onApprove: () => void | Promise<void>
   onComment: (comment: string) => void | Promise<void>
   onRevision: () => void | Promise<void>
-  onAttachmentOpen?: (attachment: HandoverAttachment) => void
+  onAttachmentOpen: (attachment: HandoverAttachment) => void
 }
 
 export function ReviewWorkspace(props: ReviewWorkspaceProps) {

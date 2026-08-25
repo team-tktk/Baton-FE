@@ -8,40 +8,6 @@
 .workspaceTools > button { display: flex; min-height: 42px; align-items: center; gap: 8px; border: 0; border-radius: 12px; background: var(--blue); color: #fff; cursor: pointer; padding: 0 15px; font-size: 12px; font-weight: 800; box-shadow: 0 9px 22px rgba(49, 130, 246, .18); }
 .workspaceTools > button svg { width: 17px; height: 17px; }
 .workspaceDocument { width: min(1080px, 100%); margin: 0 auto; }
-.receivedDocument { border: 1px solid var(--line); border-radius: 22px; background: #fff; padding: 54px 62px; box-shadow: 0 14px 38px rgba(31, 50, 80, .04); }
-.receivedDocument > header { border-bottom: 1px solid var(--line); padding-bottom: 34px; }
-.receivedDocument > header p { margin: 0 0 14px; color: var(--muted); font-size: 12px; font-weight: 750; }
-.receivedDocument > header h1 { margin: 0 0 13px; font-size: 44px; letter-spacing: -.06em; }
-.receivedDocument > header span { color: var(--sub); font-size: 15px; }
-.documentMeta { display: grid; grid-template-columns: 1fr 1fr; margin: 0; border-bottom: 1px solid var(--line); padding: 25px 0; gap: 18px 40px; }
-.documentMeta > div { display: grid; grid-template-columns: 86px 1fr; align-items: baseline; }
-.documentMeta dt { color: var(--muted); font-size: 11px; }
-.documentMeta dd { margin: 0; font-size: 13px; font-weight: 750; }
-.receivedDocument > section { padding-top: 38px; }
-.receivedDocument h2 { margin: 0 0 16px; font-size: 24px; letter-spacing: -.04em; }
-.receivedDocument > section > p, .receivedDocument li { color: var(--sub); font-size: 14px; line-height: 1.75; }
-.receivedDocument ul { margin: 0; border-radius: 14px; background: #f7f8fa; padding: 20px 24px 20px 42px; }
-.taskTable { border-top: 1px solid var(--line); }
-.taskRow { display: grid; grid-template-columns: 90px 210px minmax(0, 1fr); align-items: center; gap: 18px; border-bottom: 1px solid var(--line); padding: 20px 0; }
-.taskRow strong { font-size: 14px; }
-.taskRow p { margin: 0; color: var(--sub); font-size: 12px; line-height: 1.55; }
-.tableFrame { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; }
-.receivedDocument table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.receivedDocument th, .receivedDocument td { border-bottom: 1px solid var(--line); padding: 13px 15px; text-align: left; }
-.receivedDocument th { background: #f7f8fa; color: var(--muted); font-size: 10px; }
-.receivedDocument tr:last-child td { border-bottom: 0; }
-.receivedAttachments { margin-top: 18px; border: 1px solid var(--line); border-radius: 20px; background: #fff; padding: 24px; }
-.receivedAttachments > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.receivedAttachments h2 { margin: 0 0 5px; font-size: 18px; }
-.receivedAttachments p { margin: 0; color: var(--muted); font-size: 11px; }
-.receivedAttachments > header > span { color: var(--blue-dark); font-size: 12px; font-weight: 800; }
-.receivedAttachments > button { display: grid; width: 100%; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 13px; border: 0; border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; padding: 12px; text-align: left; }
-.receivedAttachments > button:hover { background: #f5f8fc; }
-.attachmentIcon { display: grid; width: 38px; height: 38px; place-items: center; border-radius: 11px; background: var(--blue-soft); color: var(--blue); }
-.attachmentIcon svg { width: 18px; }
-.receivedAttachments strong, .receivedAttachments small { display: block; }
-.receivedAttachments strong { margin-bottom: 4px; font-size: 12px; }
-.receivedAttachments small { color: var(--muted); font-size: 10px; }
 .aiScrim { position: fixed; z-index: 70; inset: 0; border: 0; background: rgba(23, 34, 48, .16); cursor: default; backdrop-filter: blur(2px); }
 .aiPanel { position: fixed; z-index: 80; top: 0; right: 0; display: flex; width: min(440px, calc(100vw - 40px)); height: 100vh; flex-direction: column; overflow: hidden; border-left: 1px solid #d8e6f7; background: #fff; box-shadow: -24px 0 60px rgba(31, 50, 80, .16); transform: translateX(105%); transition: transform .24s ease; }
 .aiPanelOpen { transform: translateX(0); }
@@ -70,4 +36,4 @@
 .chatPage > header span { color: var(--blue-dark); font-size: 10px; font-weight: 850; }
 .chatPage h1 { margin: 8px 0; font-size: clamp(28px, 5vw, 38px); letter-spacing: -.05em; }
 .chatPage section { min-height: 620px; }
-@media (max-width: 760px) { .workspace { width: calc(100% - 28px); padding-top: 24px; }.workspaceHeader { grid-template-columns: 1fr auto; gap: 14px; }.workspaceTitle { grid-column: 1 / -1; grid-row: 2; }.workspaceTools { grid-column: 2; grid-row: 1; }.workspaceTools > span { display: none; }.receivedDocument { padding: 32px 24px; }.receivedDocument > header h1 { font-size: 36px; }.documentMeta { grid-template-columns: 1fr; }.taskRow { grid-template-columns: 85px 1fr; gap: 10px; }.taskRow p { grid-column: 1 / -1; } }
+@media (max-width: 760px) { .workspace { width: calc(100% - 28px); padding-top: 24px; }.workspaceHeader { grid-template-columns: 1fr auto; gap: 14px; }.workspaceTitle { grid-column: 1 / -1; grid-row: 2; }.workspaceTools { grid-column: 2; grid-row: 1; }.workspaceTools > span { display: none; } }
