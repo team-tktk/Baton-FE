@@ -18,18 +18,6 @@ interface HandoverDraftEditorProps {
   onSubmit: () => void
 }
 
-const scheduleRows = [
-  ['매일', '주문·배송 이상 확인', '오전 10시 전 확인'],
-  ['매주 월요일', '주문 현황 집계', '반품과 문의 포함해 공유'],
-  ['매월 말', '행사 실적 정리', '다음 달 개선점 기록'],
-]
-
-const accessRows = [
-  ['운영 어드민', '주문 조회·행사 설정', '사용 가능'],
-  ['공유 드라이브', '운영팀 자료 편집', '사용 가능'],
-  ['배송업체 포털', '신청·반품 조회', '초대 필요'],
-]
-
 function MockTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }) {
   return <div className={styles.tableWrap}><table><thead><tr>{headers.map((header) => <th key={header}>{header}</th>)}</tr></thead><tbody>{rows.map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>
 }
@@ -76,8 +64,8 @@ export function HandoverDraftEditor(props: HandoverDraftEditorProps) {
       <section className={styles.section}><h2>업무 기준과 예외</h2><p>담당자가 바뀌어도 같은 판단을 내리기 위한 기준입니다.</p><ul className={styles.bullets}>{document.criteria.map((criterion) => <li key={criterion.id}>{edit(`${criterion.title} 내용`, `criterion.${criterion.id}`, criterion.defaultText)}</li>)}</ul></section>
       <section className={styles.section}><h2>주요 관계자</h2><p>업무별로 도움을 받을 사람입니다.</p><MockTable headers={['이름', '소속', '도움을 받을 내용']} rows={peopleRows} /></section>
       <section className={styles.section}><h2>사용 도구와 자료</h2><MockTable headers={['파일', '용도']} rows={toolRows} /></section>
-      <section className={styles.section}><h2>업무 일정</h2><p>반복 시점과 완료 기준을 함께 확인합니다.</p><MockTable headers={['주기', '업무', '완료 기준']} rows={scheduleRows} /></section>
-      <section className={styles.section}><h2>접근 권한과 계정</h2><p>업무 시작 전에 필요한 시스템 권한입니다.</p><MockTable headers={['도구', '필요 권한', '상태']} rows={accessRows} /></section>
+      <section className={styles.section}><h2>업무 일정</h2><p>반복 시점과 완료 기준을 함께 확인합니다.</p><MockTable headers={['주기', '업무', '완료 기준']} rows={document.schedule.map((row) => [row.cycle, row.task, row.detail])} /></section>
+      <section className={styles.section}><h2>접근 권한과 계정</h2><p>업무 시작 전에 필요한 시스템 권한입니다.</p><MockTable headers={['도구', '필요 권한', '상태']} rows={document.accessAccounts.map((row) => [row.tool, row.permission, row.status])} /></section>
       <section className={styles.section}><h2>첫 주 체크리스트</h2><ul className={styles.checklist}>{document.checklist.map((item, index) => <li key={`${item}-${index}`}><span>□</span>{edit(`체크리스트 ${index + 1}`, `checklist.${index}`, item)}</li>)}</ul></section>
     </section>
     <footer className={styles.actions}><button type="button" disabled={props.pending} onClick={props.onSubmit}>{props.returningFromComplete ? '수정 내용 저장하기' : '제출하기'} <Icon name="arrow" /></button></footer>

@@ -76,6 +76,23 @@ export interface HandoverPerson {
   responsibility: string
 }
 
+export interface HandoverScheduleRow {
+  cycle: string
+  task: string
+  detail: string
+}
+
+export interface HandoverAccessRow {
+  tool: string
+  permission: string
+  status: string
+}
+
+export interface HandoverConfirmedCriterion {
+  label: string
+  value: string
+}
+
 export interface HandoverDocument {
   title: string
   intro: string
@@ -90,6 +107,9 @@ export interface HandoverDocument {
   people: HandoverPerson[]
   tools: string[]
   checklist: string[]
+  schedule: HandoverScheduleRow[]
+  accessAccounts: HandoverAccessRow[]
+  confirmedCriteria: HandoverConfirmedCriterion[]
 }
 
 export interface ReviewComment {

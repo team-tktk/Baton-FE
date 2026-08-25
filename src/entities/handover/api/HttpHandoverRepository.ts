@@ -7,6 +7,7 @@ import type {
   Handover,
   HandoverAnswer,
   HandoverAttachment,
+  HandoverDocument,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -15,10 +16,19 @@ import type {
   ReviewSummary,
   UpdateHandoverInput,
 } from '../model/types'
-import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, MemberPageResponse, QuestionAnswerRequest } from './dto/types'
+import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, HandoverDraftResponse, MemberPageResponse, QuestionAnswerRequest, UpdateDraftRequest } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
+import { toDraftContent, toHandoverDocument } from './mapper/documentMapper'
 import { toAnalysisJob, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
+
+function formatUpdatedAt(value: string | undefined) {
+  if (!value) return ''
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime())
+    ? ''
+    : `${parsed.getFullYear()}. ${String(parsed.getMonth() + 1).padStart(2, '0')}. ${String(parsed.getDate()).padStart(2, '0')}.`
+}
 
 /**
  * 실제 API로 옮긴 기능만 서버를 호출하고, 아직 옮기지 않은 기능은 목업에 위임한다.
@@ -126,6 +136,29 @@ export class HttpHandoverRepository implements HandoverRepository {
 
   async completeQuestions(id: HandoverId): Promise<void> {
     await apiRequest<unknown>(`/api/v1/handovers/${id}/questions/complete`, { method: 'POST' })
+  }
+
+  async getDocument(id: HandoverId): Promise<HandoverDocument> {
+    const [draft, handover] = await Promise.all([
+      apiRequest<HandoverDraftResponse>(`/api/v1/handovers/${id}/document`),
+      apiRequest<HandoverResponse>(`/api/v1/handovers/${id}`),
+    ])
+    const recipient = handover.participants.find((participant) => participant.role === 'RECIPIENT')
+    return toHandoverDocument(draft.content ?? {}, {
+      title: handover.title?.trim() || '업무 인수인계',
+      intro: `${handover.owner.name}님의 업무를 ${recipient?.name ?? '인수자'}님에게 전달합니다.`,
+      scope: handover.workScopes.map((scope) => scope.title).filter(Boolean).join(' · '),
+      statusLabel: 'AI 초안 · 확인 중',
+      updatedAtLabel: formatUpdatedAt(draft.updatedAt),
+    })
+  }
+
+  async saveDocument(id: HandoverId, document: HandoverDocument): Promise<void> {
+    const body: UpdateDraftRequest = { content: toDraftContent(document) }
+    await apiRequest<HandoverDraftResponse>(`/api/v1/handovers/${id}/document`, {
+      body: JSON.stringify(body),
+      method: 'PATCH',
+    })
   }
 
   listReceivedHandovers(): Promise<HandoverSummary[]> {

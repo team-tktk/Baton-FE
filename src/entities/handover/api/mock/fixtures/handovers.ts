@@ -102,6 +102,17 @@ export const primaryHandoverFixture: Handover = {
       '전날 주문 누락과 배송 지연 건 확인',
       '주요 관계자에게 담당자 변경 안내',
     ],
+    schedule: [
+      { cycle: '매일', task: '주문·배송 이상 확인', detail: '오전 10시 전 확인' },
+      { cycle: '매주 월요일', task: '주문 현황 집계', detail: '반품과 문의 포함해 공유' },
+      { cycle: '매월 말', task: '행사 실적 정리', detail: '다음 달 개선점 기록' },
+    ],
+    accessAccounts: [
+      { tool: '운영 어드민', permission: '주문 조회·행사 설정', status: '사용 가능' },
+      { tool: '공유 드라이브', permission: '운영팀 자료 편집', status: '사용 가능' },
+      { tool: '배송업체 포털', permission: '신청·반품 조회', status: '초대 필요' },
+    ],
+    confirmedCriteria: [],
   },
   review: {
     checklist: [

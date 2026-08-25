@@ -7,6 +7,7 @@ import type {
   Handover,
   HandoverAnswer,
   HandoverAttachment,
+  HandoverDocument,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -151,6 +152,16 @@ export class MockHandoverRepository implements HandoverRepository {
     if (handover.interviewQuestions.some((question) => question.status === 'pending')) {
       throw new RepositoryError('VALIDATION', '아직 답하지 않은 질문이 있어요.')
     }
+  }
+
+  async getDocument(id: HandoverId): Promise<HandoverDocument> {
+    return clone((await this.getMutable(id)).document)
+  }
+
+  async saveDocument(id: HandoverId, document: HandoverDocument): Promise<void> {
+    const handover = await this.getMutable(id)
+    handover.document = clone(document)
+    this.syncSummaries(handover)
   }
 
   async updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover> {
