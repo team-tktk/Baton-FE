@@ -5,6 +5,7 @@ import type {
   CreateHandoverInput,
   Handover,
   HandoverAnswer,
+  HandoverAttachment,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -12,9 +13,9 @@ import type {
   ReviewSummary,
   UpdateHandoverInput,
 } from '../model/types'
-import type { CreateHandoverRequest, HandoverResponse, MemberPageResponse } from './dto/types'
+import type { CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, MemberPageResponse } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
-import { toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
+import { toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
 
 /**
@@ -54,6 +55,31 @@ export class HttpHandoverRepository implements HandoverRepository {
       : this.members.find((member) => member.id === input.recipientIds[0])
         ?? { id: input.recipientIds[0], name: '받는 사람', position: '', team: '' }
     return this.pending.seedDraft(created.id, seedRecipient, workItems)
+  }
+
+  async listFiles(id: HandoverId): Promise<HandoverAttachment[]> {
+    const files = await apiRequest<FileMetadataResponse[]>(`/api/v1/handovers/${id}/files`)
+    return files.map(toHandoverAttachment)
+  }
+
+  async uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment> {
+    const form = new FormData()
+    form.append('file', file)
+    const uploaded = await apiRequest<FileUploadResponse>(`/api/v1/handovers/${id}/files`, {
+      body: form,
+      method: 'POST',
+    })
+    return {
+      id: uploaded.sourceDocumentId,
+      name: uploaded.fileName,
+      mimeType: file.type,
+      size: file.size,
+      status: toAttachmentStatus(uploaded.status),
+    }
+  }
+
+  async deleteFile(id: HandoverId, fileId: string): Promise<void> {
+    await apiRequest<void>(`/api/v1/handovers/${id}/files/${fileId}`, { method: 'DELETE' })
   }
 
   listReceivedHandovers(): Promise<HandoverSummary[]> {

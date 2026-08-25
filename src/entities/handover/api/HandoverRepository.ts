@@ -2,6 +2,7 @@ import type {
   CreateHandoverInput,
   Handover,
   HandoverAnswer,
+  HandoverAttachment,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -15,6 +16,9 @@ export interface HandoverRepository {
   listReceivedHandovers(): Promise<HandoverSummary[]>
   getHandover(id: HandoverId): Promise<Handover>
   createDraft(input: CreateHandoverInput): Promise<Handover>
+  listFiles(id: HandoverId): Promise<HandoverAttachment[]>
+  uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment>
+  deleteFile(id: HandoverId, fileId: string): Promise<void>
   updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover>
   submitHandover(id: HandoverId): Promise<Handover>
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer>

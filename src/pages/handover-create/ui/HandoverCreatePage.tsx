@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import type { Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
-import { AnalysisProgress, HandoverProgress, InterviewWizard, MemberPicker, MockFileUploader, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
+import { AnalysisProgress, HandoverProgress, InterviewWizard, FileUploader, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
@@ -38,14 +38,27 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     return () => { ignore = true }
   }, [repository, showToast, step])
 
+  const draftId = state.draftId
+  const refreshFiles = useCallback(async () => {
+    if (!draftId) return
+    try {
+      dispatch({ type: 'attachments/loaded', attachments: await repository.listFiles(draftId) })
+    } catch {
+      showToast('파일 목록을 불러오지 못했어요')
+    }
+  }, [dispatch, draftId, repository, showToast])
+
   useEffect(() => {
-    if (step !== 'setup' || state.attachments.length !== 0) return
-    let ignore = false
-    repository.getHandover('handover-moastore-operations').then((handover) => {
-      if (!ignore) dispatch({ type: 'attachments/loaded', attachments: handover.attachments })
-    })
-    return () => { ignore = true }
-  }, [dispatch, repository, state.attachments.length, step])
+    if (step !== 'upload') return
+    void refreshFiles()
+  }, [refreshFiles, step])
+
+  // 업로드 직후에는 서버가 텍스트를 추출하는 중이라, 완료될 때까지만 목록을 다시 읽는다.
+  useEffect(() => {
+    if (step !== 'upload' || !state.attachments.some((file) => file.status === 'processing')) return
+    const timer = setInterval(() => { void refreshFiles() }, 2000)
+    return () => clearInterval(timer)
+  }, [refreshFiles, state.attachments, step])
 
   useEffect(() => {
     if (step !== 'interview') return
@@ -69,6 +82,31 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       navigate('/handovers/new/setup', { replace: true })
     }
   }, [navigate, showToast, state.draftId, step])
+
+  const uploadFiles = async (files: File[]) => {
+    if (!draftId) return
+    setPending(true)
+    try {
+      for (const file of files) {
+        try {
+          dispatch({ type: 'attachment/added', attachment: await repository.uploadFile(draftId, file) })
+        } catch {
+          showToast(`${file.name} 업로드에 실패했어요`)
+        }
+      }
+      await refreshFiles()
+    } finally { setPending(false) }
+  }
+
+  const removeFile = async (attachmentId: string) => {
+    if (!draftId) return
+    try {
+      await repository.deleteFile(draftId, attachmentId)
+      dispatch({ type: 'attachment/removed', attachmentId })
+    } catch {
+      showToast('파일을 삭제하지 못했어요. 처리 중인 파일은 잠시 후 지울 수 있어요')
+    }
+  }
 
   const analysisComplete = useCallback(() => navigate('/handovers/new/interview/1'), [navigate])
 
@@ -128,7 +166,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
         ) : (
           <section>
             <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 파일 모으기</div><h1>최서윤님의 업무 파일을 올려주세요</h1><p>업무에 사용하던 자료를 올리면 AI가 인수인계 초안을 만들어드려요.</p></header>
-            <MockFileUploader attachments={state.attachments} onAdd={(attachment) => dispatch({ type: 'attachment/added', attachment })} onReject={showToast} onRemove={(attachmentId) => dispatch({ type: 'attachment/removed', attachmentId })} />
+            <FileUploader attachments={state.attachments} uploading={pending} onReject={showToast} onRemove={(attachmentId) => void removeFile(attachmentId)} onSelect={(files) => void uploadFiles(files)} />
             <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button disabled={state.attachments.length === 0} onClick={() => navigate('/handovers/new/analyzing')}>인수인계 초안 만들기</Button></footer>
           </section>
         )}

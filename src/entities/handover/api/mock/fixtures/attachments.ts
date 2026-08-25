@@ -6,17 +6,20 @@ export const defaultAttachmentFixtures = [
     name: '가을_할인전_준비_메모.docx',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     size: 2_400_000,
+    status: 'ready',
   },
   {
     id: 'attachment-weekly-orders',
     name: '주간_주문현황_양식.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     size: 840_000,
+    status: 'ready',
   },
   {
     id: 'attachment-incidents',
     name: '문제상황_대응방법.pdf',
     mimeType: 'application/pdf',
     size: 1_800_000,
+    status: 'ready',
   },
 ] satisfies HandoverAttachment[]

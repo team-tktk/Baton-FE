@@ -9,6 +9,7 @@ const attachment: HandoverAttachment = {
   name: '가을_할인전_준비_메모.docx',
   mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
   size: 2_400_000,
+  status: 'ready',
 }
 
 describe('createHandoverReducer', () => {

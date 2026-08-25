@@ -1,5 +1,5 @@
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -137,26 +137,67 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(picker(RECIPIENTS).queryByRole('listbox')).not.toBeInTheDocument()
   })
 
-  it('loads setup members and starter attachments only once', async () => {
+  it('loads members once and reads the draft files on the upload step', async () => {
     const user = userEvent.setup()
     const repository = new MockHandoverRepository()
     const listMembers = vi.spyOn(repository, 'listMembers')
-    const getHandover = vi.spyOn(repository, 'getHandover')
+    const listFiles = vi.spyOn(repository, 'listFiles')
 
     const router = renderFlow('/handovers/new/setup', repository)
 
     await pickMember(user, RECIPIENTS, /정하늘/)
+    expect(listFiles).not.toHaveBeenCalled()
+
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
 
     await waitFor(() => {
       expect(router.state.location.pathname).toBe('/handovers/new/upload')
     })
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+    expect(screen.getAllByText('업로드 완료')).toHaveLength(3)
 
-    await waitFor(() => {
-      expect(listMembers).toHaveBeenCalledTimes(1)
-      expect(getHandover).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(listMembers).toHaveBeenCalledTimes(1))
+    expect(listFiles).toHaveBeenCalledWith('handover-moastore-operations')
+  })
+
+  it('uploads a selected file and removes it through the repository', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    const uploadFile = vi.spyOn(repository, 'uploadFile')
+    const deleteFile = vi.spyOn(repository, 'deleteFile')
+    renderFlow('/handovers/new/setup', repository)
+
+    await pickMember(user, RECIPIENTS, /정하늘/)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+    expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+
+    const file = new File(['mock'], '신규_운영_메모.pdf', { type: 'application/pdf' })
+    await user.upload(screen.getByTestId('handover-file-input'), file)
+
+    expect(await screen.findByText('신규_운영_메모.pdf')).toBeInTheDocument()
+    expect(uploadFile).toHaveBeenCalledWith('handover-moastore-operations', file)
+
+    await user.click(screen.getByRole('button', { name: '신규_운영_메모.pdf 삭제' }))
+    await waitFor(() => expect(screen.queryByText('신규_운영_메모.pdf')).not.toBeInTheDocument())
+    expect(deleteFile).toHaveBeenCalled()
+  })
+
+  it('rejects an unsupported file without calling the repository', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    const uploadFile = vi.spyOn(repository, 'uploadFile')
+    renderFlow('/handovers/new/setup', repository)
+
+    await pickMember(user, RECIPIENTS, /정하늘/)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+    expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId('handover-file-input'), {
+      target: { files: [new File(['x'], '메모.txt', { type: 'text/plain' })] },
     })
+
+    expect(await screen.findByRole('status')).toHaveTextContent('PDF, DOCX, XLSX, PPTX 파일만 추가할 수 있어요')
+    expect(uploadFile).not.toHaveBeenCalled()
   })
 
   it('creates a draft from the selected recipient, reviewer and work items', async () => {

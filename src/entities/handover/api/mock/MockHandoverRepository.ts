@@ -5,6 +5,7 @@ import type {
   CreateHandoverInput,
   Handover,
   HandoverAnswer,
+  HandoverAttachment,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -74,6 +75,31 @@ export class MockHandoverRepository implements HandoverRepository {
     this.handovers.set(draft.id, draft)
     this.syncSummaries(draft)
     return clone(draft)
+  }
+
+  async listFiles(id: HandoverId): Promise<HandoverAttachment[]> {
+    const handover = await this.getMutable(id)
+    return clone(handover.attachments)
+  }
+
+  async uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment> {
+    const handover = await this.getMutable(id)
+    const attachment: HandoverAttachment = {
+      id: `attachment-${handover.attachments.length + 1}-${file.name}`,
+      name: file.name,
+      mimeType: file.type,
+      size: file.size,
+      status: 'ready',
+    }
+    handover.attachments.push(attachment)
+    this.syncSummaries(handover)
+    return clone(attachment)
+  }
+
+  async deleteFile(id: HandoverId, fileId: string): Promise<void> {
+    const handover = await this.getMutable(id)
+    handover.attachments = handover.attachments.filter((file) => file.id !== fileId)
+    this.syncSummaries(handover)
   }
 
   async updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover> {

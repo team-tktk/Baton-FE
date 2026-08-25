@@ -5,6 +5,6 @@ export type { CreateHandoverAction, CreateHandoverState } from './model/createHa
 export { HandoverProgress } from './ui/HandoverProgress'
 export { AnalysisProgress, ANALYSIS_DELAY_MS } from './ui/AnalysisProgress'
 export { InterviewWizard } from './ui/InterviewWizard'
-export { MockFileUploader } from './ui/MockFileUploader'
+export { FileUploader } from './ui/FileUploader'
 export { MemberPicker } from './ui/MemberPicker'
 export { WorkScopeEditor } from './ui/WorkScopeEditor'

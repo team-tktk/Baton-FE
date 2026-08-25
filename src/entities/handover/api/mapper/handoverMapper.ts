@@ -1,5 +1,5 @@
-import type { HandoverParticipant, HandoverStatus } from '../../model/types'
-import type { HandoverStatusDto, MemberResponse, ParticipantDto } from '../dto/types'
+import type { AttachmentStatus, HandoverAttachment, HandoverParticipant, HandoverStatus } from '../../model/types'
+import type { FileMetadataResponse, FileStatusDto, HandoverStatusDto, MemberResponse, ParticipantDto } from '../dto/types'
 
 const STATUS_BY_DTO: Record<HandoverStatusDto, HandoverStatus> = {
   DRAFT: 'draft',
@@ -32,4 +32,24 @@ export function toParticipantFromDto(participant: ParticipantDto): HandoverParti
 
 export function toHandoverStatus(status: HandoverStatusDto): HandoverStatus {
   return STATUS_BY_DTO[status] ?? 'draft'
+}
+
+const ATTACHMENT_STATUS_BY_DTO: Record<FileStatusDto, AttachmentStatus> = {
+  EXTRACTING: 'processing',
+  INDEXED: 'ready',
+  FAILED: 'failed',
+}
+
+export function toAttachmentStatus(status: FileStatusDto): AttachmentStatus {
+  return ATTACHMENT_STATUS_BY_DTO[status] ?? 'processing'
+}
+
+export function toHandoverAttachment(file: FileMetadataResponse): HandoverAttachment {
+  return {
+    id: file.id,
+    name: file.fileName,
+    mimeType: file.mimeType,
+    size: file.size,
+    status: toAttachmentStatus(file.status),
+  }
 }
