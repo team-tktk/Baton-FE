@@ -1,13 +1,13 @@
 import { createBrowserRouter } from 'react-router-dom'
 
-import { DashboardPage } from '@/pages/dashboard'
+import { HomePage } from '@/pages/home'
 import { NotFoundPage } from '@/pages/not-found'
 import { RoutePlaceholder } from './RoutePlaceholder'
 
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <DashboardPage />,
+    element: <HomePage />,
   },
   { path: '/handovers/new/setup', element: <RoutePlaceholder /> },
   { path: '/handovers/new/upload', element: <RoutePlaceholder /> },
