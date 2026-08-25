@@ -1,2 +1,5 @@
 .field { border: 1px dashed var(--blue); border-radius: 12px; background: var(--blue-soft); padding: 12px 14px; outline: 0; line-height: 1.7; }
 .field:focus { border-style: solid; box-shadow: 0 0 0 3px rgba(47, 111, 237, .12); }
+.field.seamless { border: 0; border-radius: 5px; background: transparent; padding: 0; outline: 1px dashed transparent; box-shadow: none; transition: background-color .15s ease, outline-color .15s ease; }
+.field.seamless:hover { background: #f7f9fc; outline-color: #b8d5ff; }
+.field.seamless:focus { border: 0; background: #f2f7ff; outline-color: #66a3ff; box-shadow: none; }

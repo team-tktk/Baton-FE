@@ -14,6 +14,8 @@ interface HandoverDocumentProps {
 }
 
 const fieldLabels: Record<EditableDocumentField, string> = {
+  title: '문서 제목',
+  intro: '문서 소개',
   scope: '인계 범위',
   purpose: '업무 목적',
   completionStandard: '완료 기준',
