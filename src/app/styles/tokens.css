@@ -1,0 +1,24 @@
+:root {
+  --blue: #3182f6;
+  --blue-dark: #1b64da;
+  --blue-soft: #e8f3ff;
+  --blue-faint: #f4f8ff;
+  --text: #191f28;
+  --sub: #4e5968;
+  --muted: #8b95a1;
+  --line: #e5e8eb;
+  --bg: #f7f8fa;
+  --green: #009f74;
+  --green-soft: #e8f8f2;
+  --yellow: #b86e00;
+  --yellow-soft: #fff4dc;
+  --violet: #7656d6;
+  --violet-soft: #f0edff;
+  --surface: #ffffff;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --shadow-card: 0 16px 38px rgb(49 130 246 / 7%);
+  --content-wide: 980px;
+  --content-narrow: 720px;
+}
