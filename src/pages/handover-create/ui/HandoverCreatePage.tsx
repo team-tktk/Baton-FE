@@ -56,11 +56,13 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }, [refreshFiles, step])
 
   // 업로드 직후에는 서버가 텍스트를 추출하는 중이라, 완료될 때까지만 목록을 다시 읽는다.
+  // 목록 자체가 아니라 처리 중 여부만 의존해야 갱신할 때마다 주기가 리셋되지 않는다.
+  const hasProcessingFile = state.attachments.some((file) => file.status === 'processing')
   useEffect(() => {
-    if (step !== 'upload' || !state.attachments.some((file) => file.status === 'processing')) return
+    if (step !== 'upload' || !hasProcessingFile) return
     const timer = setInterval(() => { void refreshFiles() }, 2000)
     return () => clearInterval(timer)
-  }, [refreshFiles, state.attachments, step])
+  }, [hasProcessingFile, refreshFiles, step])
 
   useEffect(() => {
     if (step !== 'interview') return
