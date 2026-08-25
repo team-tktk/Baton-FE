@@ -248,6 +248,12 @@ export class HttpHandoverRepository implements HandoverRepository {
     return (page.items ?? []).map(toChatExchange)
   }
 
+  /** 초안 내용을 바탕으로 AI가 만든 추천 질문. 서버가 캐싱한다. */
+  async listSuggestedQuestions(id: HandoverId): Promise<string[]> {
+    const questions = await apiRequest<string[]>(`/api/v1/handovers/${id}/chat/suggested-questions`)
+    return questions.map((question) => question.trim()).filter(Boolean)
+  }
+
   async askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer> {
     const body: ChatQuestionRequest = { question }
     return toHandoverAnswer(await apiRequest<ChatAnswerResponse>(`/api/v1/handovers/${id}/chat/messages`, {

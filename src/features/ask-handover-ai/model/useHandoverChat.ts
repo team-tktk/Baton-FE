@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 
 import type { HandoverAnswerCitation } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
@@ -31,11 +31,23 @@ function reducer(state: State, action: Action): State {
   return { ...state, status: 'error' }
 }
 
+/** 추천 질문을 못 불러왔을 때 쓰는 문구. 특정 인수인계 내용에 기대지 않는다. */
+const FALLBACK_SUGGESTIONS = ['첫날 가장 먼저 할 일은?', '업무 기준 중 꼭 알아야 할 게 있나요?', '막히면 누구에게 물어보면 되나요?']
+
 export function useHandoverChat(handoverId: string) {
   const repository = useHandoverRepository()
   const [state, dispatch] = useReducer(reducer, initialState)
+  const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS)
   const pendingRef = useRef(false)
   const sequenceRef = useRef(0)
+
+  useEffect(() => {
+    let ignore = false
+    repository.listSuggestedQuestions(handoverId)
+      .then((items) => { if (!ignore && items.length > 0) setSuggestions(items) })
+      .catch(() => { /* 추천 질문이 없어도 직접 물어볼 수 있다 */ })
+    return () => { ignore = true }
+  }, [handoverId, repository])
 
   useEffect(() => {
     let ignore = false
@@ -70,5 +82,5 @@ export function useHandoverChat(handoverId: string) {
     }
   }, [handoverId, repository])
 
-  return { messages: state.messages, send, status: state.status }
+  return { messages: state.messages, send, status: state.status, suggestions }
 }
