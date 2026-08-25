@@ -11,6 +11,7 @@ export const primaryHandoverFixture: Handover = {
   title: '모아스토어 운영팀 업무 인수인계',
   owner,
   recipient,
+  recipients: [recipient],
   team: '운영팀',
   status: 'submitted',
   deliveredAtLabel: '오늘 14:30',
@@ -39,7 +40,6 @@ export const primaryHandoverFixture: Handover = {
         description: '행사 상품과 쿠폰 범위를 정하고 있습니다.',
         nextAction: '상품팀·마케팅팀과 쿠폰 범위 확정',
         meta: '9월 12일',
-        criterionId: 'coupon',
       },
       {
         id: 'task-delivery-vendor',
@@ -49,7 +49,6 @@ export const primaryHandoverFixture: Handover = {
         description: '물류팀의 반품 기간 답변을 기다리고 있습니다.',
         nextAction: '답변 후 배송업체 신청 화면에 등록',
         meta: '오세진 · 물류팀',
-        criterionId: 'delivery',
       },
     ],
     recurringTasks: [
@@ -61,7 +60,6 @@ export const primaryHandoverFixture: Handover = {
         description: '주문 수, 반품, 문의를 모아 팀에 공유합니다.',
         nextAction: '월요일 확인 → 화요일 팀 검토',
         meta: '매주 월요일',
-        criterionId: 'report',
       },
     ],
     criteria: [
@@ -69,22 +67,16 @@ export const primaryHandoverFixture: Handover = {
         id: 'coupon',
         title: '쿠폰 할인 승인 순서',
         defaultText: '쿠폰 할인율이 10%를 넘으면 예산과 승인 순서를 확인합니다.',
-        question: '10%를 넘는 쿠폰은 누구에게 먼저 확인하나요?',
-        options: ['마케팅 → 팀장', '팀장에게 바로'],
       },
       {
         id: 'delivery',
         title: '배송업체 회신 기준',
         defaultText: '배송업체 답변이 늦으면 물류팀에 먼저 공유합니다.',
-        question: '답변이 늦을 때 언제 물류팀에 알리나요?',
-        options: ['오늘 오후 3시', '다음 날 오전'],
       },
       {
         id: 'report',
         title: '주문 현황 공유일',
         defaultText: '품절 가능 재고가 10개 미만이면 상품 노출을 조정합니다.',
-        question: '주간 주문 현황을 팀에 언제 공유하나요?',
-        options: ['화요일', '수요일'],
       },
     ],
     people: [
@@ -102,6 +94,17 @@ export const primaryHandoverFixture: Handover = {
       '전날 주문 누락과 배송 지연 건 확인',
       '주요 관계자에게 담당자 변경 안내',
     ],
+    schedule: [
+      { cycle: '매일', task: '주문·배송 이상 확인', detail: '오전 10시 전 확인' },
+      { cycle: '매주 월요일', task: '주문 현황 집계', detail: '반품과 문의 포함해 공유' },
+      { cycle: '매월 말', task: '행사 실적 정리', detail: '다음 달 개선점 기록' },
+    ],
+    accessAccounts: [
+      { tool: '운영 어드민', permission: '주문 조회·행사 설정', status: '사용 가능' },
+      { tool: '공유 드라이브', permission: '운영팀 자료 편집', status: '사용 가능' },
+      { tool: '배송업체 포털', permission: '신청·반품 조회', status: '초대 필요' },
+    ],
+    confirmedCriteria: [],
   },
   review: {
     checklist: [

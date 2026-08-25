@@ -9,7 +9,7 @@ describe('HandoverDraftEditor', () => {
   it('renders the DEMO document editor and emits nested edits', async () => {
     const handover = await getPrimaryHandover()
     const onFieldChange = vi.fn()
-    render(<HandoverDraftEditor handover={handover} confirmations={{}} pending={false} returningFromComplete={false} onConfirm={vi.fn()} onFeedback={vi.fn()} onFieldChange={onFieldChange} onSubmit={vi.fn()} />)
+    render(<HandoverDraftEditor handover={handover} pending={false} returningFromComplete={false} onFeedback={vi.fn()} onFieldChange={onFieldChange} onSubmit={vi.fn()} />)
 
     expect(screen.getByText('AI 초안 · 확인 중')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '업무 개요' })).toBeInTheDocument()
@@ -24,8 +24,7 @@ describe('HandoverDraftEditor', () => {
 
   it('disables submission while saving', async () => {
     const handover = await getPrimaryHandover()
-    const confirmations = Object.fromEntries(handover.document.criteria.map((criterion) => [criterion.id, '확정']))
-    render(<HandoverDraftEditor handover={handover} confirmations={confirmations} pending returningFromComplete={false} onConfirm={vi.fn()} onFeedback={vi.fn()} onFieldChange={vi.fn()} onSubmit={vi.fn()} />)
+    render(<HandoverDraftEditor handover={handover} pending returningFromComplete={false} onFeedback={vi.fn()} onFieldChange={vi.fn()} onSubmit={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: '제출하기' })).toBeDisabled()
   })

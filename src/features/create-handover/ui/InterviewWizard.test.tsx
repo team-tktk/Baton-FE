@@ -11,6 +11,8 @@ const question: InterviewQuestion = {
   question: '가장 먼저 확인할 것은 무엇인가요?',
   help: '실제 기준을 확인하고 싶어요.',
   options: [{ label: '주문 오류', description: '결제 상태를 확인해요.' }],
+  status: 'pending',
+  answer: null,
 }
 
 describe('InterviewWizard', () => {

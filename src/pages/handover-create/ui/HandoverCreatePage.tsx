@@ -5,6 +5,7 @@ import type { AnalysisJob, Handover, HandoverParticipant, InterviewQuestion } fr
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, HandoverProgress, InterviewWizard, FileUploader, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
+import { ApiError } from '@/shared/api'
 import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
@@ -14,6 +15,9 @@ import { AppHeader } from '@/widgets/app-header'
 import styles from './HandoverCreatePage.module.css'
 import { CompletionStep } from './CompletionStep'
 import { DocumentStep } from './DocumentStep'
+
+/** 폴링이 연속으로 이만큼 실패하면 서버 장애로 보고 실패 화면으로 전환한다(약 12초). */
+const ANALYSIS_POLL_FAILURE_LIMIT = 5
 
 interface HandoverCreatePageProps { step: 'setup' | 'upload' | 'analyzing' | 'interview' | 'document' | 'complete' }
 
@@ -27,7 +31,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [recipientQuery, setRecipientQuery] = useState('')
   const [reviewerQuery, setReviewerQuery] = useState('')
   const [pending, setPending] = useState(false)
-  const [questions, setQuestions] = useState<InterviewQuestion[]>([])
+  const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null)
   const [draft, setDraft] = useState<Handover | null>(null)
   const [analysis, setAnalysis] = useState<AnalysisJob | null>(null)
   const params = useParams()
@@ -66,20 +70,29 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }, [hasProcessingFile, refreshFiles, step])
 
   useEffect(() => {
-    if (step !== 'interview') return
+    if (step !== 'interview' || !draftId) return
     let ignore = false
-    repository.getHandover(state.draftId ?? 'handover-moastore-operations').then((handover) => {
-      if (!ignore) setQuestions(handover.interviewQuestions)
-    })
+    repository.listQuestions(draftId)
+      .then((items) => { if (!ignore) setQuestions(items) })
+      .catch(() => { if (!ignore) showToast('확인 질문을 불러오지 못했어요') })
     return () => { ignore = true }
-  }, [repository, state.draftId, step])
+  }, [draftId, repository, showToast, step])
+
+  // 질문이 하나도 없으면 답변 단계를 건너뛰고 초안으로 간다. 조용히 넘어가면 오동작처럼 보여 안내를 남긴다.
+  useEffect(() => {
+    if (step !== 'interview' || questions === null || questions.length > 0) return
+    showToast('자료만으로 초안을 만들 수 있어 확인 질문은 건너뛰었어요')
+    navigate('/handovers/new/document', { replace: true })
+  }, [navigate, questions, showToast, step])
 
   useEffect(() => {
-    if (step !== 'document' || !state.draftId) return
+    if (step !== 'document' || !draftId) return
     let ignore = false
-    repository.getHandover(state.draftId).then((handover) => { if (!ignore) setDraft(handover) })
+    Promise.all([repository.getHandover(draftId), repository.getDocument(draftId)])
+      .then(([handover, document]) => { if (!ignore) setDraft({ ...handover, document }) })
+      .catch(() => { if (!ignore) showToast('인수인계 초안을 불러오지 못했어요') })
     return () => { ignore = true }
-  }, [repository, state.draftId, step])
+  }, [draftId, repository, showToast, step])
 
   useEffect(() => {
     if (step !== 'setup' && !state.draftId) {
@@ -113,8 +126,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     }
   }
 
-  const failAnalysis = useCallback(() => {
-    showToast('분석을 시작하지 못했어요. 파일을 먼저 확인해 주세요')
+  // 서버가 사유를 주면 그대로 보여 준다. 파일이 없을 때와 서버 장애를 구분해야 한다.
+  const failAnalysis = useCallback((reason: unknown) => {
+    showToast(reason instanceof ApiError ? reason.message : '분석을 시작하지 못했어요. 잠시 후 다시 시도해 주세요')
     navigate('/handovers/new/upload')
   }, [navigate, showToast])
 
@@ -123,7 +137,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     let ignore = false
     repository.startAnalysis(draftId)
       .then((job) => { if (!ignore) setAnalysis(job) })
-      .catch(() => { if (!ignore) failAnalysis() })
+      .catch((reason: unknown) => { if (!ignore) failAnalysis(reason) })
     return () => { ignore = true }
   }, [draftId, failAnalysis, repository, step])
 
@@ -131,10 +145,19 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   useEffect(() => {
     if (step !== 'analyzing' || !draftId || analysis?.status !== 'running') return
     let stopped = false
+    let failures = 0
     const timer = setInterval(() => {
       repository.getAnalysis(draftId)
-        .then((job) => { if (!stopped) setAnalysis(job) })
-        .catch(() => { /* 일시적인 오류는 다음 폴링에서 회복한다 */ })
+        .then((job) => { if (!stopped) { failures = 0; setAnalysis(job) } })
+        .catch(() => {
+          if (stopped) return
+          failures += 1
+          // 한두 번은 일시적일 수 있지만 계속 실패하면 무한 로딩에 갇힌다. 실패로 전환해 빠져나갈 길을 준다.
+          if (failures < ANALYSIS_POLL_FAILURE_LIMIT) return
+          setAnalysis((current) => current
+            ? { ...current, status: 'failed', error: '분석 상태를 확인하지 못했어요. 서버가 응답하지 않습니다.' }
+            : current)
+        })
     }, 2500)
     return () => { stopped = true; clearInterval(timer) }
   }, [analysis?.status, draftId, repository, step])
@@ -163,18 +186,60 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     } finally { setPending(false) }
   }
 
-  const visibleDocument = draft ? mergeDocumentChanges(draft, state.documentEdits, state.confirmations) : null
+  // 남은 미응답 질문을 건너뛰기로 정리해야 완료 호출이 통과한다(서버가 409로 막는다).
+  const completeInterview = async () => {
+    if (!draftId) return
+    // 로컬 상태가 서버보다 낡아 있으면 미응답 질문을 놓쳐 완료가 409로 막힌다. 서버 기준으로 다시 확인한다.
+    const latest = await repository.listQuestions(draftId)
+    for (const question of latest) {
+      if (question.status === 'pending') await repository.skipQuestion(draftId, question.id)
+    }
+    await repository.completeQuestions(draftId)
+    navigate('/handovers/new/document')
+  }
+
+  const answerQuestion = async (questionId: string, currentStep: number, answer: string) => {
+    if (!draftId || pending) return
+    setPending(true)
+    try {
+      await repository.answerQuestion(draftId, questionId, answer)
+      setQuestions((current) => current?.map((item) => item.id === questionId ? { ...item, status: 'answered', answer } : item) ?? current)
+      dispatch({ type: 'interview/answered', step: currentStep, answer })
+      if (currentStep === (questions?.length ?? 0)) await completeInterview()
+      else navigate(`/handovers/new/interview/${currentStep + 1}`)
+    } catch {
+      showToast('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요')
+    } finally { setPending(false) }
+  }
+
+  const skipRemainingQuestions = async () => {
+    if (!draftId || pending) return
+    setPending(true)
+    try {
+      await completeInterview()
+    } catch {
+      showToast('건너뛰기를 반영하지 못했어요. 잠시 후 다시 시도해 주세요')
+    } finally { setPending(false) }
+  }
+
+  const visibleDocument = draft
+    ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits)
+    : null
 
   const submitDocument = async () => {
     if (!visibleDocument || !state.draftId) return
     setPending(true)
     try {
-      const updated = await repository.updateDraft(state.draftId, { attachments: state.attachments, document: visibleDocument.document })
-      const completed = state.submittedHandover ? updated : await repository.submitHandover(state.draftId)
+      await repository.saveDocument(state.draftId, visibleDocument.document)
+      const completed = await repository.submitHandover(state.draftId)
       setDraft(completed)
       dispatch({ type: 'submission/completed', handover: completed })
       navigate('/handovers/new/complete')
-      showToast(state.submittedHandover ? '변경사항을 저장했어요' : `${completed.recipient.name}님에게 인수인계를 전달했어요`)
+      showToast(state.submittedHandover
+        ? '변경사항을 저장했어요'
+        : `${completed.recipients.map((person) => person.name).join(', ')}님에게 인수인계를 전달했어요`)
+    } catch {
+      showToast('인수인계를 전달하지 못했어요. 잠시 후 다시 시도해 주세요')
     } finally { setPending(false) }
   }
 
@@ -183,14 +248,24 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       {(step === 'setup' || step === 'upload' || step === 'document') ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
       {step !== 'analyzing' && step !== 'complete' && <HandoverProgress compact={step === 'setup' || step === 'upload' || step === 'document'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : 4} />}
       {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} job={analysis} onRetry={retryAnalysis} /></main>}
-      {step === 'interview' && (() => {
+      {step === 'interview' && questions !== null && questions.length > 0 && (() => {
         const currentStep = Number(params.step)
         const validStep = Number.isInteger(currentStep) && currentStep >= 1 && currentStep <= questions.length
-        if (questions.length && !validStep) { navigate('/handovers/new/interview/1', { replace: true }); return null }
+        if (!validStep) { navigate('/handovers/new/interview/1', { replace: true }); return null }
         const question = questions[currentStep - 1]
-        return question ? <InterviewWizard key={currentStep} answer={state.interviewAnswers[currentStep] ?? ''} currentStep={currentStep} question={question} total={questions.length} onBack={() => navigate(`/handovers/new/interview/${currentStep - 1}`)} onSkip={() => navigate('/handovers/new/document')} onSubmit={(answer) => { dispatch({ type: 'interview/answered', step: currentStep, answer }); navigate(currentStep === questions.length ? '/handovers/new/document' : `/handovers/new/interview/${currentStep + 1}`) }} /> : null
+        return <InterviewWizard
+          key={currentStep}
+          answer={state.interviewAnswers[currentStep] ?? question.answer ?? ''}
+          currentStep={currentStep}
+          pending={pending}
+          question={question}
+          total={questions.length}
+          onBack={() => navigate(`/handovers/new/interview/${currentStep - 1}`)}
+          onSkip={() => { void skipRemainingQuestions() }}
+          onSubmit={(answer) => { void answerQuestion(question.id, currentStep, answer) }}
+        />
       })()}
-      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} confirmations={state.confirmations} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onConfirm={(criterionId, value) => dispatch({ type: 'criterion/confirmed', criterionId, value })} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
+      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onHome={() => navigate('/')} />}
       {(step === 'setup' || step === 'upload') && (
       <main className={step === 'setup' ? styles.setupMain : styles.uploadMain}>

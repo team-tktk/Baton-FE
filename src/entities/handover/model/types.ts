@@ -38,11 +38,15 @@ export interface InterviewOption {
   description: string
 }
 
+export type QuestionStatus = 'pending' | 'answered' | 'skipped'
+
 export interface InterviewQuestion {
   id: string
   question: string
   help: string
   options: InterviewOption[]
+  status: QuestionStatus
+  answer: string | null
 }
 
 export interface HandoverTask {
@@ -53,16 +57,12 @@ export interface HandoverTask {
   description: string
   nextAction: string
   meta: string
-  criterionId?: string
 }
 
 export interface HandoverCriterion {
   id: string
   title: string
   defaultText: string
-  question?: string
-  options: string[]
-  confirmedValue?: string
 }
 
 export interface HandoverPerson {
@@ -70,6 +70,23 @@ export interface HandoverPerson {
   name: string
   team: string
   responsibility: string
+}
+
+export interface HandoverScheduleRow {
+  cycle: string
+  task: string
+  detail: string
+}
+
+export interface HandoverAccessRow {
+  tool: string
+  permission: string
+  status: string
+}
+
+export interface HandoverConfirmedCriterion {
+  label: string
+  value: string
 }
 
 export interface HandoverDocument {
@@ -86,6 +103,9 @@ export interface HandoverDocument {
   people: HandoverPerson[]
   tools: string[]
   checklist: string[]
+  schedule: HandoverScheduleRow[]
+  accessAccounts: HandoverAccessRow[]
+  confirmedCriteria: HandoverConfirmedCriterion[]
 }
 
 export interface ReviewComment {
@@ -104,7 +124,9 @@ export interface Handover {
   id: HandoverId
   title: string
   owner: HandoverParticipant
+  /** 대표 인수자. 화면 문구에서 한 명만 필요할 때 쓴다. */
   recipient: HandoverParticipant
+  recipients: HandoverParticipant[]
   team: string
   status: HandoverStatus
   deliveredAtLabel: string
@@ -146,9 +168,23 @@ export interface ReviewSummary {
   files: number
 }
 
+export interface HandoverAnswerCitation {
+  sourceId: string
+  title: string
+  locator: string
+}
+
 export interface HandoverAnswer {
   text: string
-  source: string | null
+  /** 자료에서 근거를 찾았는지. false면 지어내지 않고 문의 안내를 준다. */
+  grounded: boolean
+  citations: HandoverAnswerCitation[]
+}
+
+export interface HandoverChatExchange {
+  id: string
+  question: string
+  answer: HandoverAnswer
 }
 
 export interface CreateHandoverInput {

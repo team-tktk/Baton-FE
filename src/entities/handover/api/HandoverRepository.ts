@@ -4,9 +4,12 @@ import type {
   Handover,
   HandoverAnswer,
   HandoverAttachment,
+  HandoverChatExchange,
+  HandoverDocument,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
+  InterviewQuestion,
   ReviewComment,
   ReviewSummary,
   UpdateHandoverInput,
@@ -23,11 +26,21 @@ export interface HandoverRepository {
   startAnalysis(id: HandoverId): Promise<AnalysisJob>
   getAnalysis(id: HandoverId): Promise<AnalysisJob>
   retryAnalysis(id: HandoverId): Promise<AnalysisJob>
+  listQuestions(id: HandoverId): Promise<InterviewQuestion[]>
+  answerQuestion(id: HandoverId, questionId: string, answer: string): Promise<void>
+  skipQuestion(id: HandoverId, questionId: string): Promise<void>
+  completeQuestions(id: HandoverId): Promise<void>
+  getDocument(id: HandoverId): Promise<HandoverDocument>
+  saveDocument(id: HandoverId, document: HandoverDocument): Promise<void>
+  acknowledgeHandover(id: HandoverId): Promise<void>
+  completeHandover(id: HandoverId): Promise<Handover>
   updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover>
   submitHandover(id: HandoverId): Promise<Handover>
+  listChatMessages(id: HandoverId): Promise<HandoverChatExchange[]>
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer>
   listReviews(): Promise<ReviewSummary[]>
   addReviewComment(id: HandoverId, comment: string): Promise<ReviewComment>
+  saveReviewChecklist(id: HandoverId, items: Array<{ label: string; checked: boolean }>): Promise<void>
   requestRevision(id: HandoverId): Promise<Handover>
   approveHandover(id: HandoverId): Promise<Handover>
 }

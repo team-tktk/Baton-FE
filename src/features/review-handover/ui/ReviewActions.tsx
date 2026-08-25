@@ -9,11 +9,12 @@ interface ReviewActionsProps {
   handover: Handover
   pending: boolean
   onApprove: () => void | Promise<void>
+  onToggleChecklist: (id: string, checked: boolean) => void
   onComment: (comment: string) => void | Promise<void>
   onRevision: () => void | Promise<void>
 }
 
-export function ReviewActions({ handover, pending, onApprove, onComment, onRevision }: ReviewActionsProps) {
+export function ReviewActions({ handover, pending, onApprove, onComment, onRevision, onToggleChecklist }: ReviewActionsProps) {
   const [comment, setComment] = useState('')
   const approved = handover.status === 'approved'
   const submitComment = async () => {
@@ -24,7 +25,7 @@ export function ReviewActions({ handover, pending, onApprove, onComment, onRevis
   }
   return <aside className={styles.panel}>
     <header><small>책임자 검토</small><h2>문서를 확인해 주세요</h2><p>업무가 빠짐없이 전달됐는지 확인하고 의견을 남길 수 있습니다.</p></header>
-    <section className={styles.checklist}>{handover.review.checklist.map((item) => <label key={item.id}><input type="checkbox" defaultChecked={item.checked} /><span>{item.label}</span></label>)}</section>
+    <section className={styles.checklist}>{handover.review.checklist.length === 0 && <p>아직 체크리스트가 없어요. 승인하려면 항목이 필요합니다.</p>}{handover.review.checklist.map((item) => <label key={item.id}><input checked={item.checked} disabled={pending} type="checkbox" onChange={(event) => onToggleChecklist(item.id, event.target.checked)} /><span>{item.label}</span></label>)}</section>
     <section className={styles.comments}>
       <h3>책임자 코멘트</h3>
       <div className={styles.commentList}>{handover.review.comments.length === 0 ? <p>아직 남긴 코멘트가 없습니다.</p> : handover.review.comments.map((item) => <article key={item.id}><strong>{item.authorName}</strong><p>{item.text}</p><span>{item.createdAtLabel}</span></article>)}</div>

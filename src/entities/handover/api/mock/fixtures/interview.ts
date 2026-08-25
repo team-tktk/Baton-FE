@@ -11,6 +11,8 @@ export const interviewQuestionFixtures = [
       { label: '고객 문의 증가', description: '반복되는 문의 내용을 먼저 확인해요.' },
       { label: '관계자 진행 상황', description: '상품팀과 마케팅팀의 답변부터 확인해요.' },
     ],
+    status: 'pending',
+    answer: null,
   },
   {
     id: 'interview-first-day',
@@ -21,6 +23,8 @@ export const interviewQuestionFixtures = [
       { label: '진행 중인 행사 확인', description: '행사 일정과 남은 요청을 먼저 살펴봐요.' },
       { label: '관계자에게 진행 상황 확인', description: '함께 일하는 사람에게 변경 사항을 물어봐요.' },
     ],
+    status: 'pending',
+    answer: null,
   },
   {
     id: 'interview-criteria',
@@ -31,5 +35,7 @@ export const interviewQuestionFixtures = [
       { label: '재고 10개 미만이면 노출 조정', description: '품절 전에 상품 노출과 판매 수량을 조정해요.' },
       { label: '배송 지연은 물류팀에 먼저 공유', description: '배송업체보다 내부 물류팀에 먼저 알려요.' },
     ],
+    status: 'pending',
+    answer: null,
   },
 ] satisfies InterviewQuestion[]
