@@ -100,8 +100,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
 
   return (
     <>
-      {step === 'setup' ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : <AppHeader />}
-      {step !== 'analyzing' && <HandoverProgress compact={step === 'setup'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : step === 'document' ? 4 : 5} total={step === 'setup' ? 6 : 5} />}
+      {(step === 'setup' || step === 'upload') ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : <AppHeader />}
+      {step !== 'analyzing' && <HandoverProgress compact={step === 'setup' || step === 'upload'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : step === 'document' ? 4 : 5} total={step === 'setup' || step === 'upload' ? 6 : 5} />}
       {step === 'analyzing' && <main className={styles.main}><AnalysisProgress fileCount={state.attachments.length} onComplete={analysisComplete} /></main>}
       {step === 'interview' && (() => {
         const currentStep = Number(params.step)
@@ -113,7 +113,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} confirmations={state.confirmations} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onBack={() => navigate('/handovers/new/interview/3')} onConfirm={(criterionId, value) => dispatch({ type: 'criterion/confirmed', criterionId, value })} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onFeedback={showToast} onHome={() => navigate('/')} />}
       {(step === 'setup' || step === 'upload') && (
-      <main className={step === 'setup' ? styles.setupMain : styles.main}>
+      <main className={step === 'setup' ? styles.setupMain : styles.uploadMain}>
         {step === 'setup' ? (
           <section>
             <header className={styles.heading}><div className={styles.kicker}><Icon name="users" /> 인수인계 하기 · 시작</div><h1>누구에게 어떤 업무를 넘기나요?</h1><p>받는 사람과 대표 업무를 알려주면 AI가 필요한 자료를 더 정확히 찾아요.</p></header>
@@ -127,7 +127,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           <section>
             <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 파일 모으기</div><h1>최서윤님의 업무 파일을 올려주세요</h1><p>업무에 사용하던 자료를 올리면 AI가 인수인계 초안을 만들어드려요.</p></header>
             <MockFileUploader attachments={state.attachments} onAdd={(attachment) => dispatch({ type: 'attachment/added', attachment })} onReject={showToast} onRemove={(attachmentId) => dispatch({ type: 'attachment/removed', attachmentId })} />
-            <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button disabled={state.attachments.length === 0} onClick={() => navigate('/handovers/new/analyzing')}>인수인계 초안 만들기 <Icon name="arrow" /></Button></footer>
+            <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button disabled={state.attachments.length === 0} onClick={() => navigate('/handovers/new/analyzing')}>인수인계 초안 만들기</Button></footer>
           </section>
         )}
       </main>

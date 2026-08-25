@@ -80,3 +80,38 @@ test('matches the setup flow layout and recipient interaction', async ({ page, v
   await expect(page.getByText('8명 선택')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport?.width ?? 390)
 })
+
+test('matches the DEMO upload layout and file metadata', async ({ page, viewport }) => {
+  await page.goto('/handovers/new/setup')
+  await page.getByRole('button', { name: '업무 자료 올리기' }).click()
+  await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
+
+  await expect(page.getByRole('button', { name: '홈으로' })).toBeVisible()
+  await expect(page.getByText('2 / 6')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'BATON 홈' })).toHaveCount(0)
+  await expect(page.getByText('DOCX · 2.4MB')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport?.width ?? 390)
+
+  if ((viewport?.width ?? 0) < 1200) return
+
+  const mainBox = await page.locator('main').boundingBox()
+  const uploadButton = page.getByRole('button', { name: /파일을 여기에 끌어다 놓으세요/ })
+  const uploadBox = await uploadButton.boundingBox()
+  const uploadIconBox = await uploadButton.locator(':scope > span').first().boundingBox()
+  const uploadTitleBox = await uploadButton.locator('strong').boundingBox()
+  const uploadDescriptionBox = await uploadButton.locator('small').boundingBox()
+  const fileRowBox = await page.getByRole('article').first().boundingBox()
+  const headingStyle = await page.getByRole('heading', { name: '최서윤님의 업무 파일을 올려주세요' }).evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { fontSize: style.fontSize, fontWeight: style.fontWeight }
+  })
+
+  expect(mainBox?.width).toBeCloseTo(900, 0)
+  expect(uploadBox?.width).toBeCloseTo(900, 0)
+  expect(uploadBox?.height).toBe(190)
+  expect(uploadIconBox?.width).toBe(64)
+  expect(uploadIconBox?.height).toBe(64)
+  expect((uploadDescriptionBox?.y ?? 0) - ((uploadTitleBox?.y ?? 0) + (uploadTitleBox?.height ?? 0))).toBeCloseTo(8, 0)
+  expect(Math.abs((fileRowBox?.height ?? 0) - 66)).toBeLessThanOrEqual(2)
+  expect(headingStyle).toEqual({ fontSize: '42px', fontWeight: '700' })
+})
