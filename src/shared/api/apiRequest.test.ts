@@ -48,6 +48,24 @@ describe('apiRequest', () => {
     })
   })
 
+  it('reads the detail from a Problem Details response', async () => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({
+      code: 'AUTH_REQUIRED',
+      detail: '로그인이 필요합니다',
+      status: 401,
+      title: '로그인이 필요합니다',
+    }), {
+      headers: { 'Content-Type': 'application/problem+json' },
+      status: 401,
+    })))
+
+    await expect(apiRequest('/api/v1/auth/me')).rejects.toMatchObject({
+      code: 'http',
+      message: '로그인이 필요합니다',
+      status: 401,
+    })
+  })
+
   it('uses a safe message when an error response is not JSON', async () => {
     vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(new Response('upstream failed', { status: 502 })))
 

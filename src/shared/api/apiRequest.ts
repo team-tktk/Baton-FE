@@ -5,7 +5,11 @@ const SAFE_HTTP_ERROR_MESSAGE = '요청을 처리하지 못했어요.'
 function readErrorMessage(payload: unknown) {
   if (!payload || typeof payload !== 'object') return SAFE_HTTP_ERROR_MESSAGE
   const message = Reflect.get(payload, 'message')
-  return typeof message === 'string' && message.trim() ? message : SAFE_HTTP_ERROR_MESSAGE
+  if (typeof message === 'string' && message.trim()) return message
+
+  // Spring's Problem Details responses expose the user-facing reason as `detail`.
+  const detail = Reflect.get(payload, 'detail')
+  return typeof detail === 'string' && detail.trim() ? detail : SAFE_HTTP_ERROR_MESSAGE
 }
 
 async function readJson(response: Response) {
