@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
-import type { HandoverRepository } from '@/entities/handover'
+import type { HandoverAnswer, HandoverRepository } from '@/entities/handover'
 import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
 
 import { useHandoverChat } from './useHandoverChat'
@@ -14,7 +14,7 @@ function deferred<T>() {
 
 describe('useHandoverChat', () => {
   it('keeps user order, blocks duplicate sends, and appends sourced answers', async () => {
-    const answer = deferred<{ text: string; source: string | null }>()
+    const answer = deferred<HandoverAnswer>()
     const repository = new MockHandoverRepository()
     repository.askQuestion = vi.fn().mockReturnValue(answer.promise)
     const wrapper = ({ children }: React.PropsWithChildren) => <HandoverRepositoryProvider repository={repository as HandoverRepository}>{children}</HandoverRepositoryProvider>
@@ -28,9 +28,12 @@ describe('useHandoverChat', () => {
     await act(async () => { expect(await result.current.send('중복 질문')).toBe(false) })
     expect(repository.askQuestion).toHaveBeenCalledTimes(1)
 
-    answer.resolve({ text: '물류팀에 먼저 알려주세요.', source: '문제 상황 대응 방법' })
+    answer.resolve({ text: '물류팀에 먼저 알려주세요.', grounded: true, citations: [{ sourceId: 'source-1', title: '문제 상황 대응 방법', locator: '할 일 목록' }] })
     await act(async () => { await first })
-    expect(result.current.messages.at(-1)).toMatchObject({ role: 'assistant', source: '문제 상황 대응 방법' })
+    expect(result.current.messages.at(-1)).toMatchObject({
+      role: 'assistant',
+      citations: [{ title: '문제 상황 대응 방법', locator: '할 일 목록' }],
+    })
     expect(result.current.status).toBe('idle')
   })
 

@@ -7,6 +7,7 @@ import type {
   Handover,
   HandoverAnswer,
   HandoverAttachment,
+  HandoverChatExchange,
   HandoverDocument,
   HandoverId,
   HandoverParticipant,
@@ -16,9 +17,15 @@ import type {
   ReviewSummary,
   UpdateHandoverInput,
 } from '../model/types'
+import type {
+  ChatAnswerResponse,
+  ChatMessagePageResponse,
+  ChatQuestionRequest,
+} from './dto/types'
 import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, HandoverDraftResponse, ChecklistItemInput, CommentRequest, CommentResponse, HandoverListResponse, MemberPageResponse, QuestionAnswerRequest, ReviewChecklistRequest, ReviewDetailResponse, UpdateDraftRequest } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
 import { toDraftContent, toHandoverDocument } from './mapper/documentMapper'
+import { toChatExchange, toHandoverAnswer } from './mapper/chatMapper'
 import { formatListDate, toReceivedSummary, toReviewComment, toReviewSummary } from './mapper/receivedMapper'
 import { toAnalysisJob, toHandoverStatus, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
@@ -236,8 +243,17 @@ export class HttpHandoverRepository implements HandoverRepository {
     return { ...current, status: toHandoverStatus(submitted.status) }
   }
 
-  askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer> {
-    return this.pending.askQuestion(id, question)
+  async listChatMessages(id: HandoverId): Promise<HandoverChatExchange[]> {
+    const page = await apiRequest<ChatMessagePageResponse>(`/api/v1/handovers/${id}/chat/messages`)
+    return (page.items ?? []).map(toChatExchange)
+  }
+
+  async askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer> {
+    const body: ChatQuestionRequest = { question }
+    return toHandoverAnswer(await apiRequest<ChatAnswerResponse>(`/api/v1/handovers/${id}/chat/messages`, {
+      body: JSON.stringify(body),
+      method: 'POST',
+    }))
   }
 
   async listReviews(): Promise<ReviewSummary[]> {

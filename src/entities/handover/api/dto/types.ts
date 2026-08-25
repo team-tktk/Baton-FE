@@ -214,3 +214,37 @@ export interface ChecklistItemInput {
 export interface ReviewChecklistRequest {
   items: ChecklistItemInput[]
 }
+
+export interface Citation {
+  sourceId: string
+  title?: string
+  locator?: string
+  fileId?: string
+}
+
+export interface ChatQuestionRequest {
+  question: string
+}
+
+export interface ChatAnswerResponse {
+  messageId: string
+  answer?: string | null
+  grounded: boolean
+  citations?: Citation[]
+  fallbackContact?: string
+}
+
+export interface ChatMessageResponse {
+  id: string
+  question: string
+  answer?: string | null
+  grounded: boolean
+  citations?: Citation[]
+  createdAt: string
+}
+
+export interface ChatMessagePageResponse {
+  items: ChatMessageResponse[]
+  nextCursor?: string
+  hasNext: boolean
+}

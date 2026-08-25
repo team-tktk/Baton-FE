@@ -168,9 +168,23 @@ export interface ReviewSummary {
   files: number
 }
 
+export interface HandoverAnswerCitation {
+  sourceId: string
+  title: string
+  locator: string
+}
+
 export interface HandoverAnswer {
   text: string
-  source: string | null
+  /** 자료에서 근거를 찾았는지. false면 지어내지 않고 문의 안내를 준다. */
+  grounded: boolean
+  citations: HandoverAnswerCitation[]
+}
+
+export interface HandoverChatExchange {
+  id: string
+  question: string
+  answer: HandoverAnswer
 }
 
 export interface CreateHandoverInput {
