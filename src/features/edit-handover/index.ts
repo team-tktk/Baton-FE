@@ -1,4 +1,3 @@
-export { ConfirmationPanel } from './ui/ConfirmationPanel'
 export { EditableField } from './ui/EditableField'
 export { InlineConfirmation } from './ui/InlineConfirmation'
 export { mergeDocumentChanges } from './model/documentFields'
