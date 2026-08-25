@@ -31,10 +31,17 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   useEffect(() => {
     if (step !== 'setup') return
     let ignore = false
-    Promise.all([repository.listMembers(), repository.getHandover('handover-moastore-operations')]).then(([nextMembers, handover]) => {
-      if (ignore) return
-      setMembers(nextMembers)
-      if (state.attachments.length === 0) dispatch({ type: 'attachments/loaded', attachments: handover.attachments })
+    repository.listMembers().then((nextMembers) => {
+      if (!ignore) setMembers(nextMembers)
+    })
+    return () => { ignore = true }
+  }, [repository, step])
+
+  useEffect(() => {
+    if (step !== 'setup' || state.attachments.length !== 0) return
+    let ignore = false
+    repository.getHandover('handover-moastore-operations').then((handover) => {
+      if (!ignore) dispatch({ type: 'attachments/loaded', attachments: handover.attachments })
     })
     return () => { ignore = true }
   }, [dispatch, repository, state.attachments.length, step])
