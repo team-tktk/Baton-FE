@@ -40,7 +40,7 @@ export function DemoAuthModal({ mode, onClose, onModeChange, returnFocusRef }: D
       onClose={onClose}
     >
       <button aria-label="닫기" className={styles.close} type="button" onClick={onClose}>×</button>
-      <span className={styles.eyebrow}>BATON TOUCH</span>
+      <span className={styles.eyebrow}>BATON</span>
       <p className={styles.description}>
         {signupMode ? '업무 인수인계를 한곳에서 관리해 보세요.' : '업무를 이어갈 준비가 되어 있어요.'}
       </p>

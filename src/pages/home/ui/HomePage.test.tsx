@@ -26,6 +26,13 @@ function renderHome() {
 }
 
 describe('HomePage', () => {
+  it('uses the BATON brand name', () => {
+    renderHome()
+
+    expect(screen.getByText('BATON')).toBeInTheDocument()
+    expect(screen.queryByText('BATON TOUCH')).not.toBeInTheDocument()
+  })
+
   it.each([
     ['인수인계 하기', '/handovers/new/setup'],
     ['인수인계 받기', '/handovers/received'],

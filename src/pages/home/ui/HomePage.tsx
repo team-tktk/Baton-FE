@@ -29,7 +29,7 @@ export function HomePage() {
       <section className={styles.landing}>
         <div className={styles.brand}>
           <span><img alt="" src="/batontouch-icon.png" /></span>
-          <span><small>업무 자동 인수인계 서비스</small><strong>BATON TOUCH</strong></span>
+          <span><small>업무 자동 인수인계 서비스</small><strong>BATON</strong></span>
         </div>
         <nav aria-label="계정" className={styles.auth}>
           {!loggedIn ? (
