@@ -33,6 +33,12 @@ export interface HandoverAttachment {
   status: AttachmentStatus
 }
 
+// 원본 파일 다운로드 응답: 서버가 준 바이트와 파일명(Content-Disposition에서 읽거나 첨부 이름으로 대체).
+export interface HandoverFileDownload {
+  blob: Blob
+  filename: string
+}
+
 export interface InterviewOption {
   label: string
   description: string

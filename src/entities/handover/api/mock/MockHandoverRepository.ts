@@ -9,6 +9,7 @@ import type {
   HandoverAttachment,
   HandoverChatExchange,
   HandoverDocument,
+  HandoverFileDownload,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -111,6 +112,15 @@ export class MockHandoverRepository implements HandoverRepository {
     const handover = await this.getMutable(id)
     handover.attachments = handover.attachments.filter((file) => file.id !== fileId)
     this.syncSummaries(handover)
+  }
+
+  async downloadFile(id: HandoverId, fileId: string): Promise<HandoverFileDownload> {
+    const handover = await this.getMutable(id)
+    const file = handover.attachments.find((attachment) => attachment.id === fileId)
+    if (!file) throw new RepositoryError('NOT_FOUND', '파일을 찾을 수 없어요.')
+    // 목업에는 실제 바이트가 없으므로 파일명이 담긴 자리표시 텍스트를 내려준다.
+    const blob = new Blob([`Mock file: ${file.name}`], { type: file.mimeType || 'application/octet-stream' })
+    return { blob, filename: file.name }
   }
 
   async startAnalysis(id: HandoverId): Promise<AnalysisJob> {

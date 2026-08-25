@@ -19,6 +19,7 @@ export type {
   HandoverAnswerCitation,
   HandoverChatExchange,
   HandoverAttachment,
+  HandoverFileDownload,
   HandoverAccessRow,
   HandoverConfirmedCriterion,
   HandoverCriterion,

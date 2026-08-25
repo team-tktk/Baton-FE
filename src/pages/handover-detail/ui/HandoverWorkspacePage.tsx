@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import type { HandoverAttachment } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
+import { ApiError } from '@/shared/api'
+import { saveBlob } from '@/shared/lib/download'
 import { Badge } from '@/shared/ui/badge'
 import { Icon } from '@/shared/ui/icon'
 import { useToast } from '@/shared/ui/toast'
@@ -53,6 +56,17 @@ export function HandoverWorkspacePage() {
     } finally { setCompleting(false) }
   }
 
+  const downloadAttachment = (attachment: HandoverAttachment) => {
+    void (async () => {
+      try {
+        const { blob, filename } = await repository.downloadFile(handover.id, attachment.id)
+        saveBlob(blob, filename || attachment.name)
+      } catch (caught) {
+        showToast(caught instanceof ApiError ? caught.message : '파일을 내려받지 못했어요')
+      }
+    })()
+  }
+
   return <main className={styles.workspace}>
     <header className={styles.workspaceHeader}>
       <button type="button" onClick={() => navigate('/handovers/received')}><Icon name="back" /> 받은 인수인계</button>
@@ -67,7 +81,7 @@ export function HandoverWorkspacePage() {
         <button ref={aiTriggerRef} type="button" onClick={() => setAiOpen(true)}><Icon name="chat" /> AI에게 질문</button>
       </div>
     </header>
-    <div className={styles.workspaceDocument}><HandoverReadDocument handover={handover} onAttachmentOpen={() => showToast('파일 다운로드는 아직 준비 중이에요')} /></div>
+    <div className={styles.workspaceDocument}><HandoverReadDocument handover={handover} onAttachmentOpen={downloadAttachment} /></div>
     <HandoverAiPanel attachmentCount={handover.attachments.length} handoverId={handover.id} open={aiOpen} returnFocusRef={aiTriggerRef} onClose={() => setAiOpen(false)} />
   </main>
 }

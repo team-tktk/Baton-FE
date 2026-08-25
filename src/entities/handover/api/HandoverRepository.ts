@@ -6,6 +6,7 @@ import type {
   HandoverAttachment,
   HandoverChatExchange,
   HandoverDocument,
+  HandoverFileDownload,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -23,6 +24,7 @@ export interface HandoverRepository {
   listFiles(id: HandoverId): Promise<HandoverAttachment[]>
   uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment>
   deleteFile(id: HandoverId, fileId: string): Promise<void>
+  downloadFile(id: HandoverId, fileId: string): Promise<HandoverFileDownload>
   startAnalysis(id: HandoverId): Promise<AnalysisJob>
   getAnalysis(id: HandoverId): Promise<AnalysisJob>
   retryAnalysis(id: HandoverId): Promise<AnalysisJob>

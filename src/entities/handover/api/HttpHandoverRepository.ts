@@ -9,6 +9,7 @@ import type {
   HandoverAttachment,
   HandoverChatExchange,
   HandoverDocument,
+  HandoverFileDownload,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -36,6 +37,32 @@ function formatUpdatedAt(value: string | undefined) {
   return Number.isNaN(parsed.getTime())
     ? ''
     : `${parsed.getFullYear()}. ${String(parsed.getMonth() + 1).padStart(2, '0')}. ${String(parsed.getDate()).padStart(2, '0')}.`
+}
+
+const DOWNLOAD_ERROR_MESSAGE = '파일을 내려받지 못했어요.'
+
+// 다운로드 실패 응답은 JSON(Problem Details)이므로 사용자 문구만 뽑아 쓴다.
+async function readDownloadError(response: Response) {
+  try {
+    const payload = await response.json() as unknown
+    if (payload && typeof payload === 'object') {
+      const message = Reflect.get(payload, 'message') ?? Reflect.get(payload, 'detail')
+      if (typeof message === 'string' && message.trim()) return message
+    }
+  } catch { /* 본문이 비었거나 JSON이 아니면 기본 문구를 쓴다 */ }
+  return DOWNLOAD_ERROR_MESSAGE
+}
+
+// Content-Disposition: attachment; filename*=UTF-8''<이름> (RFC 5987) 또는 filename="<이름>"에서 파일명을 읽는다.
+// 헤더가 없거나 CORS로 노출되지 않으면 빈 문자열을 돌려주고, 호출부가 첨부 이름으로 대체한다.
+function parseContentDispositionFilename(header: string | null): string {
+  if (!header) return ''
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(header)
+  if (encoded?.[1]) {
+    try { return decodeURIComponent(encoded[1].trim()) } catch { /* 잘못된 인코딩이면 다음 형식을 본다 */ }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(header)
+  return plain?.[1]?.trim() ?? ''
 }
 
 /**
@@ -105,6 +132,21 @@ export class HttpHandoverRepository implements HandoverRepository {
 
   async deleteFile(id: HandoverId, fileId: string): Promise<void> {
     await apiRequest<void>(`/api/v1/handovers/${id}/files/${fileId}`, { method: 'DELETE' })
+  }
+
+  // 원본 파일은 JSON이 아니라 바이트로 내려오므로 apiRequest(JSON 전용) 대신 직접 fetch 한다.
+  async downloadFile(id: HandoverId, fileId: string): Promise<HandoverFileDownload> {
+    let response: Response
+    try {
+      response = await fetch(`/api/v1/handovers/${id}/files/${fileId}/download`, { credentials: 'include' })
+    } catch (cause) {
+      throw new ApiError('서버에 연결하지 못했어요.', { cause, code: 'network' })
+    }
+    if (!response.ok) {
+      throw new ApiError(await readDownloadError(response), { code: 'http', status: response.status })
+    }
+    const blob = await response.blob()
+    return { blob, filename: parseContentDispositionFilename(response.headers.get('Content-Disposition')) }
   }
 
   async startAnalysis(id: HandoverId): Promise<AnalysisJob> {
