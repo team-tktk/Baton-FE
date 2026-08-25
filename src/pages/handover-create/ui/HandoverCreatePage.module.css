@@ -1,0 +1,45 @@
+.main { width: min(var(--content-narrow), calc(100% - 40px)); margin: 0 auto; padding: 50px 0 88px; }
+.analysisMain { display: block; width: min(1120px, calc(100% - 80px)); min-height: calc(100vh - 82px); margin: 0 auto; padding: 128px 0 84px; }
+.setupMain { width: min(1120px, calc(100% - 80px)); margin: 0 auto; padding: 34px 0 92px; }
+.uploadMain { width: min(900px, calc(100% - 64px)); margin: 0 auto; padding: 68px 0 84px; }
+.heading { margin-bottom: 28px; }
+.kicker { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; color: var(--blue-dark); font-size: 12px; font-weight: 800; }
+.heading h1 { margin: 0 0 11px; font-size: clamp(34px, 4.5vw, 46px); line-height: 1.18; letter-spacing: -.055em; }
+.heading p { margin: 0; color: var(--sub); font-size: 14px; line-height: 1.7; }
+.setupMain .heading { margin-bottom: 32px; }
+.setupMain .kicker { margin-bottom: 15px; font-size: 13px; }
+.setupMain .heading h1 { margin-bottom: 14px; font-size: clamp(40px, 4.5vw, 54px); line-height: 1.16; }
+.setupMain .heading p { font-size: 17px; line-height: 1.65; }
+.uploadMain .heading { margin-bottom: 32px; }
+.uploadMain .kicker { margin-bottom: 13px; }
+.uploadMain .heading h1 { margin-bottom: 12px; font-size: 42px; }
+.uploadMain .actions { margin-top: 28px; }
+.card { border: 1px solid #dfe7f0; border-radius: 30px; background: #fff; padding: 46px 48px; box-shadow: 0 22px 52px rgb(31 50 80 / 8%); }
+.actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
+.setupMain .actions { margin-top: 28px; }
+.setupMain .actions button { min-height: 58px; border-radius: 16px; padding: 0 26px; font-size: 15px; }
+.homeBack { position: fixed; z-index: 30; top: 22px; left: 28px; display: flex; align-items: center; gap: 7px; border: 0; border-radius: 12px; background: rgb(255 255 255 / 58%); color: var(--muted); cursor: pointer; padding: 9px 11px; font-size: 11px; font-weight: 750; backdrop-filter: blur(10px); transition: .18s ease; }
+.homeBack:hover { background: #fff; color: var(--sub); box-shadow: 0 8px 22px rgb(31 50 80 / 8%); }
+.homeBack svg { width: 15px; height: 15px; }
+
+@media (max-width: 760px) {
+  .setupMain { width: calc(100% - 28px); padding: 38px 0 62px; }
+  .setupMain .heading h1 { font-size: 34px; }
+  .setupMain .heading p { font-size: 13px; }
+  .card { border-radius: 24px; padding: 28px 22px; }
+  .homeBack { left: 14px; }
+}
+
+@media (max-width: 1100px) {
+  .analysisMain { width: min(800px, calc(100% - 64px)); padding: 78px 0 68px; }
+}
+
+@media (max-width: 560px) {
+  .main { width: calc(100% - 28px); padding-top: 36px; }
+  .analysisMain { width: calc(100% - 28px); padding: 54px 0 62px; }
+  .uploadMain { width: calc(100% - 28px); padding: 54px 0 62px; }
+  .heading h1 { font-size: 34px; }
+  .uploadMain .heading h1 { font-size: 34px; }
+  .actions { align-items: stretch; flex-direction: column-reverse; }
+  .actions button { width: 100%; }
+}

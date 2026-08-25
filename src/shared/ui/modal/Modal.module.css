@@ -1,0 +1,4 @@
+.backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgb(23 32 51 / 34%); padding: 28px; backdrop-filter: blur(6px); }
+.modal { width: min(460px, 100%); border: 1px solid rgb(255 255 255 / 75%); border-radius: 26px; background: #fff; padding: 36px 38px 30px; box-shadow: 0 32px 90px rgb(23 32 51 / 22%); animation: modal-in 0.22s ease-out; }
+.modal h2 { margin: 0 0 20px; font-size: 29px; letter-spacing: -0.045em; }
+@media (max-width: 760px) { .modal { padding: 32px 24px 26px; } }

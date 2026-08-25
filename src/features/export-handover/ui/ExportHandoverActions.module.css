@@ -1,0 +1,1 @@
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }.actions button { min-width: 40px; min-height: 40px; padding: 0 13px; font-size: 10px; }.actions svg { width: 15px; }

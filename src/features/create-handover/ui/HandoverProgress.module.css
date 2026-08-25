@@ -1,0 +1,16 @@
+.progress { width: min(1040px, calc(100% - 40px)); margin: 26px auto 0; }
+.copy { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; color: var(--sub); font-size: 11px; }
+.copy strong { color: var(--blue-dark); }
+.compact { width: min(440px, calc(100% - 240px)); margin-top: 20px; }
+.compact .copy { margin-bottom: 7px; color: var(--muted); font-size: 10px; }
+.compact .copy strong { font-size: 10px; }
+.compact .copy span { font-weight: 700; }
+.compactBar > span { height: 2px; background: #e3e8ee; }
+
+@media (max-width: 760px) {
+  .compact { width: min(440px, calc(100% - 120px)); }
+}
+
+@media (max-width: 520px) {
+  .compact { width: calc(100% - 40px); margin-top: 72px; }
+}

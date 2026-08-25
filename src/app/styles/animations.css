@@ -1,0 +1,26 @@
+@keyframes breathe {
+  to {
+    transform: scale(1.06);
+    box-shadow: 0 22px 48px rgb(49 130 246 / 32%);
+  }
+}
+
+@keyframes blink {
+  to {
+    opacity: 0.25;
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}

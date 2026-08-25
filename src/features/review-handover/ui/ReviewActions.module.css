@@ -1,0 +1,56 @@
+.panel {
+  position: sticky;
+  top: 32px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+.panel > header { padding: 26px 26px 20px; }
+.panel > header small { color: var(--blue-dark); font-size: 11px; font-weight: 800; }
+.panel > header h2 { margin: 8px 0 9px; font-size: 22px; letter-spacing: -.035em; }
+.panel > header p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+.checklist {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 20px 26px;
+}
+
+.checklist label { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 12px; font-weight: 700; }
+.checklist input { width: 18px; height: 18px; margin: 0; accent-color: var(--blue); }
+
+.comments { display: grid; gap: 12px; padding: 20px 26px 24px; }
+.comments h3 { margin: 0; font-size: 15px; }
+.commentList { display: grid; gap: 8px; }
+.commentList > p { margin: 0; color: var(--muted); font-size: 11px; }
+.commentList article { border-radius: 12px; background: var(--bg); padding: 11px 12px; }
+.commentList article strong, .commentList article span { font-size: 10px; }
+.commentList article p { margin: 6px 0; overflow-wrap: anywhere; font-size: 11px; line-height: 1.5; }
+.commentList article span { color: var(--muted); }
+.comments label { display: grid; gap: 7px; color: var(--muted); font-size: 10px; font-weight: 700; }
+.comments textarea { min-height: 82px; resize: vertical; border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; color: var(--ink); font: inherit; line-height: 1.5; }
+.comments textarea:focus { outline: 2px solid var(--blue-soft); border-color: var(--blue); }
+
+.commentButton, .panel > footer button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.commentButton { background: var(--blue-soft); color: var(--blue-dark); }
+.commentButton:disabled, .panel > footer button:disabled { cursor: not-allowed; opacity: .55; }
+.panel > footer { display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; border-top: 1px solid var(--line); padding: 18px 26px 24px; }
+.panel > footer button { background: var(--bg); color: var(--ink); }
+.panel > footer .approveButton { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--blue); color: #fff; }
+.approveButton svg { width: 15px; }
+
+@media (max-width: 1080px) { .panel { position: static; } }
