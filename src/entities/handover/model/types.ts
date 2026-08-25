@@ -128,7 +128,9 @@ export interface Handover {
   id: HandoverId
   title: string
   owner: HandoverParticipant
+  /** 대표 인수자. 화면 문구에서 한 명만 필요할 때 쓴다. */
   recipient: HandoverParticipant
+  recipients: HandoverParticipant[]
   team: string
   status: HandoverStatus
   deliveredAtLabel: string

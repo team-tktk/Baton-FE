@@ -61,12 +61,17 @@ export class HttpHandoverRepository implements HandoverRepository {
       method: 'POST',
     })
 
-    const recipient = created.participants.find((participant) => participant.role === 'RECIPIENT')
-    const seedRecipient = recipient
-      ? toParticipantFromDto(recipient)
-      : this.members.find((member) => member.id === input.recipientIds[0])
-        ?? { id: input.recipientIds[0], name: '받는 사람', position: '', team: '' }
-    return this.pending.seedDraft(created.id, seedRecipient, workItems)
+    const recipients = created.participants
+      .filter((participant) => participant.role === 'RECIPIENT')
+      .map(toParticipantFromDto)
+    const fallback = input.recipientIds.map((id) => this.members.find((member) => member.id === id)
+      ?? { id, name: '받는 사람', position: '', team: '' })
+    return this.pending.seedDraft(
+      created.id,
+      toHandoverParticipant({ id: created.owner.id, name: created.owner.name, team: created.owner.team, position: created.owner.position }),
+      recipients.length > 0 ? recipients : fallback,
+      workItems,
+    )
   }
 
   async listFiles(id: HandoverId): Promise<HandoverAttachment[]> {
@@ -143,10 +148,13 @@ export class HttpHandoverRepository implements HandoverRepository {
       apiRequest<HandoverDraftResponse>(`/api/v1/handovers/${id}/document`),
       apiRequest<HandoverResponse>(`/api/v1/handovers/${id}`),
     ])
-    const recipient = handover.participants.find((participant) => participant.role === 'RECIPIENT')
+    const recipientNames = handover.participants
+      .filter((participant) => participant.role === 'RECIPIENT')
+      .map((participant) => participant.name)
+      .filter(Boolean)
     return toHandoverDocument(draft.content ?? {}, {
       title: handover.title?.trim() || '업무 인수인계',
-      intro: `${handover.owner.name}님의 업무를 ${recipient?.name ?? '인수자'}님에게 전달합니다.`,
+      intro: `${handover.owner.name}님의 업무를 ${recipientNames.join(', ') || '인수자'}님에게 전달합니다.`,
       scope: handover.workScopes.map((scope) => scope.title).filter(Boolean).join(' · '),
       statusLabel: 'AI 초안 · 확인 중',
       updatedAtLabel: formatUpdatedAt(draft.updatedAt),

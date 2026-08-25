@@ -55,11 +55,16 @@ export class MockHandoverRepository implements HandoverRepository {
    * 실제 API가 만든 인수인계 id에 아직 연동되지 않은 화면용 목업 내용을 붙여 둔다.
    * 알 수 없는 id는 계속 NOT_FOUND로 남겨 잘못된 경로 처리를 유지한다.
    */
-  seedDraft(id: HandoverId, recipient: HandoverParticipant, workItems: string[]): Handover {
+  seedDraft(id: HandoverId, owner: HandoverParticipant, recipients: HandoverParticipant[], workItems: string[]): Handover {
     const draft = clone(primaryHandoverFixture)
     draft.id = id
     draft.status = 'draft'
-    draft.recipient = clone(recipient)
+    draft.owner = clone(owner)
+    if (owner.team) draft.team = owner.team
+    draft.recipients = clone(recipients)
+    if (recipients[0]) draft.recipient = clone(recipients[0])
+    // 첨부는 실제 파일 목록으로 채워지므로 픽스처를 남기지 않는다.
+    draft.attachments = []
     if (workItems.length > 0) draft.document.scope = workItems.join(' · ')
     this.handovers.set(id, draft)
     return clone(draft)
@@ -75,6 +80,7 @@ export class MockHandoverRepository implements HandoverRepository {
     const draft = clone(primaryHandoverFixture)
     draft.status = 'draft'
     draft.recipient = clone(recipient)
+    draft.recipients = [clone(recipient)]
     draft.document.scope = workItems.join(' · ')
     this.handovers.set(draft.id, draft)
     this.syncSummaries(draft)
@@ -171,7 +177,10 @@ export class MockHandoverRepository implements HandoverRepository {
     if (changes.workItems) handover.document.scope = changes.workItems.map((item) => item.trim()).filter(Boolean).join(' · ')
     if (changes.recipientIds) {
       const recipient = this.members.find((member) => changes.recipientIds!.includes(member.id))
-      if (recipient) handover.recipient = clone(recipient)
+      if (recipient) {
+        handover.recipient = clone(recipient)
+        handover.recipients = [clone(recipient)]
+      }
     }
     this.syncSummaries(handover)
     return clone(handover)

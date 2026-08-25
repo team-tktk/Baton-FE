@@ -11,6 +11,7 @@ export const primaryHandoverFixture: Handover = {
   title: '모아스토어 운영팀 업무 인수인계',
   owner,
   recipient,
+  recipients: [recipient],
   team: '운영팀',
   status: 'submitted',
   deliveredAtLabel: '오늘 14:30',

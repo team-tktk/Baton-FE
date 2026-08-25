@@ -208,7 +208,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     } finally { setPending(false) }
   }
 
-  const visibleDocument = draft ? mergeDocumentChanges(draft, state.documentEdits, state.confirmations) : null
+  const visibleDocument = draft
+    ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits, state.confirmations)
+    : null
 
   const submitDocument = async () => {
     if (!visibleDocument || !state.draftId) return

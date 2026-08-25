@@ -15,7 +15,7 @@ describe('ExportHandoverActions', () => {
 
     await user.click(screen.getByRole('button', { name: 'Markdown 복사' }))
 
-    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('# 모아스토어 운영팀 업무 인수인계'))
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('# 업무 인수인계'))
     expect(onFeedback).toHaveBeenCalledWith('Markdown을 클립보드에 복사했어요')
   })
 })
