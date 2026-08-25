@@ -4,6 +4,10 @@ export {
 } from './api/HandoverRepositoryProvider'
 export { useHandoverRepository } from './api/useHandoverRepository'
 export { MockHandoverRepository } from './api/mock/MockHandoverRepository'
+export { AttachmentList } from './ui/AttachmentList'
+export { HandoverStatusBadge } from './ui/HandoverStatusBadge'
+export { PersonSummary } from './ui/PersonSummary'
+export { TaskSummary } from './ui/TaskSummary'
 export type {
   CreateHandoverInput,
   Handover,
@@ -13,6 +17,7 @@ export type {
   HandoverDocument,
   HandoverId,
   HandoverParticipant,
+  HandoverPerson,
   HandoverStatus,
   HandoverSummary,
   HandoverTask,

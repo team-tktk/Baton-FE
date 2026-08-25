@@ -2,6 +2,8 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import { HomePage } from '@/pages/home'
 import { HandoverCreatePage } from '@/pages/handover-create'
+import { HandoverArrivalPage, HandoverOverviewPage } from '@/pages/handover-detail'
+import { HandoverInboxPage } from '@/pages/handover-inbox'
 import { NotFoundPage } from '@/pages/not-found'
 import { RoutePlaceholder } from './RoutePlaceholder'
 
@@ -16,13 +18,14 @@ export const router = createBrowserRouter([
   { path: '/handovers/new/interview/:step', element: <HandoverCreatePage step="interview" /> },
   { path: '/handovers/new/document', element: <HandoverCreatePage step="document" /> },
   { path: '/handovers/new/complete', element: <HandoverCreatePage step="complete" /> },
-  { path: '/handovers/received', element: <RoutePlaceholder /> },
-  { path: '/handovers/:handoverId/arrival', element: <RoutePlaceholder /> },
-  { path: '/handovers/:handoverId/overview', element: <RoutePlaceholder /> },
+  { path: '/handovers/received', element: <HandoverInboxPage /> },
+  { path: '/handovers/:handoverId/arrival', element: <HandoverArrivalPage /> },
+  { path: '/handovers/:handoverId/overview', element: <HandoverOverviewPage /> },
   { path: '/handovers/:handoverId/chat', element: <RoutePlaceholder /> },
   { path: '/handovers/:handoverId', element: <RoutePlaceholder /> },
   { path: '/reviews', element: <RoutePlaceholder /> },
   { path: '/reviews/:handoverId', element: <RoutePlaceholder /> },
+  { path: '/404', element: <NotFoundPage /> },
   {
     path: '*',
     element: <NotFoundPage />,
