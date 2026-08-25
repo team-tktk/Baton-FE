@@ -4,6 +4,7 @@ export { createHandoverReducer, createInitialCreateHandoverState } from './model
 export type { CreateHandoverAction, CreateHandoverState } from './model/createHandoverReducer'
 export { HandoverProgress } from './ui/HandoverProgress'
 export { AnalysisProgress } from './ui/AnalysisProgress'
+export { DraftFinalizing } from './ui/DraftFinalizing'
 export { InterviewWizard } from './ui/InterviewWizard'
 export { FileUploader } from './ui/FileUploader'
 export { MemberPicker } from './ui/MemberPicker'

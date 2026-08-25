@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import type { AnalysisJob, Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
-import { AnalysisProgress, HandoverProgress, InterviewWizard, FileUploader, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
+import { AnalysisProgress, DraftFinalizing, FileUploader, HandoverProgress, InterviewWizard, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
 import { ApiError } from '@/shared/api'
 import { mergeDocumentChanges } from '@/features/edit-handover'
@@ -34,6 +34,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null)
   const [draft, setDraft] = useState<Handover | null>(null)
   const [analysis, setAnalysis] = useState<AnalysisJob | null>(null)
+  const [finalizing, setFinalizing] = useState(false)
   const params = useParams()
 
   useEffect(() => {
@@ -189,6 +190,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   // 남은 미응답 질문을 건너뛰기로 정리해야 완료 호출이 통과한다(서버가 409로 막는다).
   const completeInterview = async () => {
     if (!draftId) return
+    setFinalizing(true)
     // 로컬 상태가 서버보다 낡아 있으면 미응답 질문을 놓쳐 완료가 409로 막힌다. 서버 기준으로 다시 확인한다.
     const latest = await repository.listQuestions(draftId)
     for (const question of latest) {
@@ -197,6 +199,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     await repository.completeQuestions(draftId)
     navigate('/handovers/new/document')
   }
+
+  const answeredCount = questions?.filter((item) => item.status === 'answered').length ?? 0
 
   const answerQuestion = async (questionId: string, currentStep: number, answer: string) => {
     if (!draftId || pending) return
@@ -208,6 +212,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       if (currentStep === (questions?.length ?? 0)) await completeInterview()
       else navigate(`/handovers/new/interview/${currentStep + 1}`)
     } catch {
+      setFinalizing(false)
       showToast('답변을 저장하지 못했어요. 잠시 후 다시 시도해 주세요')
     } finally { setPending(false) }
   }
@@ -222,6 +227,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       if (currentStep === (questions?.length ?? 0)) await completeInterview()
       else navigate(`/handovers/new/interview/${currentStep + 1}`)
     } catch {
+      setFinalizing(false)
       showToast('건너뛰기를 반영하지 못했어요. 잠시 후 다시 시도해 주세요')
     } finally { setPending(false) }
   }
@@ -252,7 +258,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       {(step === 'setup' || step === 'upload' || step === 'document') ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
       {step !== 'analyzing' && step !== 'complete' && <HandoverProgress compact={step === 'setup' || step === 'upload' || step === 'document'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : 4} />}
       {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} job={analysis} onRetry={retryAnalysis} /></main>}
-      {step === 'interview' && questions !== null && questions.length > 0 && (() => {
+      {step === 'interview' && finalizing && <main className={styles.analysisMain}><DraftFinalizing answered={answeredCount} /></main>}
+      {step === 'interview' && !finalizing && questions !== null && questions.length > 0 && (() => {
         const currentStep = Number(params.step)
         const validStep = Number.isInteger(currentStep) && currentStep >= 1 && currentStep <= questions.length
         if (!validStep) { navigate('/handovers/new/interview/1', { replace: true }); return null }
