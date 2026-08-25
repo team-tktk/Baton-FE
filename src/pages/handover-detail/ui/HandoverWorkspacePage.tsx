@@ -29,6 +29,7 @@ export function HandoverWorkspacePage() {
   const { showToast } = useToast()
   const { error, handover, handoverId, retry } = useHandoverDetail()
   const acknowledged = useRef<string | null>(null)
+  const aiTriggerRef = useRef<HTMLButtonElement>(null)
 
   // 인수자가 문서를 처음 열었을 때 한 번만 수신 확인을 보낸다. 서버는 멱등이다.
   useEffect(() => {
@@ -63,10 +64,10 @@ export function HandoverWorkspacePage() {
             <Icon name="check" /> {completing ? '처리 중…' : '인수인계 완료'}
           </button>
         )}
-        <button type="button" onClick={() => setAiOpen(true)}><Icon name="chat" /> AI에게 질문</button>
+        <button ref={aiTriggerRef} type="button" onClick={() => setAiOpen(true)}><Icon name="chat" /> AI에게 질문</button>
       </div>
     </header>
     <div className={styles.workspaceDocument}><HandoverReadDocument handover={handover} onAttachmentOpen={() => showToast('파일 다운로드는 아직 준비 중이에요')} /></div>
-    <HandoverAiPanel attachmentCount={handover.attachments.length} handoverId={handover.id} open={aiOpen} onClose={() => setAiOpen(false)} />
+    <HandoverAiPanel attachmentCount={handover.attachments.length} handoverId={handover.id} open={aiOpen} returnFocusRef={aiTriggerRef} onClose={() => setAiOpen(false)} />
   </main>
 }
