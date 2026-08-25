@@ -101,7 +101,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   return (
     <>
       {(step === 'setup' || step === 'upload') ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : <AppHeader />}
-      {step !== 'analyzing' && <HandoverProgress compact={step === 'setup' || step === 'upload'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : step === 'document' ? 4 : 5} total={step === 'setup' || step === 'upload' ? 6 : 5} />}
+      {step !== 'analyzing' && <HandoverProgress compact={step === 'setup' || step === 'upload'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : step === 'document' ? 4 : 6} />}
       {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} onComplete={analysisComplete} /></main>}
       {step === 'interview' && (() => {
         const currentStep = Number(params.step)
