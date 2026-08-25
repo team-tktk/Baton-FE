@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
-import type { HandoverParticipant } from '@/entities/handover'
+import type { HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
-import { HandoverProgress, MockFileUploader, RecipientPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
+import { AnalysisProgress, HandoverProgress, InterviewWizard, MockFileUploader, RecipientPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
 import { useToast } from '@/shared/ui/toast'
@@ -11,7 +11,7 @@ import { AppHeader } from '@/widgets/app-header'
 
 import styles from './HandoverCreatePage.module.css'
 
-interface HandoverCreatePageProps { step: 'setup' | 'upload' }
+interface HandoverCreatePageProps { step: 'setup' | 'upload' | 'analyzing' | 'interview' }
 
 export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const navigate = useNavigate()
@@ -21,6 +21,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [members, setMembers] = useState<HandoverParticipant[]>([])
   const [query, setQuery] = useState('')
   const [pending, setPending] = useState(false)
+  const [questions, setQuestions] = useState<InterviewQuestion[]>([])
+  const params = useParams()
 
   useEffect(() => {
     if (step !== 'setup') return
@@ -34,11 +36,22 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }, [dispatch, repository, state.attachments.length, step])
 
   useEffect(() => {
-    if (step === 'upload' && !state.draftId) {
+    if (step !== 'interview') return
+    let ignore = false
+    repository.getHandover(state.draftId ?? 'handover-moastore-operations').then((handover) => {
+      if (!ignore) setQuestions(handover.interviewQuestions)
+    })
+    return () => { ignore = true }
+  }, [repository, state.draftId, step])
+
+  useEffect(() => {
+    if (step !== 'setup' && !state.draftId) {
       showToast('먼저 누구에게 어떤 업무를 넘길지 알려주세요')
       navigate('/handovers/new/setup', { replace: true })
     }
   }, [navigate, showToast, state.draftId, step])
+
+  const analysisComplete = useCallback(() => navigate('/handovers/new/interview/1'), [navigate])
 
   const createDraft = async () => {
     const workItems = state.workItems.map((item) => item.trim()).filter(Boolean)
@@ -55,7 +68,16 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   return (
     <>
       <AppHeader />
-      <HandoverProgress current={step === 'setup' ? 1 : 2} />
+      {step !== 'analyzing' && <HandoverProgress current={step === 'setup' ? 1 : step === 'upload' ? 2 : 3} />}
+      {step === 'analyzing' && <main className={styles.main}><AnalysisProgress fileCount={state.attachments.length} onComplete={analysisComplete} /></main>}
+      {step === 'interview' && (() => {
+        const currentStep = Number(params.step)
+        const validStep = Number.isInteger(currentStep) && currentStep >= 1 && currentStep <= questions.length
+        if (questions.length && !validStep) { navigate('/handovers/new/interview/1', { replace: true }); return null }
+        const question = questions[currentStep - 1]
+        return question ? <InterviewWizard key={currentStep} answer={state.interviewAnswers[currentStep] ?? ''} currentStep={currentStep} question={question} total={questions.length} onBack={() => navigate(`/handovers/new/interview/${currentStep - 1}`)} onSkip={() => navigate('/handovers/new/document')} onSubmit={(answer) => { dispatch({ type: 'interview/answered', step: currentStep, answer }); navigate(currentStep === questions.length ? '/handovers/new/document' : `/handovers/new/interview/${currentStep + 1}`) }} /> : null
+      })()}
+      {(step === 'setup' || step === 'upload') && (
       <main className={styles.main}>
         {step === 'setup' ? (
           <section>
@@ -74,6 +96,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           </section>
         )}
       </main>
+      )}
     </>
   )
 }
