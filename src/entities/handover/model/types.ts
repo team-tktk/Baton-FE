@@ -14,11 +14,14 @@ export interface HandoverParticipant {
   team: string
 }
 
+export type AttachmentStatus = 'processing' | 'ready' | 'failed'
+
 export interface HandoverAttachment {
   id: string
   name: string
   mimeType: string
   size: number
+  status: AttachmentStatus
 }
 
 export interface InterviewOption {

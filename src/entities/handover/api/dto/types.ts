@@ -68,3 +68,20 @@ export interface HandoverResponse {
   createdAt: string
   updatedAt: string
 }
+
+export type FileStatusDto = 'EXTRACTING' | 'INDEXED' | 'FAILED'
+
+export interface FileMetadataResponse {
+  id: string
+  fileName: string
+  mimeType: string
+  size: number
+  status: FileStatusDto
+  createdAt: string
+}
+
+export interface FileUploadResponse {
+  sourceDocumentId: string
+  fileName: string
+  status: FileStatusDto
+}

@@ -13,6 +13,7 @@ test('creates, confirms, and delivers a handover', async ({ page }) => {
   await page.getByRole('combobox', { name: '검토하는 사람 검색' }).click()
   await page.getByRole('option', { name: /이도현/ }).click()
   await page.keyboard.press('Escape')
+  await page.getByRole('textbox', { name: '1번 업무' }).fill('프로모션 운영')
   await page.getByRole('button', { name: /업무 자료 올리기/ }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
 

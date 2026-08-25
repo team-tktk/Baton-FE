@@ -26,8 +26,19 @@ const MEMBERS = [
 
 export const test = base.extend<{ stubbedBackend: void }>({
   stubbedBackend: [async ({ page }, use) => {
+    // 테스트마다 초기화되는 첨부 목록. 업로드 화면이 빈 상태로 시작하지 않도록 하나를 미리 넣어 둔다.
+    let files = [{
+      id: 'file-autumn-sale',
+      fileName: '가을_할인전_준비_메모.docx',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      size: 2_400_000,
+      status: 'INDEXED',
+      createdAt: '2026-08-25T00:00:00Z',
+    }]
+
     await page.route('**/api/v1/**', async (route) => {
       const { pathname } = new URL(route.request().url())
+      const method = route.request().method()
       const json = (body: unknown, status = 200) =>
         route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
 
@@ -40,6 +51,20 @@ export const test = base.extend<{ stubbedBackend: void }>({
       }
       if (pathname.endsWith('/auth/logout')) return route.fulfill({ status: 204, body: '' })
       if (pathname.endsWith('/members')) return json({ items: MEMBERS, hasNext: false })
+
+      if (pathname.endsWith('/files')) {
+        if (method === 'GET') return json(files)
+        if (method === 'POST') {
+          const fileName = /filename="([^"]+)"/.exec(route.request().postData() ?? '')?.[1] ?? '업로드파일.pdf'
+          const id = `file-${files.length + 1}`
+          files.push({ id, fileName, mimeType: 'application/pdf', size: 4, status: 'INDEXED', createdAt: '2026-08-25T00:00:00Z' })
+          return json({ sourceDocumentId: id, fileName, status: 'INDEXED' }, 201)
+        }
+      }
+      if (method === 'DELETE' && /\/files\/[^/]+$/.test(pathname)) {
+        files = files.filter((file) => !pathname.endsWith(file.id))
+        return route.fulfill({ status: 204, body: '' })
+      }
       if (pathname.endsWith('/handovers')) {
         return json({
           id: '00000000-0000-0000-0000-0000000000bb',

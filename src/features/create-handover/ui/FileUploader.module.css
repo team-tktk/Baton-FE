@@ -1,5 +1,6 @@
 .drop { display: grid; width: 100%; min-height: 190px; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; border: 2px dashed #a8ceff; border-radius: 24px; background: linear-gradient(135deg, #f8fbff, #edf5ff); color: var(--text); cursor: pointer; padding: 30px 34px; text-align: left; transition: .2s ease; }
 .drop:hover { border-color: var(--blue); background: #f3f8ff; box-shadow: 0 16px 35px rgb(49 130 246 / 10%); }
+.dragging { border-color: var(--blue); border-style: solid; background: #eaf3ff; box-shadow: 0 18px 38px rgb(49 130 246 / 16%); }
 .dropIcon { display: grid; width: 64px; height: 64px; place-items: center; border-radius: 20px; background: var(--blue); color: #fff; box-shadow: 0 12px 24px rgb(49 130 246 / 22%); }
 .dropIcon svg { width: 27px; height: 27px; }
 .dropCopy { min-width: 0; }

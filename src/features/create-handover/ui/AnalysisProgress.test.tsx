@@ -1,14 +1,16 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import type { HandoverAttachment } from '@/entities/handover'
+
 import { AnalysisProgress } from './AnalysisProgress'
 
 afterEach(() => vi.useRealTimers())
 
-const attachments = [
-  { id: 'file-1', name: '가을_할인전_준비_메모.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: 2_400_000 },
-  { id: 'file-2', name: '주간_주문현황_양식.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 840_000 },
-  { id: 'file-3', name: '문제상황_대응방법.pdf', mimeType: 'application/pdf', size: 1_800_000 },
+const attachments: HandoverAttachment[] = [
+  { id: 'file-1', name: '가을_할인전_준비_메모.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', size: 0, status: 'ready' },
+  { id: 'file-2', name: '주간_주문현황_양식.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 0, status: 'ready' },
+  { id: 'file-3', name: '문제상황_대응방법.pdf', mimeType: 'application/pdf', size: 0, status: 'ready' },
 ]
 
 describe('AnalysisProgress', () => {
