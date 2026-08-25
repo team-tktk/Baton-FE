@@ -1,9 +1,10 @@
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
+import { ApiError } from '@/shared/api'
 import { AuthProvider } from '@/features/auth'
 import { CreateHandoverProvider } from '@/features/create-handover'
 import { ToastProvider } from '@/shared/ui/toast'
@@ -30,6 +31,7 @@ function renderFlow(initialPath: string, repository = new MockHandoverRepository
     { path: '/', element: <p>홈 화면</p> },
     { path: '/handovers/new/setup', element: <HandoverCreatePage step="setup" /> },
     { path: '/handovers/new/upload', element: <HandoverCreatePage step="upload" /> },
+    { path: '/handovers/new/analyzing', element: <HandoverCreatePage step="analyzing" /> },
   ], { initialEntries: [initialPath] })
   render(
     <HandoverRepositoryProvider repository={repository}>
@@ -284,5 +286,28 @@ describe('HandoverCreatePage setup and upload', () => {
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/handovers/new/setup'))
     expect(screen.getByRole('status')).toHaveTextContent('먼저 누구에게 어떤 업무를 넘길지 알려주세요')
+  })
+
+  it('leaves the analysis screen when the status keeps failing instead of spinning forever', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const repository = new MockHandoverRepository()
+    vi.spyOn(repository, 'startAnalysis').mockResolvedValue({ status: 'running', progress: 10, currentStep: '자료를 읽는 중', error: null })
+    vi.spyOn(repository, 'getAnalysis').mockRejectedValue(new ApiError('서버에 문제가 있어요', { code: 'http', status: 502 }))
+    renderFlow('/handovers/new/setup', repository)
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+    // 파일 목록이 채워져야 초안 만들기 버튼이 열린다.
+    expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '인수인계 초안 만들기' }))
+    expect(await screen.findByText('자료를 읽는 중')).toBeInTheDocument()
+
+    // 폴링이 연속으로 실패하면 안내와 재시도 버튼이 떠야 한다.
+    await act(async () => { await vi.advanceTimersByTimeAsync(2500 * 6) })
+
+    expect(screen.getByRole('alert')).toHaveTextContent('서버가 응답하지 않습니다')
+    expect(screen.getByRole('button', { name: '다시 분석하기' })).toBeInTheDocument()
+    vi.useRealTimers()
   })
 })
