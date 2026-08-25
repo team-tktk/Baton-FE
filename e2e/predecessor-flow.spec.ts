@@ -31,13 +31,9 @@ test('creates, confirms, and delivers a handover', async ({ page }) => {
   await page.getByRole('button', { name: /답변 반영하고 초안 보기/ }).click()
 
   await expect(page.getByRole('button', { name: 'Markdown 복사' })).toBeVisible()
-  await page.getByRole('button', { name: '쿠폰 할인 승인 순서 확인 필요' }).click()
-  await page.getByRole('radio', { name: '마케팅 → 팀장' }).click()
-  await expect(page.getByRole('button', { name: '쿠폰 할인 승인 순서 확인 완료' })).toBeVisible()
-  await page.getByRole('button', { name: '배송업체 회신 기준 확인 필요' }).click()
-  await page.getByRole('radio', { name: '오늘 오후 3시' }).click()
-  await page.getByRole('button', { name: '주문 현황 공유일 확인 필요' }).click()
-  await page.getByRole('radio', { name: '화요일' }).click()
+  // 서버가 만든 초안이 그대로 보여야 한다.
+  await expect(page.getByText('가을 정기 할인전 준비')).toBeVisible()
+  await expect(page.getByText('주간 주문 현황 정리')).toBeVisible()
   await page.getByRole('button', { name: '제출하기' }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/complete$/)
   await expect(page.getByRole('heading', { name: /정하늘님에게/ })).toBeVisible()

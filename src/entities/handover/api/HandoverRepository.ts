@@ -4,6 +4,7 @@ import type {
   Handover,
   HandoverAnswer,
   HandoverAttachment,
+  HandoverDocument,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
@@ -28,6 +29,8 @@ export interface HandoverRepository {
   answerQuestion(id: HandoverId, questionId: string, answer: string): Promise<void>
   skipQuestion(id: HandoverId, questionId: string): Promise<void>
   completeQuestions(id: HandoverId): Promise<void>
+  getDocument(id: HandoverId): Promise<HandoverDocument>
+  saveDocument(id: HandoverId, document: HandoverDocument): Promise<void>
   updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover>
   submitHandover(id: HandoverId): Promise<Handover>
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer>

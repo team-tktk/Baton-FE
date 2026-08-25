@@ -82,11 +82,13 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }, [navigate, questions, showToast, step])
 
   useEffect(() => {
-    if (step !== 'document' || !state.draftId) return
+    if (step !== 'document' || !draftId) return
     let ignore = false
-    repository.getHandover(state.draftId).then((handover) => { if (!ignore) setDraft(handover) })
+    Promise.all([repository.getHandover(draftId), repository.getDocument(draftId)])
+      .then(([handover, document]) => { if (!ignore) setDraft({ ...handover, document }) })
+      .catch(() => { if (!ignore) showToast('인수인계 초안을 불러오지 못했어요') })
     return () => { ignore = true }
-  }, [repository, state.draftId, step])
+  }, [draftId, repository, showToast, step])
 
   useEffect(() => {
     if (step !== 'setup' && !state.draftId) {
@@ -206,12 +208,15 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     } finally { setPending(false) }
   }
 
-  const visibleDocument = draft ? mergeDocumentChanges(draft, state.documentEdits, state.confirmations) : null
+  const visibleDocument = draft
+    ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits, state.confirmations)
+    : null
 
   const submitDocument = async () => {
     if (!visibleDocument || !state.draftId) return
     setPending(true)
     try {
+      await repository.saveDocument(state.draftId, visibleDocument.document)
       const updated = await repository.updateDraft(state.draftId, { attachments: state.attachments, document: visibleDocument.document })
       const completed = state.submittedHandover ? updated : await repository.submitHandover(state.draftId)
       setDraft(completed)

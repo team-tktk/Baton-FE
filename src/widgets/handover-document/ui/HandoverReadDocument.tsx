@@ -31,12 +31,12 @@ export function HandoverReadDocument({ handover, onAttachmentOpen }: { handover:
   const tasks = [...document.activeTasks, ...document.recurringTasks]
   return <>
     <article className={styles.document}>
-      <header><p>모아스토어 · {handover.team}</p><h1>{document.title}</h1><span>{document.intro}</span></header>
-      <dl className={styles.meta}><div><dt>인계자</dt><dd>{handover.owner.name}</dd></div><div><dt>인수자</dt><dd>{handover.recipient.name}</dd></div><div><dt>담당 업무</dt><dd>{document.scope}</dd></div><div><dt>업데이트</dt><dd>{document.updatedAtLabel}</dd></div></dl>
-      <section><h2>업무 개요</h2><p>프로모션과 주문 운영이 담당자 변경 후에도 멈추지 않도록 행사 일정, 주문 현황, 배송 이슈 처리 기준을 정리했습니다.</p></section>
-      <section><h2>먼저 이어서 할 일</h2><div className={styles.taskTable}>{tasks.map((task) => <TaskRow key={task.id} task={task} />)}</div></section>
-      <section><h2>업무 기준과 예외</h2><ul>{document.criteria.map((criterion) => <li key={criterion.id}>{criterionDescriptions[criterion.id] ?? criterion.defaultText}</li>)}</ul></section>
-      <section><h2>주요 관계자</h2><div className={styles.tableFrame}><table><thead><tr><th>이름</th><th>소속</th><th>도움을 받을 내용</th></tr></thead><tbody>{document.people.map((person) => <tr key={person.id}><td>{person.name}</td><td>{person.team}</td><td>{person.responsibility}</td></tr>)}</tbody></table></div></section>
+      <header><p>{handover.team}</p><h1>{document.title}</h1><span>{document.intro}</span></header>
+      <dl className={styles.meta}><div><dt>인계자</dt><dd>{handover.owner.name}</dd></div><div><dt>인수자</dt><dd>{handover.recipients.map((person) => person.name).join(', ')}</dd></div><div><dt>담당 업무</dt><dd>{document.scope}</dd></div><div><dt>업데이트</dt><dd>{document.updatedAtLabel}</dd></div></dl>
+      <section><h2>업무 개요</h2><p>{document.purpose}</p></section>
+      {tasks.length > 0 && <section><h2>먼저 이어서 할 일</h2><div className={styles.taskTable}>{tasks.map((task) => <TaskRow key={task.id} task={task} />)}</div></section>}
+      {document.criteria.length > 0 && <section><h2>업무 기준과 예외</h2><ul>{document.criteria.map((criterion) => <li key={criterion.id}>{criterionDescriptions[criterion.id] ?? criterion.defaultText}</li>)}</ul></section>}
+      {document.people.length > 0 && <section><h2>주요 관계자</h2><div className={styles.tableFrame}><table><thead><tr><th>이름</th><th>소속</th><th>도움을 받을 내용</th></tr></thead><tbody>{document.people.map((person) => <tr key={person.id}><td>{person.name}</td><td>{person.team}</td><td>{person.responsibility}</td></tr>)}</tbody></table></div></section>}
     </article>
     <section className={styles.attachments}>
       <header><div><h2>첨부 문서</h2><p>AI 답변에 함께 사용되는 원본 자료입니다.</p></div><span>{handover.attachments.length}개</span></header>

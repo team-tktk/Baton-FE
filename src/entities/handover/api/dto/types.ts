@@ -124,3 +124,34 @@ export interface QuestionAnswerRequest {
   answer?: string
   skipped: boolean
 }
+
+export interface TaskItemDto {
+  title?: string
+  status?: string
+  description?: string
+  nextAction?: string
+  schedule?: string
+}
+
+export interface HandoverDraftContent {
+  purpose?: string
+  completionCriteria?: string
+  ongoingTasks?: TaskItemDto[]
+  recurringTasks?: TaskItemDto[]
+  rulesAndExceptions?: string[]
+  stakeholders?: Array<{ name?: string; team?: string; helpWith?: string }>
+  tools?: Array<{ name?: string; description?: string }>
+  schedule?: Array<{ cycle?: string; task?: string; detail?: string }>
+  accessAccounts?: Array<{ tool?: string; permission?: string; status?: string }>
+  firstWeekChecklist?: string[]
+  confirmedCriteria?: Array<{ label?: string; value?: string }>
+}
+
+export interface HandoverDraftResponse {
+  content: HandoverDraftContent
+  updatedAt: string
+}
+
+export interface UpdateDraftRequest {
+  content: HandoverDraftContent
+}
