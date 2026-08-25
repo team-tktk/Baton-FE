@@ -22,10 +22,10 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
-function renderModal(onClose = vi.fn(), onSignup = vi.fn()) {
+function renderModal(onClose = vi.fn(), onSignup = vi.fn(), initialEmail = '') {
   render(
     <AuthProvider>
-      <AuthModal open returnFocusRef={createRef<HTMLElement>()} onClose={onClose} onSignup={onSignup} />
+      <AuthModal initialEmail={initialEmail} open returnFocusRef={createRef<HTMLElement>()} onClose={onClose} onSignup={onSignup} />
     </AuthProvider>,
   )
   return { onClose, onSignup }
@@ -36,6 +36,14 @@ afterEach(() => {
 })
 
 describe('AuthModal', () => {
+  it('prefills the email supplied by a completed signup', () => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ message: 'Unauthorized' }, 401)))
+
+    renderModal(vi.fn(), vi.fn(), authenticatedUser.email)
+
+    expect(screen.getByRole('textbox', { name: '회사 이메일' })).toHaveValue(authenticatedUser.email)
+  })
+
   it('starts with empty credentials and closes only after a successful login', async () => {
     const user = userEvent.setup()
     const fetchSpy = vi.fn<typeof fetch>()

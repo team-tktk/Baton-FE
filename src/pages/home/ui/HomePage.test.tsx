@@ -59,15 +59,31 @@ describe('HomePage', () => {
     expect(router.state.location.pathname).toBe(pathname)
   })
 
-  it('shows a preparation notice instead of the old mock signup form', async () => {
+  it('opens the signup form and returns to login with the registered email', async () => {
     const user = userEvent.setup()
-    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(jsonResponse({ message: 'Unauthorized' }, 401)))
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ message: 'Unauthorized' }, 401))
+      .mockResolvedValueOnce(jsonResponse({
+        createdAt: '2026-08-25T12:00:00Z',
+        email: 'minjun@moastore.co.kr',
+        id: 'f22d04eb-e4f9-4899-953a-86ad86f00dd3',
+        name: '김민준',
+        position: '매니저',
+        team: '상품팀',
+      }, 201)))
     renderHome()
 
     await user.click(await screen.findByRole('button', { name: '회원가입' }))
+    await user.type(screen.getByRole('textbox', { name: '이름' }), '김민준')
+    await user.type(screen.getByRole('textbox', { name: '회사 이메일' }), 'minjun@moastore.co.kr')
+    await user.type(screen.getByRole('textbox', { name: '팀' }), '상품팀')
+    await user.type(screen.getByRole('textbox', { name: '직책' }), '매니저')
+    await user.type(screen.getByLabelText('비밀번호'), 'password123')
+    await user.click(screen.getByRole('button', { name: '회원가입하기' }))
 
-    expect(screen.getByRole('status')).toHaveTextContent('회원가입은 준비 중이에요.')
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('회원가입이 완료됐어요. 로그인해 주세요.')
+    expect(screen.getByRole('heading', { name: '다시 만나서 반가워요' })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '회사 이메일' })).toHaveValue('minjun@moastore.co.kr')
   })
 
   it('shows API profile metadata for a restored session', async () => {
