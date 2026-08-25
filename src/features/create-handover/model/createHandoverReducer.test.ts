@@ -13,12 +13,12 @@ const attachment: HandoverAttachment = {
 }
 
 describe('createHandoverReducer', () => {
-  it('starts without preselected people and with three work items', () => {
+  it('starts empty so nothing demo-shaped reaches the server', () => {
     const state = createInitialCreateHandoverState()
 
     expect(state.recipientIds).toEqual([])
     expect(state.reviewerIds).toEqual([])
-    expect(state.workItems).toEqual(['프로모션 운영', '주문 현황 관리', '배송업체 협업'])
+    expect(state.workItems).toEqual([''])
   })
 
   it('toggles recipients without duplicates', () => {

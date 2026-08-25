@@ -1,9 +1,10 @@
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent, { type UserEvent } from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
+import { AuthProvider } from '@/features/auth'
 import { CreateHandoverProvider } from '@/features/create-handover'
 import { ToastProvider } from '@/shared/ui/toast'
 
@@ -11,6 +12,18 @@ import { HandoverCreatePage } from './HandoverCreatePage'
 
 const RECIPIENTS = '업무를 받는 사람'
 const REVIEWERS = '검토하는 사람'
+const SIGNED_IN_USER = { id: 'u-1', email: 'seoyun@moastore.dev', name: '최서윤', team: '운영팀', position: '매니저', createdAt: '2026-08-01T00:00:00Z' }
+
+beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(SIGNED_IN_USER), {
+    headers: { 'Content-Type': 'application/json' },
+    status: 200,
+  })))
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 function renderFlow(initialPath: string, repository = new MockHandoverRepository()) {
   const router = createMemoryRouter([
@@ -20,9 +33,11 @@ function renderFlow(initialPath: string, repository = new MockHandoverRepository
   ], { initialEntries: [initialPath] })
   render(
     <HandoverRepositoryProvider repository={repository}>
-      <CreateHandoverProvider>
-        <ToastProvider><RouterProvider router={router} /></ToastProvider>
-      </CreateHandoverProvider>
+      <AuthProvider>
+        <CreateHandoverProvider>
+          <ToastProvider><RouterProvider router={router} /></ToastProvider>
+        </CreateHandoverProvider>
+      </AuthProvider>
     </HandoverRepositoryProvider>,
   )
   return router
@@ -34,6 +49,11 @@ async function pickMember(user: UserEvent, pickerName: string, member: RegExp) {
   const scope = picker(pickerName)
   await user.click(scope.getByRole('combobox'))
   await user.click(await scope.findByRole('option', { name: member }))
+}
+
+async function fillSetup(user: UserEvent, workItem = '프로모션 운영') {
+  await pickMember(user, RECIPIENTS, /정하늘/)
+  await user.type(screen.getByRole('textbox', { name: '1번 업무' }), workItem)
 }
 
 describe('HandoverCreatePage setup and upload', () => {
@@ -145,7 +165,7 @@ describe('HandoverCreatePage setup and upload', () => {
 
     const router = renderFlow('/handovers/new/setup', repository)
 
-    await pickMember(user, RECIPIENTS, /정하늘/)
+    await fillSetup(user)
     expect(listFiles).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
@@ -167,7 +187,7 @@ describe('HandoverCreatePage setup and upload', () => {
     const deleteFile = vi.spyOn(repository, 'deleteFile')
     renderFlow('/handovers/new/setup', repository)
 
-    await pickMember(user, RECIPIENTS, /정하늘/)
+    await fillSetup(user)
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
 
@@ -182,13 +202,41 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(deleteFile).toHaveBeenCalled()
   })
 
+  it('greets the signed-in user on the upload step', async () => {
+    const user = userEvent.setup()
+    renderFlow('/handovers/new/setup')
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+
+    expect(await screen.findByRole('heading', { name: '최서윤님의 업무 파일을 올려주세요' })).toBeInTheDocument()
+  })
+
+  it('uploads files dropped onto the drop zone', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    const uploadFile = vi.spyOn(repository, 'uploadFile')
+    renderFlow('/handovers/new/setup', repository)
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+    expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+
+    const dropped = new File(['mock'], '끌어온_자료.pdf', { type: 'application/pdf' })
+    const zone = screen.getByRole('button', { name: /파일을 여기에 끌어다 놓으세요/ })
+    fireEvent.drop(zone, { dataTransfer: { files: [dropped] } })
+
+    expect(await screen.findByText('끌어온_자료.pdf')).toBeInTheDocument()
+    expect(uploadFile).toHaveBeenCalledWith('handover-moastore-operations', dropped)
+  })
+
   it('rejects an unsupported file without calling the repository', async () => {
     const user = userEvent.setup()
     const repository = new MockHandoverRepository()
     const uploadFile = vi.spyOn(repository, 'uploadFile')
     renderFlow('/handovers/new/setup', repository)
 
-    await pickMember(user, RECIPIENTS, /정하늘/)
+    await fillSetup(user)
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
 
@@ -206,7 +254,7 @@ describe('HandoverCreatePage setup and upload', () => {
     const createDraft = vi.spyOn(repository, 'createDraft')
     const router = renderFlow('/handovers/new/setup', repository)
 
-    await pickMember(user, RECIPIENTS, /정하늘/)
+    await fillSetup(user)
     await pickMember(user, REVIEWERS, /이도현/)
     await user.click(screen.getByRole('button', { name: '+ 업무 추가' }))
     await user.type(screen.getAllByPlaceholderText('업무를 입력하세요').at(-1)!, '신규 파트너 안내')
@@ -216,7 +264,7 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(createDraft).toHaveBeenCalledWith({
       recipientIds: ['user-jung-haneul'],
       reviewerIds: ['user-lee-dohyeon'],
-      workItems: ['프로모션 운영', '주문 현황 관리', '배송업체 협업', '신규 파트너 안내'],
+      workItems: ['프로모션 운영', '신규 파트너 안내'],
     })
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
   })

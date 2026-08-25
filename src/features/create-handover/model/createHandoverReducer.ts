@@ -33,7 +33,7 @@ export function createInitialCreateHandoverState(): CreateHandoverState {
     draftId: null,
     recipientIds: [],
     reviewerIds: [],
-    workItems: ['프로모션 운영', '주문 현황 관리', '배송업체 협업'],
+    workItems: [''],
     attachments: [],
     interviewAnswers: {},
     documentEdits: {},

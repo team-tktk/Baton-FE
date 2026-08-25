@@ -66,6 +66,7 @@ test('matches the setup flow layout and recipient interaction', async ({ page, v
     expect(fillBox?.width).toBeCloseTo(440 / 5, 0)
 
     await page.keyboard.press('Escape')
+    await page.getByRole('textbox', { name: '1번 업무' }).fill('프로모션 운영')
     await page.getByRole('button', { name: '업무 자료 올리기' }).click()
     await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
     const uploadHeadingSize = await page.getByRole('heading', { name: /업무 파일을 올려주세요/ }).evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))
@@ -85,6 +86,8 @@ test('matches the DEMO upload layout and file metadata', async ({ page, viewport
   await page.goto('/handovers/new/setup')
   await page.getByRole('combobox', { name: '업무를 받는 사람 검색' }).click()
   await page.getByRole('option', { name: /정하늘/ }).click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('textbox', { name: '1번 업무' }).fill('프로모션 운영')
   await page.getByRole('button', { name: '업무 자료 올리기' }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
 

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import type { Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, HandoverProgress, InterviewWizard, FileUploader, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
+import { useAuth } from '@/features/auth'
 import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
@@ -21,6 +22,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const repository = useHandoverRepository()
   const { showToast } = useToast()
   const { dispatch, state } = useCreateHandover()
+  const { user } = useAuth()
   const [members, setMembers] = useState<HandoverParticipant[]>([])
   const [recipientQuery, setRecipientQuery] = useState('')
   const [reviewerQuery, setReviewerQuery] = useState('')
@@ -165,7 +167,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           </section>
         ) : (
           <section>
-            <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 파일 모으기</div><h1>최서윤님의 업무 파일을 올려주세요</h1><p>업무에 사용하던 자료를 올리면 AI가 인수인계 초안을 만들어드려요.</p></header>
+            <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 파일 모으기</div><h1>{user?.name ?? '내'}님의 업무 파일을 올려주세요</h1><p>업무에 사용하던 자료를 올리면 AI가 인수인계 초안을 만들어드려요.</p></header>
             <FileUploader attachments={state.attachments} uploading={pending} onReject={showToast} onRemove={(attachmentId) => void removeFile(attachmentId)} onSelect={(files) => void uploadFiles(files)} />
             <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button disabled={state.attachments.length === 0} onClick={() => navigate('/handovers/new/analyzing')}>인수인계 초안 만들기</Button></footer>
           </section>
