@@ -8,7 +8,6 @@ export interface CreateHandoverState {
   attachments: HandoverAttachment[]
   interviewAnswers: Record<number, string>
   documentEdits: Record<string, string>
-  confirmations: Record<string, string>
   submittedHandover: Handover | null
 }
 
@@ -24,7 +23,6 @@ export type CreateHandoverAction =
   | { type: 'draft/created'; draft: Handover }
   | { type: 'interview/answered'; step: number; answer: string }
   | { type: 'document/changed'; field: string; value: string }
-  | { type: 'criterion/confirmed'; criterionId: string; value: string }
   | { type: 'submission/completed'; handover: Handover }
   | { type: 'reset' }
 
@@ -37,7 +35,6 @@ export function createInitialCreateHandoverState(useScenario = false): CreateHan
     attachments: [],
     interviewAnswers: {},
     documentEdits: {},
-    confirmations: {},
     submittedHandover: null,
   }
 }
@@ -81,8 +78,6 @@ export function createHandoverReducer(
       return { ...state, interviewAnswers: { ...state.interviewAnswers, [action.step]: action.answer } }
     case 'document/changed':
       return { ...state, documentEdits: { ...state.documentEdits, [action.field]: action.value } }
-    case 'criterion/confirmed':
-      return { ...state, confirmations: { ...state.confirmations, [action.criterionId]: action.value } }
     case 'submission/completed':
       return { ...state, submittedHandover: action.handover }
     case 'reset':

@@ -7,6 +7,7 @@ import type {
   Handover,
   HandoverAnswer,
   HandoverAttachment,
+  HandoverChatExchange,
   HandoverDocument,
   HandoverId,
   HandoverParticipant,
@@ -172,6 +173,15 @@ export class MockHandoverRepository implements HandoverRepository {
     this.syncSummaries(handover)
   }
 
+  async acknowledgeHandover(id: HandoverId): Promise<void> {
+    const handover = await this.getMutable(id)
+    if (handover.status === 'submitted') this.changeStatusOf(handover, 'in-progress')
+  }
+
+  async completeHandover(id: HandoverId): Promise<Handover> {
+    return this.changeStatus(id, 'approved')
+  }
+
   async updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover> {
     const handover = await this.getMutable(id)
     if (changes.attachments) handover.attachments = clone(changes.attachments)
@@ -192,12 +202,20 @@ export class MockHandoverRepository implements HandoverRepository {
     return this.changeStatus(id, 'submitted')
   }
 
-  async askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer> {
-    await this.getMutable(id)
+  async listChatMessages(): Promise<HandoverChatExchange[]> {
+    return []
+  }
+
+  async askQuestion(_id: HandoverId, question: string): Promise<HandoverAnswer> {
     const value = question.trim()
     if (!value) throw new RepositoryError('VALIDATION', '질문을 입력해 주세요.')
     const match = qaResponseRules.find((rule) => rule.keywords.some((keyword) => value.includes(keyword)))
-    return clone(match ? { text: match.text, source: match.source } : fallbackQaResponse)
+    if (!match) return clone(fallbackQaResponse)
+    return clone({
+      text: match.text,
+      grounded: true,
+      citations: [{ sourceId: match.source, title: match.source, locator: '' }],
+    })
   }
 
   async listReviews(): Promise<ReviewSummary[]> {
@@ -218,6 +236,11 @@ export class MockHandoverRepository implements HandoverRepository {
     return clone(reviewComment)
   }
 
+  async saveReviewChecklist(id: HandoverId, items: Array<{ label: string; checked: boolean }>): Promise<void> {
+    const handover = await this.getMutable(id)
+    handover.review.checklist = items.map((item, index) => ({ id: `check-${index}`, label: item.label, checked: item.checked }))
+  }
+
   async requestRevision(id: HandoverId): Promise<Handover> {
     return this.changeStatus(id, 'revision-requested')
   }
@@ -234,9 +257,13 @@ export class MockHandoverRepository implements HandoverRepository {
 
   private async changeStatus(id: HandoverId, status: Handover['status']): Promise<Handover> {
     const handover = await this.getMutable(id)
+    this.changeStatusOf(handover, status)
+    return clone(handover)
+  }
+
+  private changeStatusOf(handover: Handover, status: Handover['status']) {
     handover.status = status
     this.syncSummaries(handover)
-    return clone(handover)
   }
 
   private syncSummaries(handover: Handover) {

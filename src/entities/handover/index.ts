@@ -16,6 +16,8 @@ export type {
   CreateHandoverInput,
   Handover,
   HandoverAnswer,
+  HandoverAnswerCitation,
+  HandoverChatExchange,
   HandoverAttachment,
   HandoverAccessRow,
   HandoverConfirmedCriterion,

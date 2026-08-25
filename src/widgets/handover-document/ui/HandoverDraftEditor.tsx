@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import type { Handover, HandoverTask } from '@/entities/handover'
-import { EditableField, InlineConfirmation } from '@/features/edit-handover'
+import { EditableField } from '@/features/edit-handover'
 import { ExportHandoverActions } from '@/features/export-handover'
 import { Icon } from '@/shared/ui/icon'
 
@@ -9,10 +9,8 @@ import styles from './HandoverDraftEditor.module.css'
 
 interface HandoverDraftEditorProps {
   handover: Handover
-  confirmations: Record<string, string>
   pending: boolean
   returningFromComplete: boolean
-  onConfirm: (criterionId: string, value: string) => void
   onFeedback: (message: string) => void
   onFieldChange: (field: string, value: string) => void
   onSubmit: () => void
@@ -23,17 +21,14 @@ function MockTable({ headers, rows }: { headers: string[]; rows: ReactNode[][] }
 }
 
 export function HandoverDraftEditor(props: HandoverDraftEditorProps) {
-  const { handover, confirmations, onFieldChange } = props
+  const { handover, onFieldChange } = props
   const document = handover.document
   const edit = (label: string, key: string, value: string) => <EditableField seamless label={label} value={value} onChange={(next) => onFieldChange(key, next)} />
-  const criterionById = new Map(document.criteria.map((criterion) => [criterion.id, criterion]))
-  const renderTasks = (items: HandoverTask[]) => items.map((task) => {
-    const criterion = task.criterionId ? criterionById.get(task.criterionId) : undefined
-    return <article className={styles.task} key={task.id}>
+  const renderTasks = (items: HandoverTask[]) => items.map((task) => (
+    <article className={styles.task} key={task.id}>
       <header>
         <span className={`${styles.taskStatus} ${styles[task.tone]}`}>{task.statusLabel}</span>
         <div>{edit(`${task.title} 제목`, `task.${task.id}.title`, task.title)}{edit(`${task.title} 설명`, `task.${task.id}.description`, task.description)}</div>
-        {criterion ? <InlineConfirmation criterion={criterion} value={confirmations[criterion.id] ?? criterion.confirmedValue} onConfirm={props.onConfirm} /> : null}
       </header>
       <ul>
         <li>현재 상태: {task.statusLabel}</li>
@@ -41,7 +36,7 @@ export function HandoverDraftEditor(props: HandoverDraftEditorProps) {
         {task.meta && <li>{edit(`${task.title} 일정과 담당`, `task.${task.id}.meta`, `일정·담당: ${task.meta}`)}</li>}
       </ul>
     </article>
-  })
+  ))
 
   const peopleRows = document.people.map((person) => [person.name, person.team, edit(`${person.name} 역할`, `person.${person.id}.responsibility`, person.responsibility)])
   const toolRows = document.tools.map((tool, index) => {

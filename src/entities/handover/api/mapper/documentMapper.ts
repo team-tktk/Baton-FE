@@ -46,7 +46,6 @@ export function toHandoverDocument(content: HandoverDraftContent, meta: Document
       id: `rule-${index}`,
       title: `업무 기준 ${index + 1}`,
       defaultText: rule,
-      options: [],
     })),
     people: (content.stakeholders ?? []).map((person, index) => ({
       id: `stakeholder-${index}`,

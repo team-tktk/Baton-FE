@@ -155,3 +155,96 @@ export interface HandoverDraftResponse {
 export interface UpdateDraftRequest {
   content: HandoverDraftContent
 }
+
+export interface HandoverSummaryResponse {
+  id: string
+  title: string
+  status: HandoverStatusDto
+  owner: UserSummaryResponse
+  workScopeSummary?: string
+  workScopeCount?: number
+  fileCount?: number
+  recipientCount?: number
+  receiptStatus?: string
+  submittedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface HandoverListResponse {
+  items: HandoverSummaryResponse[]
+  nextCursor?: string
+  hasNext: boolean
+  statusCounts?: Record<string, number>
+}
+
+export interface ChecklistItemResponse {
+  id: string
+  label: string
+  checked: boolean
+}
+
+export interface CommentResponse {
+  id: string
+  authorId: string
+  authorName: string
+  content: string
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface ReviewDetailResponse {
+  handoverId: string
+  status: HandoverStatusDto
+  document?: HandoverDraftResponse | null
+  attachments?: FileMetadataResponse[]
+  checklist?: ChecklistItemResponse[]
+  comments?: CommentResponse[]
+}
+
+export interface CommentRequest {
+  content: string
+}
+
+export interface ChecklistItemInput {
+  label: string
+  checked: boolean
+}
+
+export interface ReviewChecklistRequest {
+  items: ChecklistItemInput[]
+}
+
+export interface Citation {
+  sourceId: string
+  title?: string
+  locator?: string
+  fileId?: string
+}
+
+export interface ChatQuestionRequest {
+  question: string
+}
+
+export interface ChatAnswerResponse {
+  messageId: string
+  answer?: string | null
+  grounded: boolean
+  citations?: Citation[]
+  fallbackContact?: string
+}
+
+export interface ChatMessageResponse {
+  id: string
+  question: string
+  answer?: string | null
+  grounded: boolean
+  citations?: Citation[]
+  createdAt: string
+}
+
+export interface ChatMessagePageResponse {
+  items: ChatMessageResponse[]
+  nextCursor?: string
+  hasNext: boolean
+}

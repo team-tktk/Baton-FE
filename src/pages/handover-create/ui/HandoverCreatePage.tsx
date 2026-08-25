@@ -5,6 +5,7 @@ import type { AnalysisJob, Handover, HandoverParticipant, InterviewQuestion } fr
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, HandoverProgress, InterviewWizard, FileUploader, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
+import { ApiError } from '@/shared/api'
 import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
@@ -14,6 +15,9 @@ import { AppHeader } from '@/widgets/app-header'
 import styles from './HandoverCreatePage.module.css'
 import { CompletionStep } from './CompletionStep'
 import { DocumentStep } from './DocumentStep'
+
+/** 폴링이 연속으로 이만큼 실패하면 서버 장애로 보고 실패 화면으로 전환한다(약 12초). */
+const ANALYSIS_POLL_FAILURE_LIMIT = 5
 
 interface HandoverCreatePageProps { step: 'setup' | 'upload' | 'analyzing' | 'interview' | 'document' | 'complete' }
 
@@ -122,8 +126,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     }
   }
 
-  const failAnalysis = useCallback(() => {
-    showToast('분석을 시작하지 못했어요. 파일을 먼저 확인해 주세요')
+  // 서버가 사유를 주면 그대로 보여 준다. 파일이 없을 때와 서버 장애를 구분해야 한다.
+  const failAnalysis = useCallback((reason: unknown) => {
+    showToast(reason instanceof ApiError ? reason.message : '분석을 시작하지 못했어요. 잠시 후 다시 시도해 주세요')
     navigate('/handovers/new/upload')
   }, [navigate, showToast])
 
@@ -132,7 +137,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     let ignore = false
     repository.startAnalysis(draftId)
       .then((job) => { if (!ignore) setAnalysis(job) })
-      .catch(() => { if (!ignore) failAnalysis() })
+      .catch((reason: unknown) => { if (!ignore) failAnalysis(reason) })
     return () => { ignore = true }
   }, [draftId, failAnalysis, repository, step])
 
@@ -140,10 +145,19 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   useEffect(() => {
     if (step !== 'analyzing' || !draftId || analysis?.status !== 'running') return
     let stopped = false
+    let failures = 0
     const timer = setInterval(() => {
       repository.getAnalysis(draftId)
-        .then((job) => { if (!stopped) setAnalysis(job) })
-        .catch(() => { /* 일시적인 오류는 다음 폴링에서 회복한다 */ })
+        .then((job) => { if (!stopped) { failures = 0; setAnalysis(job) } })
+        .catch(() => {
+          if (stopped) return
+          failures += 1
+          // 한두 번은 일시적일 수 있지만 계속 실패하면 무한 로딩에 갇힌다. 실패로 전환해 빠져나갈 길을 준다.
+          if (failures < ANALYSIS_POLL_FAILURE_LIMIT) return
+          setAnalysis((current) => current
+            ? { ...current, status: 'failed', error: '분석 상태를 확인하지 못했어요. 서버가 응답하지 않습니다.' }
+            : current)
+        })
     }, 2500)
     return () => { stopped = true; clearInterval(timer) }
   }, [analysis?.status, draftId, repository, step])
@@ -209,7 +223,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }
 
   const visibleDocument = draft
-    ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits, state.confirmations)
+    ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits)
     : null
 
   const submitDocument = async () => {
@@ -217,12 +231,15 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     setPending(true)
     try {
       await repository.saveDocument(state.draftId, visibleDocument.document)
-      const updated = await repository.updateDraft(state.draftId, { attachments: state.attachments, document: visibleDocument.document })
-      const completed = state.submittedHandover ? updated : await repository.submitHandover(state.draftId)
+      const completed = await repository.submitHandover(state.draftId)
       setDraft(completed)
       dispatch({ type: 'submission/completed', handover: completed })
       navigate('/handovers/new/complete')
-      showToast(state.submittedHandover ? '변경사항을 저장했어요' : `${completed.recipient.name}님에게 인수인계를 전달했어요`)
+      showToast(state.submittedHandover
+        ? '변경사항을 저장했어요'
+        : `${completed.recipients.map((person) => person.name).join(', ')}님에게 인수인계를 전달했어요`)
+    } catch {
+      showToast('인수인계를 전달하지 못했어요. 잠시 후 다시 시도해 주세요')
     } finally { setPending(false) }
   }
 
@@ -248,7 +265,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           onSubmit={(answer) => { void answerQuestion(question.id, currentStep, answer) }}
         />
       })()}
-      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} confirmations={state.confirmations} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onConfirm={(criterionId, value) => dispatch({ type: 'criterion/confirmed', criterionId, value })} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
+      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep
         handover={state.submittedHandover}
         onEdit={() => navigate('/handovers/new/document')}

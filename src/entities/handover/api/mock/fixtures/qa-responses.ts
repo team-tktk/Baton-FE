@@ -1,7 +1,9 @@
 import type { HandoverAnswer } from '../../../model/types'
 
-interface QaResponseRule extends HandoverAnswer {
+interface QaResponseRule {
   keywords: string[]
+  text: string
+  source: string
 }
 
 export const qaResponseRules = [
@@ -39,5 +41,6 @@ export const qaResponseRules = [
 
 export const fallbackQaResponse = {
   text: '자료에서 답을 찾지 못했어요. 이도현 팀장님께 물어볼 질문으로 정리해드릴게요.',
-  source: null,
+  grounded: false,
+  citations: [],
 } satisfies HandoverAnswer

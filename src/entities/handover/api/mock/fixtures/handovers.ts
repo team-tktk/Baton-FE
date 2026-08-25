@@ -39,8 +39,7 @@ export const primaryHandoverFixture: Handover = {
         tone: 'blue',
         description: '행사 상품과 쿠폰 범위를 정하고 있습니다.',
         nextAction: '상품팀·마케팅팀과 쿠폰 범위 확정',
-        meta: '8월 28일',
-        criterionId: 'coupon',
+        meta: '9월 12일',
       },
       {
         id: 'task-delivery-vendor',
@@ -50,7 +49,6 @@ export const primaryHandoverFixture: Handover = {
         description: '물류팀의 반품 기간 답변을 기다리고 있습니다.',
         nextAction: '답변 후 배송업체 신청 화면에 등록',
         meta: '오세진 · 물류팀',
-        criterionId: 'delivery',
       },
     ],
     recurringTasks: [
@@ -62,7 +60,6 @@ export const primaryHandoverFixture: Handover = {
         description: '주문 수, 반품, 문의를 모아 팀에 공유합니다.',
         nextAction: '월요일 확인 → 화요일 팀 검토',
         meta: '매주 월요일',
-        criterionId: 'report',
       },
     ],
     criteria: [
@@ -70,22 +67,16 @@ export const primaryHandoverFixture: Handover = {
         id: 'coupon',
         title: '쿠폰 할인 승인 순서',
         defaultText: '쿠폰 할인율이 10%를 넘으면 예산과 승인 순서를 확인합니다.',
-        question: '10%를 넘는 쿠폰은 누구에게 먼저 확인하나요?',
-        options: ['마케팅 → 팀장', '팀장에게 바로'],
       },
       {
         id: 'delivery',
         title: '배송업체 회신 기준',
         defaultText: '배송업체 답변이 늦으면 물류팀에 먼저 공유합니다.',
-        question: '답변이 늦을 때 언제 물류팀에 알리나요?',
-        options: ['오늘 오후 3시', '다음 날 오전'],
       },
       {
         id: 'report',
         title: '주문 현황 공유일',
         defaultText: '품절 가능 재고가 10개 미만이면 상품 노출을 조정합니다.',
-        question: '주간 주문 현황을 팀에 언제 공유하나요?',
-        options: ['화요일', '수요일'],
       },
     ],
     people: [
@@ -151,16 +142,16 @@ export const csSupportHandoverFixture: Handover = {
     statusLabel: '보완 요청 · 답변 기준 확인 필요',
     updatedAtLabel: '2026. 08. 25.',
     activeTasks: [
-      { id: 'task-cs-backlog', title: '미처리 문의 18건 정리', statusLabel: '진행 중', tone: 'blue', description: '배송 지연 문의가 집중되어 우선 답변이 필요합니다.', nextAction: '배송 지연 7건에 예상 도착일 일괄 안내', meta: '오늘 11:00', criterionId: 'cs-priority' },
-      { id: 'task-refund-review', title: '예외 환불 승인 대기', statusLabel: '승인 대기', tone: 'yellow', description: '정책 기간이 지난 환불 요청 3건을 검토하고 있습니다.', nextAction: '증빙 확인 후 CS 리더 승인 요청', meta: '3건', criterionId: 'refund-approval' },
+      { id: 'task-cs-backlog', title: '미처리 문의 18건 정리', statusLabel: '진행 중', tone: 'blue', description: '배송 지연 문의가 집중되어 우선 답변이 필요합니다.', nextAction: '배송 지연 7건에 예상 도착일 일괄 안내', meta: '오늘 11:00' },
+      { id: 'task-refund-review', title: '예외 환불 승인 대기', statusLabel: '승인 대기', tone: 'yellow', description: '정책 기간이 지난 환불 요청 3건을 검토하고 있습니다.', nextAction: '증빙 확인 후 CS 리더 승인 요청', meta: '3건' },
     ],
     recurringTasks: [
-      { id: 'task-weekly-voc', title: '주간 VOC 리포트', statusLabel: '매주 반복', tone: 'green', description: '반복 문의와 개선 요청을 유형별로 정리합니다.', nextAction: '금요일 오전 제품팀에 공유', meta: '매주 금요일', criterionId: 'voc-report' },
+      { id: 'task-weekly-voc', title: '주간 VOC 리포트', statusLabel: '매주 반복', tone: 'green', description: '반복 문의와 개선 요청을 유형별로 정리합니다.', nextAction: '금요일 오전 제품팀에 공유', meta: '매주 금요일' },
     ],
     criteria: [
-      { id: 'cs-priority', title: '문의 우선순위', defaultText: '결제 오류와 배송 분실 문의를 최우선으로 처리합니다.', question: '같은 등급의 문의가 몰리면 어떤 순서로 답변하나요?', options: ['접수 순서', '고객 영향도 순서'] },
-      { id: 'refund-approval', title: '예외 환불 승인', defaultText: '정책 기간이 지난 환불은 CS 리더 승인을 받습니다.', question: '승인 전에 고객에게 무엇을 안내하나요?', options: ['처리 예정 시간', '승인 완료 후 안내'] },
-      { id: 'voc-report', title: 'VOC 공유 기준', defaultText: '동일 유형 문의가 5건 이상이면 제품팀에 공유합니다.', question: '긴급 이슈는 정기 리포트를 기다리나요?', options: ['즉시 공유', '금요일에 공유'] },
+      { id: 'cs-priority', title: '문의 우선순위', defaultText: '결제 오류와 배송 분실 문의를 최우선으로 처리합니다.' },
+      { id: 'refund-approval', title: '예외 환불 승인', defaultText: '정책 기간이 지난 환불은 CS 리더 승인을 받습니다.' },
+      { id: 'voc-report', title: 'VOC 공유 기준', defaultText: '동일 유형 문의가 5건 이상이면 제품팀에 공유합니다.' },
     ],
     people: [
       { id: 'user-lee-dohyeon', name: '이도현', team: '운영팀', responsibility: '예외 환불 최종 승인' },
@@ -217,16 +208,16 @@ export const monthlySettlementHandoverFixture: Handover = {
     statusLabel: '승인 완료 · 최신 버전',
     updatedAtLabel: '2026. 08. 18.',
     activeTasks: [
-      { id: 'task-august-settlement', title: '8월 매출 정산 준비', statusLabel: '준비 중', tone: 'blue', description: '채널별 매출 자료와 PG사 입금 내역을 모으고 있습니다.', nextAction: '누락된 제휴몰 매출 자료 요청', meta: '9월 3일', criterionId: 'settlement-gap' },
+      { id: 'task-august-settlement', title: '8월 매출 정산 준비', statusLabel: '준비 중', tone: 'blue', description: '채널별 매출 자료와 PG사 입금 내역을 모으고 있습니다.', nextAction: '누락된 제휴몰 매출 자료 요청', meta: '9월 3일' },
     ],
     recurringTasks: [
-      { id: 'task-tax-invoice', title: '세금계산서 발행', statusLabel: '매월 반복', tone: 'green', description: '거래처별 공급가액과 사업자 정보를 확인해 발행합니다.', nextAction: '미발행 거래처 목록 확인', meta: '매월 5영업일', criterionId: 'tax-deadline' },
-      { id: 'task-cost-report', title: '월간 비용 보고', statusLabel: '매월 반복', tone: 'violet', description: '예산 대비 실제 비용과 주요 증감 사유를 보고합니다.', nextAction: '증감률 10% 이상 항목에 사유 작성', meta: '매월 7영업일', criterionId: 'cost-gap' },
+      { id: 'task-tax-invoice', title: '세금계산서 발행', statusLabel: '매월 반복', tone: 'green', description: '거래처별 공급가액과 사업자 정보를 확인해 발행합니다.', nextAction: '미발행 거래처 목록 확인', meta: '매월 5영업일' },
+      { id: 'task-cost-report', title: '월간 비용 보고', statusLabel: '매월 반복', tone: 'violet', description: '예산 대비 실제 비용과 주요 증감 사유를 보고합니다.', nextAction: '증감률 10% 이상 항목에 사유 작성', meta: '매월 7영업일' },
     ],
     criteria: [
-      { id: 'settlement-gap', title: '매출 차이 처리 기준', defaultText: '차이가 1만원을 넘으면 주문 단위로 원인을 확인합니다.', options: [] },
-      { id: 'tax-deadline', title: '세금계산서 마감', defaultText: '매월 5영업일까지 발행을 완료합니다.', options: [] },
-      { id: 'cost-gap', title: '비용 증감 보고', defaultText: '전월 대비 10% 이상 변동된 항목은 사유를 함께 기록합니다.', options: [] },
+      { id: 'settlement-gap', title: '매출 차이 처리 기준', defaultText: '차이가 1만원을 넘으면 주문 단위로 원인을 확인합니다.' },
+      { id: 'tax-deadline', title: '세금계산서 마감', defaultText: '매월 5영업일까지 발행을 완료합니다.' },
+      { id: 'cost-gap', title: '비용 증감 보고', defaultText: '전월 대비 10% 이상 변동된 항목은 사유를 함께 기록합니다.' },
     ],
     people: [
       { id: 'user-lee-dohyeon', name: '이도현', team: '운영팀', responsibility: '정산 차이 내역 확인' },

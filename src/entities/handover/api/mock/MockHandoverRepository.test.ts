@@ -59,11 +59,13 @@ describe('MockHandoverRepository', () => {
     const repository = new MockHandoverRepository()
 
     await expect(repository.askQuestion('handover-moastore-operations', '왜 12% 쿠폰인가요?')).resolves.toMatchObject({
-      source: '가을 할인전 준비 메모 · 팀 대화 · 8월 21일',
+      grounded: true,
+      citations: [{ title: '가을 할인전 준비 메모 · 팀 대화 · 8월 21일' }],
     })
     await expect(repository.askQuestion('handover-moastore-operations', '사내 와이파이 비밀번호는?')).resolves.toEqual({
       text: '자료에서 답을 찾지 못했어요. 이도현 팀장님께 물어볼 질문으로 정리해드릴게요.',
-      source: null,
+      grounded: false,
+      citations: [],
     })
   })
 
