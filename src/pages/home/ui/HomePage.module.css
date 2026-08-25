@@ -20,6 +20,8 @@
 .copy h1 span { color: var(--blue); }
 .copy p { margin: 0; border-left: 3px solid rgb(49 130 246 / 35%); padding-left: 18px; color: #5c6775; font-size: var(--fs-md); font-weight: 500; line-height: 1.72; }
 .actions { display: flex; width: 100%; flex-direction: column; gap: 12px; }
+.hero { width: 100%; }
+.hero img { display: block; width: 100%; height: auto; }
 .card { display: grid; width: 100%; min-height: 126px; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 18px; border: 1px solid rgb(25 31 40 / 9%); border-radius: 24px; background: rgb(255 255 255 / 90%); color: var(--text); cursor: pointer; padding: 22px 24px; text-align: left; box-shadow: 0 12px 35px rgb(31 50 80 / 6%); transition: .2s ease; }
 .card:hover { border-color: rgb(49 130 246 / 38%); box-shadow: 0 18px 42px rgb(49 130 246 / 12%); transform: translateY(-3px); }
 .card.primary { border-color: transparent; background: linear-gradient(135deg, #3182f6, #1966df); color: #fff; box-shadow: 0 20px 44px rgb(49 130 246 / 28%); }
@@ -32,7 +34,7 @@
 .cardCopy strong { margin-bottom: 7px; font-size: var(--fs-2xl); letter-spacing: -.04em; }
 .cardCopy em { color: var(--muted); font-size: var(--fs-2xs); font-style: normal; line-height: 1.45; }
 .primary .cardCopy em { color: rgb(255 255 255 / 78%); }
-@media (max-width: 900px) { .landing { grid-template-columns: 1fr; align-content: center; gap: 38px; padding: 110px max(5vw, 24px) 48px; } .copy { justify-self: center; text-align: center; } .copy h1 { font-size: clamp(46px, 8vw, 64px); } .copy p { border-left: 0; padding-left: 0; } .actions { width: min(620px, 100%); justify-self: center; } }
+@media (max-width: 900px) { .landing { grid-template-columns: 1fr; align-content: center; gap: 38px; padding: 110px max(5vw, 24px) 48px; } .copy { justify-self: center; text-align: center; } .copy h1 { font-size: clamp(46px, 8vw, 64px); } .copy p { border-left: 0; padding-left: 0; } .actions, .hero { width: min(620px, 100%); justify-self: center; } }
 @media (max-width: 560px) { .landing { gap: 28px; padding: 110px 20px 40px; } .brand { left: 20px; top: 24px; } .brand > span:last-child { display: none; } .auth { top: 24px; right: 20px; } .auth > button { height: 40px; padding: 0 13px; } .copy h1 { margin-bottom: 16px; font-size: clamp(38px, 11vw, 48px); } .copy p { font-size: var(--fs-xs); } .card { min-height: 102px; gap: 13px; border-radius: 20px; padding: 17px 18px; } .roleIcon { width: 46px; height: 46px; } .cardCopy strong { font-size: var(--fs-lg); } }
 @media (max-width: 1200px) { .copy { display: flex; min-height: 440px; flex-direction: column; align-items: flex-start; justify-content: center; } .copy h1 { font-size: var(--fs-8xl); } }
 @media (max-width: 900px) { .copy { align-items: center; } }

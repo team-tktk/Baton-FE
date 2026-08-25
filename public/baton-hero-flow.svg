@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 520" width="640" height="520" fill="none" role="img" aria-label="흩어진 업무 자료를 AI가 정리해 인수인계서로 만들어 다음 담당자에게 전달하는 모습">
+  <defs>
+    <linearGradient id="f-ai" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#60A5FA"/><stop offset="1" stop-color="#2563EB"/>
+    </linearGradient>
+    <filter id="f-sh" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#1E3A8A" flood-opacity="0.10"/>
+    </filter>
+    <filter id="f-sh2" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1E3A8A" flood-opacity="0.08"/>
+    </filter>
+    <marker id="f-ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0 0 L6 3 L0 6 Z" fill="#93C5FD"/>
+    </marker>
+  </defs>
+
+  <!-- 배경 장식 -->
+  <circle cx="96" cy="104" r="74" fill="#DBEAFE" opacity=".5"/>
+  <circle cx="570" cy="452" r="88" fill="#DBEAFE" opacity=".42"/>
+  <circle cx="600" cy="98" r="9" fill="#93C5FD" opacity=".7"/>
+  <circle cx="46" cy="404" r="7" fill="#93C5FD" opacity=".55"/>
+  <circle cx="300" cy="66" r="6" fill="#BFDBFE"/>
+  <circle cx="392" cy="470" r="8" fill="#BFDBFE"/>
+
+  <!-- 흩어진 업무 자료 -->
+  <g filter="url(#f-sh2)">
+    <g transform="rotate(-13 108 316)">
+      <rect x="56" y="250" width="104" height="132" rx="12" fill="#FFFFFF" stroke="#E8EDF5" stroke-width="1.5"/>
+      <rect x="72" y="270" width="46" height="8" rx="4" fill="#BFDBFE"/>
+      <rect x="72" y="292" width="72" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="72" y="308" width="58" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="72" y="324" width="68" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="72" y="340" width="38" height="6" rx="3" fill="#E7ECF3"/>
+    </g>
+    <g transform="rotate(-4 128 298)">
+      <rect x="76" y="232" width="104" height="132" rx="12" fill="#FFFFFF" stroke="#E8EDF5" stroke-width="1.5"/>
+      <rect x="92" y="252" width="46" height="8" rx="4" fill="#BFDBFE"/>
+      <rect x="92" y="274" width="72" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="92" y="290" width="52" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="92" y="306" width="68" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="92" y="322" width="44" height="6" rx="3" fill="#E7ECF3"/>
+    </g>
+    <g transform="rotate(7 148 280)">
+      <rect x="96" y="214" width="104" height="132" rx="12" fill="#FFFFFF" stroke="#E8EDF5" stroke-width="1.5"/>
+      <rect x="112" y="234" width="46" height="8" rx="4" fill="#93C5FD"/>
+      <rect x="112" y="256" width="72" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="112" y="272" width="60" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="112" y="288" width="68" height="6" rx="3" fill="#E7ECF3"/>
+      <rect x="112" y="304" width="40" height="6" rx="3" fill="#E7ECF3"/>
+    </g>
+  </g>
+
+  <!-- 흐름 화살표 -->
+  <path d="M212 282 Q 240 272 254 268" stroke="#93C5FD" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 9" marker-end="url(#f-ar)"/>
+  <path d="M382 268 H 424" stroke="#93C5FD" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 9" marker-end="url(#f-ar)"/>
+
+  <!-- AI 코어 -->
+  <circle cx="320" cy="268" r="78" fill="#3B82F6" opacity=".07"/>
+  <circle cx="320" cy="268" r="62" fill="none" stroke="#BFDBFE" stroke-width="2" stroke-dasharray="5 9" stroke-linecap="round"/>
+  <g filter="url(#f-sh)">
+    <rect x="274" y="222" width="92" height="92" rx="28" fill="url(#f-ai)"/>
+  </g>
+  <path d="M320 246 C 322 258 328 264 340 266 C 328 268 322 274 320 286 C 318 274 312 268 300 266 C 312 264 318 258 320 246 Z" fill="#FFFFFF"/>
+  <path d="M345 240 C 346 245 348 247 353 248 C 348 249 346 251 345 256 C 344 251 342 249 337 248 C 342 247 344 245 345 240 Z" fill="#FFFFFF" opacity=".85"/>
+  <path d="M297 288 C 298 292 299 293 303 294 C 299 295 298 296 297 300 C 296 296 295 295 291 294 C 295 293 296 292 297 288 Z" fill="#FFFFFF" opacity=".7"/>
+
+  <!-- 정리된 인수인계서 -->
+  <g filter="url(#f-sh)">
+    <rect x="436" y="140" width="168" height="248" rx="20" fill="#FFFFFF"/>
+  </g>
+  <rect x="460" y="170" width="62" height="10" rx="5" fill="#2563EB"/>
+  <rect x="460" y="191" width="98" height="7" rx="3.5" fill="#E7ECF3"/>
+  <line x1="460" y1="214" x2="580" y2="214" stroke="#F1F5F9" stroke-width="2"/>
+
+  <g>
+    <circle cx="470" cy="238" r="9" fill="#2563EB"/>
+    <path d="M466 238 l3 3 l5.5 -6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect x="488" y="234" width="86" height="8" rx="4" fill="#E7ECF3"/>
+  </g>
+  <g>
+    <circle cx="470" cy="274" r="9" fill="#2563EB"/>
+    <path d="M466 274 l3 3 l5.5 -6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect x="488" y="270" width="66" height="8" rx="4" fill="#E7ECF3"/>
+  </g>
+  <g>
+    <circle cx="470" cy="310" r="9" fill="#2563EB"/>
+    <path d="M466 310 l3 3 l5.5 -6" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect x="488" y="306" width="80" height="8" rx="4" fill="#E7ECF3"/>
+  </g>
+  <g>
+    <circle cx="470" cy="346" r="8.5" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="2"/>
+    <rect x="488" y="342" width="56" height="8" rx="4" fill="#EEF2F7"/>
+  </g>
+
+  <!-- 다음 담당자 -->
+  <g filter="url(#f-sh2)">
+    <rect x="452" y="406" width="136" height="46" rx="23" fill="#EFF6FF" stroke="#DBEAFE" stroke-width="1.5"/>
+  </g>
+  <circle cx="477" cy="429" r="15" fill="#2563EB"/>
+  <circle cx="477" cy="425" r="5" fill="#FFFFFF"/>
+  <path d="M469 438 a8 8 0 0 1 16 0 z" fill="#FFFFFF"/>
+  <rect x="500" y="420" width="62" height="7" rx="3.5" fill="#93C5FD"/>
+  <rect x="500" y="433" width="42" height="6" rx="3" fill="#BFDBFE"/>
+</svg>

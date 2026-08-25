@@ -51,7 +51,10 @@ describe('buildHandoverMarkdown', () => {
     expect(markdown).toContain('## 반복 업무')
   })
 
-  it('uses the agreed Korean UTF-8 download filename', () => {
-    expect(handoverMarkdownFilename).toBe('모아스토어_운영팀_업무_인수인계.md')
+  it('builds the download filename from the handover title', async () => {
+    const handover = await getPrimaryHandover()
+    // 제목이 파일명을 결정한다: 공백은 _로 바꾸고 파일명 금지문자는 지운다.
+    expect(handoverMarkdownFilename({ ...handover, title: '가을 할인전 내부 미팅' })).toBe('가을_할인전_내부_미팅.md')
+    expect(handoverMarkdownFilename({ ...handover, title: 'Q3 리포트/최종' })).toBe('Q3_리포트최종.md')
   })
 })

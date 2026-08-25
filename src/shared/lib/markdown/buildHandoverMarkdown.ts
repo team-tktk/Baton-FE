@@ -1,6 +1,11 @@
 import type { Handover, HandoverTask } from '@/entities/handover'
 
-export const handoverMarkdownFilename = '모아스토어_운영팀_업무_인수인계.md'
+// 다운로드 파일명은 실제 인수인계 제목에서 만든다. 파일명에 못 쓰는 문자는 지우고 공백은 _로 바꾼다.
+export function handoverMarkdownFilename(handover: Handover): string {
+  const base = handover.title.trim() || '업무 인수인계'
+  const safe = base.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_')
+  return `${safe}.md`
+}
 
 function taskLines(tasks: HandoverTask[]) {
   // AI가 채우지 못한 항목은 라벨만 남으므로 줄 자체를 뺀다.
