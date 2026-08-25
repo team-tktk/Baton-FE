@@ -1,0 +1,10 @@
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.heading h2 { margin: 0 0 6px; font-size: 18px; }.heading p { margin: 0; color: var(--muted); font-size: 11px; }
+.search { display: flex; align-items: center; gap: 10px; height: 52px; margin-top: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); padding: 0 14px; }
+.search input { min-width: 0; flex: 1; border: 0; background: transparent; outline: 0; }
+.listTitle { display: block; margin: 17px 0 9px; color: var(--sub); font-size: 11px; }
+.people { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.people button { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 13px; background: #fff; color: var(--text); cursor: pointer; padding: 13px; text-align: left; }
+.people button span strong, .people button span small { display: block; }.people button span strong { margin-bottom: 4px; font-size: 11px; }.people button span small { color: var(--muted); font-size: 8px; }
+.people button i { display: none; color: var(--blue); }.people button.selected { border-color: #9ac7ff; background: var(--blue-faint); }.people button.selected i { display: flex; }
+@media (max-width: 700px) { .people { grid-template-columns: 1fr; } }
