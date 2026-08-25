@@ -5,12 +5,12 @@ import { Badge } from '@/shared/ui/badge'
 import { Icon } from '@/shared/ui/icon'
 import { useToast } from '@/shared/ui/toast'
 import { AppHeader } from '@/widgets/app-header'
+import { HandoverReadDocument } from '@/widgets/handover-document'
 
 import { useHandoverDetail } from '../model/useHandoverDetail'
 import { DetailState } from './DetailState'
 import { HandoverAiPanel } from './HandoverAiPanel'
 import styles from './HandoverWorkspacePages.module.css'
-import { ReceivedHandoverDocument } from './ReceivedHandoverDocument'
 
 export function HandoverWorkspacePage() {
   const navigate = useNavigate()
@@ -25,7 +25,7 @@ export function HandoverWorkspacePage() {
       <div className={styles.workspaceTitle}><small>{handover.team} · {handover.deliveredAtLabel} 전달</small><strong>{handover.owner.name}님에게 받은 인수인계</strong></div>
       <div className={styles.workspaceTools}><Badge tone="blue">확인 전</Badge><button type="button" onClick={() => setAiOpen(true)}><Icon name="chat" /> AI에게 질문</button></div>
     </header>
-    <div className={styles.workspaceDocument}><ReceivedHandoverDocument handover={handover} onAttachmentOpen={fixtureNotice} /></div>
+    <div className={styles.workspaceDocument}><HandoverReadDocument handover={handover} onAttachmentOpen={fixtureNotice} /></div>
     <HandoverAiPanel attachmentCount={handover.attachments.length} handoverId={handover.id} open={aiOpen} onClose={() => setAiOpen(false)} />
   </main>
 }

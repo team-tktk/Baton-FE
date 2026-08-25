@@ -20,6 +20,6 @@ describe('ReviewActions', () => {
   it('disables mutations while a request is pending', async () => {
     render(<ReviewActions handover={await getPrimaryHandover()} pending onApprove={vi.fn()} onComment={vi.fn()} onRevision={vi.fn()} />)
     expect(screen.getByRole('button', { name: '보완 요청' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: '승인하기' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '인수인계 승인' })).toBeDisabled()
   })
 })

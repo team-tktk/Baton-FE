@@ -1,2 +1,10 @@
-.workspace { display: grid; grid-template-columns: minmax(0, 1fr) 330px; align-items: start; gap: 16px; }
-@media (max-width: 900px) { .workspace { grid-template-columns: 1fr; } }
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  align-items: start;
+  gap: 24px;
+}
+
+.document { min-width: 0; }
+
+@media (max-width: 1080px) { .workspace { grid-template-columns: 1fr; } }
