@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { DemoAuthModal, ProfileMenu, type AuthMode, useDemoAuth } from '@/features/demo-auth'
+import { AuthModal, ProfileMenu, useAuth } from '@/features/auth'
 import { Icon, type IconName } from '@/shared/ui/icon'
+import { useToast } from '@/shared/ui/toast'
 
 import styles from './HomePage.module.css'
 
@@ -14,15 +15,18 @@ const roles: Array<{ icon: IconName; kicker: string; title: string; description:
 
 export function HomePage() {
   const navigate = useNavigate()
-  const { loggedIn, user } = useDemoAuth()
-  const [authMode, setAuthMode] = useState<AuthMode | null>(null)
+  const { sessionCheckFailed, status, user } = useAuth()
+  const { showToast } = useToast()
+  const [authOpen, setAuthOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const authTriggerRef = useRef<HTMLElement | null>(null)
 
-  const openAuth = (event: React.MouseEvent<HTMLButtonElement>, mode: AuthMode) => {
+  const openAuth = (event: React.MouseEvent<HTMLButtonElement>) => {
     authTriggerRef.current = event.currentTarget
-    setAuthMode(mode)
+    setAuthOpen(true)
   }
+
+  const showSignupNotice = () => showToast('회원가입은 준비 중이에요.')
 
   return (
     <main className={styles.main}>
@@ -32,20 +36,23 @@ export function HomePage() {
           <span><small>업무 자동 인수인계 서비스</small><strong>BATON</strong></span>
         </div>
         <nav aria-label="계정" className={styles.auth}>
-          {!loggedIn ? (
+          {status === 'loading' ? (
+            <span aria-label="로그인 상태 확인 중" className={styles.authLoading} role="status" />
+          ) : status === 'anonymous' ? (
             <>
-              <button className={styles.login} type="button" onClick={(event) => openAuth(event, 'login')}>로그인</button>
-              <button className={styles.signup} type="button" onClick={(event) => openAuth(event, 'signup')}>회원가입</button>
+              <button className={styles.login} type="button" onClick={openAuth}>로그인</button>
+              <button className={styles.signup} type="button" onClick={showSignupNotice}>회원가입</button>
             </>
-          ) : (
+          ) : user ? (
             <>
               <button className={styles.profile} type="button" onClick={() => setProfileOpen((value) => !value)}>
                 <i>{user.name.slice(0, 1)}</i><span>{user.name}</span><Icon name="chevron" />
               </button>
               {profileOpen && <ProfileMenu onHandovers={() => navigate('/handovers/received')} />}
             </>
-          )}
+          ) : null}
         </nav>
+        {sessionCheckFailed && <p className={styles.sessionWarning} role="alert">로그인 상태를 확인하지 못했어요. 로그인하면 다시 연결합니다.</p>}
         <div className={styles.copy}>
           <h1>업무는 남기고,<br /><span>인수인계는 자동으로.</span></h1>
           <p>흩어진 업무 자료를 AI가 정리해<br />다음 담당자가 바로 이어서 일할 수 있어요.</p>
@@ -60,7 +67,7 @@ export function HomePage() {
           ))}
         </section>
       </section>
-      <DemoAuthModal mode={authMode} returnFocusRef={authTriggerRef} onClose={() => setAuthMode(null)} onModeChange={setAuthMode} />
+      <AuthModal open={authOpen} returnFocusRef={authTriggerRef} onClose={() => setAuthOpen(false)} onSignup={showSignupNotice} />
     </main>
   )
 }

@@ -1,8 +1,8 @@
 export interface User {
   id: string
-  name: string
   email: string
-  organization: string
+  name: string
   team: string
-  role: 'predecessor' | 'successor' | 'manager'
+  position: string
+  createdAt: string
 }

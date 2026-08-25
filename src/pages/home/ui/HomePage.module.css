@@ -8,6 +8,8 @@
 .brand strong { color: #172033; font-size: 20px; font-weight: 800; letter-spacing: .025em; }
 .auth { position: absolute; z-index: 8; top: 38px; right: max(6vw, 32px); display: flex; align-items: flex-end; gap: 8px; }
 .auth > button { height: 44px; border: 0; border-radius: 12px; cursor: pointer; padding: 0 17px; font-size: 13px; font-weight: 750; }
+.authLoading { width: 112px; height: 44px; border-radius: 12px; background: linear-gradient(90deg, #e9edf3 25%, #f7f9fc 50%, #e9edf3 75%); background-size: 200% 100%; animation: auth-loading 1.2s ease-in-out infinite; }
+.sessionWarning { position: absolute; z-index: 4; top: 88px; right: max(6vw, 32px); margin: 0; color: #9a6700; font-size: 11px; }
 .login { background: transparent; color: var(--sub); }
 .signup { background: #172033; color: #fff; box-shadow: 0 8px 20px rgb(23 32 51 / 12%); }
 .profile { display: flex; align-items: center; gap: 9px; border: 1px solid rgb(25 31 40 / 9%) !important; background: rgb(255 255 255 / 88%); color: #263244; box-shadow: 0 7px 22px rgb(31 50 80 / 6%); }
@@ -35,3 +37,4 @@
 @media (max-width: 1200px) { .copy { display: flex; min-height: 440px; flex-direction: column; align-items: flex-start; justify-content: center; } .copy h1 { font-size: 56px; } }
 @media (max-width: 900px) { .copy { align-items: center; } }
 @media (max-width: 560px) { .landing { min-height: calc(100svh - 62px); padding: 34px 20px 40px; } .copy p br { display: none; } }
+@keyframes auth-loading { to { background-position: -200% 0; } }
