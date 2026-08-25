@@ -13,13 +13,13 @@
 .status {
   margin: 0 0 22px;
   color: var(--green);
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 850;
 }
 
 .main h1 {
   margin: 0 0 20px;
-  font-size: 54px;
+  font-size: var(--fs-8xl);
   line-height: 1.17;
   letter-spacing: -.06em;
 }
@@ -27,7 +27,7 @@
 .description {
   margin: 0;
   color: var(--sub);
-  font-size: 17px;
+  font-size: var(--fs-lg);
   font-weight: 500;
 }
 
@@ -46,7 +46,7 @@
   justify-content: center;
   border-radius: 14px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: var(--fs-base);
   font-weight: 800;
 }
 
@@ -72,13 +72,13 @@
   display: block;
   margin-top: 22px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--fs-2xs);
 }
 
 @media (max-width: 560px) {
   .main { width: calc(100% - 32px); padding: 64px 0; }
-  .main h1 { font-size: 40px; }
-  .description { font-size: 14px; }
+  .main h1 { font-size: var(--fs-6xl); }
+  .description { font-size: var(--fs-sm); }
   .actions { align-items: stretch; flex-direction: column; }
   .actions button { width: 100%; }
 }

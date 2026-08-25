@@ -22,15 +22,15 @@
   color: var(--muted);
   cursor: pointer;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-2xs);
   font-weight: 750;
 }
 
 .main > header > button svg { width: 16px; }
 .main > header > div { display: grid; grid-template-columns: auto auto; align-items: center; justify-items: end; column-gap: 10px; }
 .main > header > div > span { grid-row: 1 / 3; }
-.main > header strong { color: var(--ink); font-size: 15px; }
-.main > header small { color: var(--muted); font-size: 11px; }
+.main > header strong { color: var(--ink); font-size: var(--fs-base); }
+.main > header small { color: var(--muted); font-size: var(--fs-2xs); }
 .state { display: grid; min-height: 50vh; place-items: center; color: var(--muted); }
 
 @media (max-width: 720px) {
