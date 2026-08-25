@@ -10,6 +10,8 @@ export { HandoverStatusBadge } from './ui/HandoverStatusBadge'
 export { PersonSummary } from './ui/PersonSummary'
 export { TaskSummary } from './ui/TaskSummary'
 export type {
+  AnalysisJob,
+  AnalysisStatus,
   AttachmentStatus,
   CreateHandoverInput,
   Handover,

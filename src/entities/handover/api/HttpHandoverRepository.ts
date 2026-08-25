@@ -1,7 +1,8 @@
-import { apiRequest } from '@/shared/api'
+import { ApiError, apiRequest } from '@/shared/api'
 import { RepositoryError } from '@/shared/lib/async'
 
 import type {
+  AnalysisJob,
   CreateHandoverInput,
   Handover,
   HandoverAnswer,
@@ -13,9 +14,9 @@ import type {
   ReviewSummary,
   UpdateHandoverInput,
 } from '../model/types'
-import type { CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, MemberPageResponse } from './dto/types'
+import type { AnalysisJobResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, MemberPageResponse } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
-import { toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
+import { toAnalysisJob, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
 
 /**
@@ -80,6 +81,24 @@ export class HttpHandoverRepository implements HandoverRepository {
 
   async deleteFile(id: HandoverId, fileId: string): Promise<void> {
     await apiRequest<void>(`/api/v1/handovers/${id}/files/${fileId}`, { method: 'DELETE' })
+  }
+
+  async startAnalysis(id: HandoverId): Promise<AnalysisJob> {
+    try {
+      return toAnalysisJob(await apiRequest<AnalysisJobResponse>(`/api/v1/handovers/${id}/analysis`, { method: 'POST' }))
+    } catch (caught) {
+      // 이미 돌고 있는 작업이면 새로 시작할 필요 없이 현재 상태를 따라간다.
+      if (caught instanceof ApiError && caught.status === 409) return this.getAnalysis(id)
+      throw caught
+    }
+  }
+
+  async getAnalysis(id: HandoverId): Promise<AnalysisJob> {
+    return toAnalysisJob(await apiRequest<AnalysisJobResponse>(`/api/v1/handovers/${id}/analysis`))
+  }
+
+  async retryAnalysis(id: HandoverId): Promise<AnalysisJob> {
+    return toAnalysisJob(await apiRequest<AnalysisJobResponse>(`/api/v1/handovers/${id}/analysis/retry`, { method: 'POST' }))
   }
 
   listReceivedHandovers(): Promise<HandoverSummary[]> {

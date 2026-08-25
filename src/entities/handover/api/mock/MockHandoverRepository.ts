@@ -2,6 +2,7 @@ import { RepositoryError } from '@/shared/lib/async'
 
 import type { HandoverRepository } from '../HandoverRepository'
 import type {
+  AnalysisJob,
   CreateHandoverInput,
   Handover,
   HandoverAnswer,
@@ -27,6 +28,7 @@ export class MockHandoverRepository implements HandoverRepository {
   ])
   private readonly received = clone(receivedHandoverFixtures)
   private readonly reviews = clone(reviewSummaryFixtures)
+  private analysisProgress = 0
 
   async listMembers(): Promise<HandoverParticipant[]> {
     return clone(this.members)
@@ -100,6 +102,27 @@ export class MockHandoverRepository implements HandoverRepository {
     const handover = await this.getMutable(id)
     handover.attachments = handover.attachments.filter((file) => file.id !== fileId)
     this.syncSummaries(handover)
+  }
+
+  async startAnalysis(id: HandoverId): Promise<AnalysisJob> {
+    const handover = await this.getMutable(id)
+    if (handover.attachments.length === 0) {
+      throw new RepositoryError('VALIDATION', '분석할 파일이 없어요. 파일을 먼저 올려주세요.')
+    }
+    this.analysisProgress = 0
+    return { status: 'running', progress: 0, currentStep: '업무 자료를 읽는 중', error: null }
+  }
+
+  async getAnalysis(id: HandoverId): Promise<AnalysisJob> {
+    await this.getMutable(id)
+    this.analysisProgress = Math.min(100, this.analysisProgress + 50)
+    return this.analysisProgress >= 100
+      ? { status: 'completed', progress: 100, currentStep: '초안 준비 완료', error: null }
+      : { status: 'running', progress: this.analysisProgress, currentStep: '반복 업무를 정리하는 중', error: null }
+  }
+
+  async retryAnalysis(id: HandoverId): Promise<AnalysisJob> {
+    return this.startAnalysis(id)
   }
 
   async updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover> {

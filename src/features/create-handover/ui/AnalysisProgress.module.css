@@ -143,6 +143,17 @@
   animation: analysis-progress 1.8s ease-in-out infinite;
 }
 
+.progress i.determinate {
+  inset: 0 auto 0 0;
+  width: var(--progress, 0%);
+  background: #3182f6;
+  transition: width .4s ease;
+  animation: none;
+}
+
+.failure { grid-column: 1 / -1; display: grid; justify-items: start; gap: 10px; margin-top: 16px; }
+.failure p { margin: 0; color: var(--muted); font-size: 13px; }
+
 @keyframes analysis-progress { 0% { left: -30%; } 100% { left: 100%; } }
 @keyframes analysis-hint { 0%, 33% { opacity: 0; transform: translateY(7px); } 6%, 27% { opacity: 1; transform: translateY(0); } }
 @keyframes analysis-pulse { 0% { box-shadow: 0 0 0 0 rgb(49 130 246 / 28%); } 70% { box-shadow: 0 0 0 10px rgb(49 130 246 / 0%); } 100% { box-shadow: 0 0 0 0 rgb(49 130 246 / 0%); } }

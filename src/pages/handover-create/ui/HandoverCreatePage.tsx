@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import type { Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
+import type { AnalysisJob, Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, HandoverProgress, InterviewWizard, FileUploader, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
@@ -29,6 +29,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [pending, setPending] = useState(false)
   const [questions, setQuestions] = useState<InterviewQuestion[]>([])
   const [draft, setDraft] = useState<Handover | null>(null)
+  const [analysis, setAnalysis] = useState<AnalysisJob | null>(null)
   const params = useParams()
 
   useEffect(() => {
@@ -112,7 +113,43 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     }
   }
 
-  const analysisComplete = useCallback(() => navigate('/handovers/new/interview/1'), [navigate])
+  const failAnalysis = useCallback(() => {
+    showToast('분석을 시작하지 못했어요. 파일을 먼저 확인해 주세요')
+    navigate('/handovers/new/upload')
+  }, [navigate, showToast])
+
+  useEffect(() => {
+    if (step !== 'analyzing' || !draftId) return
+    let ignore = false
+    repository.startAnalysis(draftId)
+      .then((job) => { if (!ignore) setAnalysis(job) })
+      .catch(() => { if (!ignore) failAnalysis() })
+    return () => { ignore = true }
+  }, [draftId, failAnalysis, repository, step])
+
+  // 서버 권장 주기는 2~3초다. 완료·실패면 폴링을 멈춘다.
+  useEffect(() => {
+    if (step !== 'analyzing' || !draftId || analysis?.status !== 'running') return
+    let stopped = false
+    const timer = setInterval(() => {
+      repository.getAnalysis(draftId)
+        .then((job) => { if (!stopped) setAnalysis(job) })
+        .catch(() => { /* 일시적인 오류는 다음 폴링에서 회복한다 */ })
+    }, 2500)
+    return () => { stopped = true; clearInterval(timer) }
+  }, [analysis?.status, draftId, repository, step])
+
+  // 실패한 분석은 retry 엔드포인트로만 다시 돌릴 수 있다.
+  const retryAnalysis = () => {
+    if (!draftId) return
+    setAnalysis(null)
+    repository.retryAnalysis(draftId).then(setAnalysis).catch(failAnalysis)
+  }
+
+  useEffect(() => {
+    if (step !== 'analyzing' || analysis?.status !== 'completed') return
+    navigate('/handovers/new/interview/1')
+  }, [analysis?.status, navigate, step])
 
   const createDraft = async () => {
     const workItems = state.workItems.map((item) => item.trim()).filter(Boolean)
@@ -145,7 +182,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     <>
       {(step === 'setup' || step === 'upload' || step === 'document') ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
       {step !== 'analyzing' && step !== 'complete' && <HandoverProgress compact={step === 'setup' || step === 'upload' || step === 'document'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : 4} />}
-      {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} onComplete={analysisComplete} /></main>}
+      {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} job={analysis} onRetry={retryAnalysis} /></main>}
       {step === 'interview' && (() => {
         const currentStep = Number(params.step)
         const validStep = Number.isInteger(currentStep) && currentStep >= 1 && currentStep <= questions.length
