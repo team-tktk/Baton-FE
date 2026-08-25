@@ -5,10 +5,8 @@ import styles from './DocumentStep.module.css'
 
 interface DocumentStepProps {
   handover: Handover
-  confirmations: Record<string, string>
   pending: boolean
   returningFromComplete: boolean
-  onConfirm: (criterionId: string, value: string) => void
   onFeedback: (message: string) => void
   onFieldChange: (field: string, value: string) => void
   onSubmit: () => void

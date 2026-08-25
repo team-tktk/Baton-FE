@@ -2,7 +2,7 @@ import { expect, test } from './support/backend'
 
 test('comments, approves, and sees the updated review list', async ({ page }) => {
   await page.goto('/reviews')
-  await expect(page.getByRole('article')).toHaveCount(3)
+  await expect(page.getByRole('article')).toHaveCount(1)
   await page.getByRole('button', { name: /모아스토어 운영팀 업무 인수인계/ }).click()
   await page.getByLabel('검토 코멘트').fill('다음 행동과 담당자가 명확합니다.')
   await page.getByRole('button', { name: '코멘트 남기기' }).click()

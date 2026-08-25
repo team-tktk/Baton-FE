@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 
 import type { Handover } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
+import { ApiError } from '@/shared/api'
 import { RepositoryError } from '@/shared/lib/async'
 
 export function useHandoverDetail() {
@@ -19,7 +20,9 @@ export function useHandoverDetail() {
     let ignore = false
     repository.getHandover(handoverId).then((value) => { if (!ignore) { setError(''); setLoaded({ id: handoverId, value }) } }).catch((reason: unknown) => {
       if (ignore) return
-      if (reason instanceof RepositoryError && reason.code === 'NOT_FOUND') navigate('/404', { replace: true })
+      const missing = (reason instanceof RepositoryError && reason.code === 'NOT_FOUND')
+        || (reason instanceof ApiError && reason.status === 404)
+      if (missing) navigate('/404', { replace: true })
       else setError(reason instanceof Error ? reason.message : '인수인계를 불러오지 못했어요.')
     })
     return () => { ignore = true }

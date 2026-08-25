@@ -11,11 +11,11 @@ test('guards create routes and maps unknown paths to 404', async ({ page }) => {
 })
 
 test('keeps the app within the viewport and the workspace columns on desktop', async ({ page, viewport }) => {
-  await page.goto('/handovers/handover-moastore-operations')
-  await expect(page.getByRole('heading', { name: '업무 인수인계' })).toBeVisible()
+  await page.goto('/handovers/00000000-0000-0000-0000-0000000000bb')
+  await expect(page.getByRole('heading', { name: '프로모션 운영' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport?.width ?? 1440)
   if ((viewport?.width ?? 0) >= 900) {
-    const documentBox = await page.getByRole('heading', { name: '업무 인수인계' }).boundingBox()
+    const documentBox = await page.getByRole('heading', { name: '프로모션 운영' }).boundingBox()
     const chatBox = await page.getByText('인수인계 AI', { exact: true }).boundingBox()
     expect(documentBox?.x).toBeLessThan(chatBox?.x ?? 0)
   }

@@ -209,7 +209,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }
 
   const visibleDocument = draft
-    ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits, state.confirmations)
+    ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits)
     : null
 
   const submitDocument = async () => {
@@ -217,12 +217,15 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     setPending(true)
     try {
       await repository.saveDocument(state.draftId, visibleDocument.document)
-      const updated = await repository.updateDraft(state.draftId, { attachments: state.attachments, document: visibleDocument.document })
-      const completed = state.submittedHandover ? updated : await repository.submitHandover(state.draftId)
+      const completed = await repository.submitHandover(state.draftId)
       setDraft(completed)
       dispatch({ type: 'submission/completed', handover: completed })
       navigate('/handovers/new/complete')
-      showToast(state.submittedHandover ? '변경사항을 저장했어요' : `${completed.recipient.name}님에게 인수인계를 전달했어요`)
+      showToast(state.submittedHandover
+        ? '변경사항을 저장했어요'
+        : `${completed.recipients.map((person) => person.name).join(', ')}님에게 인수인계를 전달했어요`)
+    } catch {
+      showToast('인수인계를 전달하지 못했어요. 잠시 후 다시 시도해 주세요')
     } finally { setPending(false) }
   }
 
@@ -248,7 +251,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           onSubmit={(answer) => { void answerQuestion(question.id, currentStep, answer) }}
         />
       })()}
-      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} confirmations={state.confirmations} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onConfirm={(criterionId, value) => dispatch({ type: 'criterion/confirmed', criterionId, value })} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
+      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onHome={() => navigate('/')} />}
       {(step === 'setup' || step === 'upload') && (
       <main className={step === 'setup' ? styles.setupMain : styles.uploadMain}>

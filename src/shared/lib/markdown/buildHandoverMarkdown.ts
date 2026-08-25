@@ -46,7 +46,7 @@ export function buildHandoverMarkdown(handover: Handover): string {
     ...section('## 목적과 완료 기준', [document.purpose, '', document.completionStandard].filter((line, index) => index === 1 || line)),
     ...section('## 진행 중인 업무', taskLines(document.activeTasks)),
     ...section('## 반복 업무', taskLines(document.recurringTasks)),
-    ...section('## 업무 기준과 예외', document.criteria.map((criterion) => `- ${criterion.confirmedValue ?? criterion.defaultText}`)),
+    ...section('## 업무 기준과 예외', document.criteria.map((criterion) => `- ${criterion.defaultText}`)),
     ...section('## 확인된 기준', document.confirmedCriteria.map((item) => `- **${item.label}**: ${item.value}`)),
     ...section('## 함께 일하는 사람', document.people.map((person) => `- ${person.name} · ${person.team}: ${person.responsibility}`)),
     ...section('## 업무 일정', document.schedule.map((row) => `- ${row.cycle} · ${row.task}: ${row.detail}`)),

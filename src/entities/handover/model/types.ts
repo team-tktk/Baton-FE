@@ -57,16 +57,12 @@ export interface HandoverTask {
   description: string
   nextAction: string
   meta: string
-  criterionId?: string
 }
 
 export interface HandoverCriterion {
   id: string
   title: string
   defaultText: string
-  question?: string
-  options: string[]
-  confirmedValue?: string
 }
 
 export interface HandoverPerson {

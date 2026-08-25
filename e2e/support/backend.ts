@@ -24,6 +24,11 @@ const MEMBERS = [
   { id: 'user-lee-seojin', name: '이서진', position: '주임', team: '운영지원팀' },
 ]
 
+const HANDOVER_ID = '00000000-0000-0000-0000-0000000000bb'
+const OWNER = { id: '00000000-0000-0000-0000-0000000000aa', name: '최서윤', team: '운영팀', position: '매니저' }
+const PARTICIPANTS = [{ userId: 'user-jung-haneul', name: '정하늘', team: '운영팀', position: '주임', role: 'RECIPIENT' }]
+const WORK_SCOPES = [{ id: 'scope-1', title: '프로모션 운영' }]
+
 const DRAFT = {
   purpose: '프로모션과 주문 운영이 담당자 변경 후에도 멈추지 않도록 합니다.',
   completionCriteria: '정하늘님이 행사 일정, 주문 현황, 배송 이슈를 독립적으로 처리할 수 있습니다.',
@@ -46,6 +51,8 @@ const DRAFT = {
 export const test = base.extend<{ stubbedBackend: void }>({
   stubbedBackend: [async ({ page }, use) => {
     // 테스트마다 초기화되는 첨부 목록. 업로드 화면이 빈 상태로 시작하지 않도록 하나를 미리 넣어 둔다.
+    let reviewApproved = false
+    const comments: Array<{ id: string; authorId: string; authorName: string; content: string; createdAt: string }> = []
     let files = [{
       id: 'file-autumn-sale',
       fileName: '가을_할인전_준비_메모.docx',
@@ -122,6 +129,80 @@ export const test = base.extend<{ stubbedBackend: void }>({
         files = files.filter((file) => !pathname.endsWith(file.id))
         return route.fulfill({ status: 204, body: '' })
       }
+      if (pathname.endsWith('/acknowledge') || pathname.endsWith('/complete')) {
+        return json({ id: HANDOVER_ID, title: '프로모션 운영', status: 'COMPLETED', owner: OWNER, participants: PARTICIPANTS, workScopes: WORK_SCOPES, createdAt: '2026-08-25T00:00:00Z', updatedAt: '2026-09-11T00:00:00Z' })
+      }
+      if (pathname.endsWith('/handovers/reviews')) {
+        return json({
+          items: [{
+            id: HANDOVER_ID,
+            title: '모아스토어 운영팀 업무 인수인계',
+            status: reviewApproved ? 'APPROVED' : 'PENDING_REVIEW',
+            owner: { id: 'user-choi-seoyun', name: '최서윤', team: '운영팀', position: '매니저' },
+            workScopeSummary: '프로모션 운영',
+            workScopeCount: 3,
+            fileCount: 3,
+            submittedAt: '2026-09-11T05:30:00Z',
+            createdAt: '2026-08-25T00:00:00Z',
+            updatedAt: '2026-09-11T00:00:00Z',
+          }],
+          hasNext: false,
+        })
+      }
+      if (pathname.endsWith('/comments') && method === 'POST') {
+        const body = JSON.parse(route.request().postData() ?? '{}') as { content?: string }
+        const created = { id: `comment-${comments.length + 1}`, authorId: OWNER.id, authorName: '이도현', content: body.content ?? '', createdAt: '2026-09-11T06:00:00Z' }
+        comments.push(created)
+        return json(created, 201)
+      }
+      if (pathname.endsWith('/review/checklist')) return route.fulfill({ status: 200, body: '' })
+      if (pathname.endsWith('/approve')) {
+        reviewApproved = true
+        return json({ id: HANDOVER_ID, title: '모아스토어 운영팀 업무 인수인계', status: 'APPROVED', owner: OWNER, participants: PARTICIPANTS, workScopes: WORK_SCOPES, createdAt: '2026-08-25T00:00:00Z', updatedAt: '2026-09-11T00:00:00Z' })
+      }
+      if (pathname.endsWith('/handovers/received')) {
+        return json({
+          items: [{
+            id: HANDOVER_ID,
+            title: '프로모션 운영',
+            status: 'PENDING_REVIEW',
+            owner: { id: 'user-choi-seoyun', name: '최서윤', team: '운영팀', position: '매니저' },
+            workScopeSummary: '프로모션 운영 · 주문 관리 · 배송업체 협업',
+            workScopeCount: 3,
+            fileCount: 3,
+            recipientCount: 1,
+            receiptStatus: 'UNREAD',
+            submittedAt: '2026-09-11T05:30:00Z',
+            createdAt: '2026-08-25T00:00:00Z',
+            updatedAt: '2026-09-11T00:00:00Z',
+          }],
+          hasNext: false,
+          statusCounts: { UNREAD: 1, IN_PROGRESS: 0, COMPLETED: 0 },
+        })
+      }
+      if (pathname.endsWith('/review')) {
+        if (!pathname.includes(HANDOVER_ID)) return json({ detail: '없는 인수인계', status: 404 }, 404)
+        return json({
+          handoverId: HANDOVER_ID,
+          status: reviewApproved ? 'APPROVED' : 'PENDING_REVIEW',
+          document: { content: DRAFT, updatedAt: '2026-09-11T00:00:00Z' },
+          attachments: files,
+          checklist: [{ id: 'check-1', label: '업무 목적과 완료 기준이 분명해요', checked: true }],
+          comments,
+        })
+      }
+      if (pathname.endsWith('/submit')) {
+        return json({
+          id: '00000000-0000-0000-0000-0000000000bb',
+          title: '프로모션 운영',
+          status: 'PENDING_REVIEW',
+          owner: { id: USER.id, name: USER.name, team: USER.team, position: USER.position },
+          participants: [{ userId: 'user-jung-haneul', name: '정하늘', team: '운영팀', position: '주임', role: 'RECIPIENT' }],
+          workScopes: [{ id: 'scope-1', title: '프로모션 운영' }],
+          createdAt: '2026-08-25T00:00:00Z',
+          updatedAt: '2026-09-11T00:00:00Z',
+        })
+      }
       if (pathname.endsWith('/questions/complete')) return json({ content: DRAFT, updatedAt: '2026-09-11T00:00:00Z' })
       if (pathname.endsWith('/document')) return json({ content: DRAFT, updatedAt: '2026-09-11T00:00:00Z' })
       if (/\/questions\/[^/]+\/answer$/.test(pathname)) {
@@ -148,10 +229,11 @@ export const test = base.extend<{ stubbedBackend: void }>({
       }
 
       if (/\/handovers\/[^/]+$/.test(pathname) && method === 'GET') {
+        if (!pathname.endsWith(HANDOVER_ID)) return json({ detail: '없는 인수인계', status: 404 }, 404)
         return json({
-          id: '00000000-0000-0000-0000-0000000000bb',
+          id: HANDOVER_ID,
           title: '프로모션 운영',
-          status: 'EDITING',
+          status: reviewApproved ? 'APPROVED' : 'EDITING',
           owner: { id: USER.id, name: USER.name, team: USER.team, position: USER.position },
           participants: [{ userId: 'user-jung-haneul', name: '정하늘', team: '운영팀', position: '주임', role: 'RECIPIENT' }],
           workScopes: [{ id: 'scope-1', title: '프로모션 운영' }],
