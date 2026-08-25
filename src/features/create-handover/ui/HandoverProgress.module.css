@@ -1,0 +1,3 @@
+.progress { width: min(1040px, calc(100% - 40px)); margin: 26px auto 0; }
+.progress > div { display: flex; justify-content: space-between; margin-bottom: 9px; color: var(--sub); font-size: 11px; }
+.progress strong { color: var(--blue-dark); }
