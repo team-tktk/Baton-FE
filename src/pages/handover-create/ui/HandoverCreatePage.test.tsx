@@ -32,6 +32,7 @@ function renderFlow(initialPath: string, repository = new MockHandoverRepository
     { path: '/handovers/new/setup', element: <HandoverCreatePage step="setup" /> },
     { path: '/handovers/new/upload', element: <HandoverCreatePage step="upload" /> },
     { path: '/handovers/new/analyzing', element: <HandoverCreatePage step="analyzing" /> },
+    { path: '/handovers/new/interview/:step', element: <HandoverCreatePage step="interview" /> },
   ], { initialEntries: [initialPath] })
   render(
     <HandoverRepositoryProvider repository={repository}>
@@ -309,5 +310,61 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('서버가 응답하지 않습니다')
     expect(screen.getByRole('button', { name: '다시 분석하기' })).toBeInTheDocument()
     vi.useRealTimers()
+  })
+
+  it('skips only the current question and moves to the next one', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    const skipQuestion = vi.spyOn(repository, 'skipQuestion').mockResolvedValue()
+    const completeQuestions = vi.spyOn(repository, 'completeQuestions')
+    vi.spyOn(repository, 'startAnalysis').mockResolvedValue({ status: 'completed', progress: 100, currentStep: '완료', error: null })
+    vi.spyOn(repository, 'listQuestions').mockResolvedValue([
+      { id: 'q-1', question: '첫 질문인가요?', help: '설명', options: [], status: 'pending', answer: null },
+      { id: 'q-2', question: '둘째 질문인가요?', help: '설명', options: [], status: 'pending', answer: null },
+    ])
+    const router = renderFlow('/handovers/new/setup', repository)
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+    expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '인수인계 초안 만들기' }))
+
+    expect(await screen.findByRole('heading', { name: '첫 질문인가요?' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '질문 건너뛰기' }))
+
+    // 이 문항만 건너뛰고 다음 질문으로 가야 한다. 남은 질문까지 끝내면 안 된다.
+    expect(skipQuestion).toHaveBeenCalledWith('handover-moastore-operations', 'q-1')
+    expect(completeQuestions).not.toHaveBeenCalled()
+    await waitFor(() => expect(router.state.location.pathname).toBe('/handovers/new/interview/2'))
+    expect(await screen.findByRole('heading', { name: '둘째 질문인가요?' })).toBeInTheDocument()
+  })
+
+  it('shows a waiting screen while the server rebuilds the draft', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    let finishComplete!: () => void
+    const pendingQuestion = { id: 'q-1', question: '유일한 질문인가요?', help: '설명', options: [], status: 'pending' as const, answer: null }
+    vi.spyOn(repository, 'startAnalysis').mockResolvedValue({ status: 'completed', progress: 100, currentStep: '완료', error: null })
+    vi.spyOn(repository, 'listQuestions')
+      .mockResolvedValueOnce([pendingQuestion])
+      .mockResolvedValue([{ ...pendingQuestion, status: 'answered', answer: '네' }])
+    vi.spyOn(repository, 'answerQuestion').mockResolvedValue()
+    vi.spyOn(repository, 'completeQuestions').mockReturnValue(new Promise<void>((resolve) => { finishComplete = resolve }))
+    renderFlow('/handovers/new/setup', repository)
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+    expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '인수인계 초안 만들기' }))
+
+    await user.type(await screen.findByRole('textbox', { name: '직접 답변' }), '네')
+    await user.click(screen.getByRole('button', { name: /답변 반영하고 초안 보기/ }))
+
+    // 초안 재생성은 몇 초 걸린다. 그동안 빈 화면이 아니라 안내가 보여야 한다.
+    expect(await screen.findByRole('heading', { name: /초안을 다시 만들고 있어요/ })).toBeInTheDocument()
+    expect(screen.getByText('답변 1개 반영 중')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '질문 건너뛰기' })).not.toBeInTheDocument()
+
+    finishComplete()
   })
 })

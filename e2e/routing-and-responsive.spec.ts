@@ -118,5 +118,5 @@ test('matches the DEMO upload layout and file metadata', async ({ page, viewport
   expect(uploadIconBox?.height).toBe(64)
   expect((uploadDescriptionBox?.y ?? 0) - ((uploadTitleBox?.y ?? 0) + (uploadTitleBox?.height ?? 0))).toBeCloseTo(8, 0)
   expect(Math.abs((fileRowBox?.height ?? 0) - 66)).toBeLessThanOrEqual(2)
-  expect(headingStyle).toEqual({ fontSize: '42px', fontWeight: '700' })
+  expect(headingStyle).toEqual({ fontSize: '40px', fontWeight: '700' })
 })

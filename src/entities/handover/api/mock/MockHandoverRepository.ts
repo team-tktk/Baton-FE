@@ -187,7 +187,7 @@ export class MockHandoverRepository implements HandoverRepository {
   }
 
   async completeHandover(id: HandoverId): Promise<Handover> {
-    return this.changeStatus(id, 'approved')
+    return this.changeStatus(id, 'completed')
   }
 
   async updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover> {
@@ -279,14 +279,14 @@ export class MockHandoverRepository implements HandoverRepository {
     if (received) {
       received.scope = handover.document.scope
       received.status = handover.status
-      received.statusLabel = handover.status === 'approved' ? '확인 완료' : handover.status === 'in-progress' ? '진행 중' : '확인 전'
+      received.statusLabel = handover.status === 'completed' ? '확인 완료' : handover.status === 'in-progress' ? '진행 중' : '확인 전'
       received.files = handover.attachments.length
     }
     const review = this.reviews.find((item) => item.id === handover.id)
     if (review) {
       review.status = handover.status
       review.statusLabel =
-        handover.status === 'approved' ? '승인 완료' : handover.status === 'revision-requested' ? '보완 요청' : '승인 대기'
+        handover.status === 'approved' || handover.status === 'completed' ? '승인 완료' : handover.status === 'revision-requested' ? '보완 요청' : '승인 대기'
     }
   }
 }

@@ -6,6 +6,7 @@ export type HandoverStatus =
   | 'in-progress'
   | 'revision-requested'
   | 'approved'
+  | 'completed'
 
 export interface HandoverParticipant {
   id: string
