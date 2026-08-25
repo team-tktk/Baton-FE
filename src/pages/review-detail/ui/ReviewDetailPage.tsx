@@ -10,6 +10,7 @@ import { Badge } from '@/shared/ui/badge'
 import { Icon } from '@/shared/ui/icon'
 import { useToast } from '@/shared/ui/toast'
 import { AppHeader } from '@/widgets/app-header'
+import { withReviewChecklist } from '@/features/review-handover'
 import { ReviewWorkspace } from '@/widgets/review-workspace'
 
 import styles from './ReviewDetailPage.module.css'
@@ -27,7 +28,7 @@ export function ReviewDetailPage() {
   useEffect(() => {
     if (!handoverId) { navigate('/404', { replace: true }); return }
     let ignore = false
-    repository.getHandover(handoverId).then((value) => { if (!ignore) setHandover(value) }).catch((reason: unknown) => {
+    repository.getHandover(handoverId).then((value) => { if (!ignore) setHandover(withReviewChecklist(value)) }).catch((reason: unknown) => {
       if (ignore) return
       if (reason instanceof RepositoryError && reason.code === 'NOT_FOUND') navigate('/404', { replace: true })
       else setError('검토 문서를 불러오지 못했어요.')

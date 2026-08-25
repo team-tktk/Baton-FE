@@ -1,7 +1,7 @@
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/handover'
 import { ToastProvider } from '@/shared/ui/toast'
@@ -34,5 +34,28 @@ describe('ReviewDetailPage', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('인수인계를 승인했어요')
     expect(screen.getByRole('button', { name: '승인 완료' })).toBeInTheDocument()
     expect((await repository.getHandover('handover-moastore-operations')).status).toBe('approved')
+  })
+
+  it('offers the default checklist when the server has none so approval is reachable', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    const base = await repository.getHandover('handover-moastore-operations')
+    // 새 인수인계는 서버에 저장된 체크리스트가 없다.
+    vi.spyOn(repository, 'getHandover').mockResolvedValue({ ...base, review: { ...base.review, checklist: [] } })
+    const saveReviewChecklist = vi.spyOn(repository, 'saveReviewChecklist').mockResolvedValue()
+    render(<HandoverRepositoryProvider repository={repository}><ToastProvider><MemoryRouter initialEntries={['/reviews/handover-moastore-operations']}><Routes><Route path="/reviews/:handoverId" element={<ReviewDetailPage />} /></Routes></MemoryRouter></ToastProvider></HandoverRepositoryProvider>)
+
+    const first = await screen.findByRole('checkbox', { name: '담당 업무와 다음 할 일이 명확해요' })
+    expect(first).not.toBeChecked()
+    expect(screen.queryByText('아직 체크리스트가 없어요. 승인하려면 항목이 필요합니다.')).not.toBeInTheDocument()
+
+    await user.click(first)
+
+    // 첫 체크에서 목록 전체가 서버에 만들어져야 한다.
+    expect(saveReviewChecklist).toHaveBeenCalledWith('handover-moastore-operations', [
+      { label: '담당 업무와 다음 할 일이 명확해요', checked: true },
+      { label: '판단 기준과 예외 상황이 포함됐어요', checked: false },
+      { label: '필요한 첨부 자료와 권한이 준비됐어요', checked: false },
+    ])
   })
 })
