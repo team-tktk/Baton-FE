@@ -39,6 +39,7 @@ export interface HandoverRepository {
   updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover>
   submitHandover(id: HandoverId): Promise<Handover>
   listChatMessages(id: HandoverId): Promise<HandoverChatExchange[]>
+  listSuggestedQuestions(id: HandoverId): Promise<string[]>
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer>
   listReviews(): Promise<ReviewSummary[]>
   addReviewComment(id: HandoverId, comment: string): Promise<ReviewComment>

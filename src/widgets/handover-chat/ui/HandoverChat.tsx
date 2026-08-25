@@ -5,10 +5,9 @@ import { Icon } from '@/shared/ui/icon'
 
 import styles from './HandoverChat.module.css'
 
-const suggestions = ['첫날 무엇부터 확인하면 되나요?', '12% 쿠폰을 제안한 이유가 뭔가요?', '배송이 늦어지면 누구에게 알려야 하나요?']
 
 export function HandoverChat({ handoverId }: { handoverId: string }) {
-  const { messages, send, status } = useHandoverChat(handoverId)
+  const { messages, send, status, suggestions } = useHandoverChat(handoverId)
   const endRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }) }, [messages, status])
   return <section className={styles.chat}>

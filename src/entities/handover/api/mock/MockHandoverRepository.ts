@@ -214,6 +214,10 @@ export class MockHandoverRepository implements HandoverRepository {
     return []
   }
 
+  async listSuggestedQuestions(): Promise<string[]> {
+    return ['첫날 가장 먼저 할 일은?', '배송 답변이 늦으면 누구에게 물어봐요?']
+  }
+
   async askQuestion(_id: HandoverId, question: string): Promise<HandoverAnswer> {
     const value = question.trim()
     if (!value) throw new RepositoryError('VALIDATION', '질문을 입력해 주세요.')
