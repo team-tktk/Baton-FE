@@ -173,7 +173,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   // 남은 미응답 질문을 건너뛰기로 정리해야 완료 호출이 통과한다(서버가 409로 막는다).
   const completeInterview = async () => {
     if (!draftId) return
-    for (const question of questions ?? []) {
+    // 로컬 상태가 서버보다 낡아 있으면 미응답 질문을 놓쳐 완료가 409로 막힌다. 서버 기준으로 다시 확인한다.
+    const latest = await repository.listQuestions(draftId)
+    for (const question of latest) {
       if (question.status === 'pending') await repository.skipQuestion(draftId, question.id)
     }
     await repository.completeQuestions(draftId)
