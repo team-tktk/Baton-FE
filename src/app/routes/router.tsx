@@ -2,7 +2,7 @@ import { createBrowserRouter } from 'react-router-dom'
 
 import { HomePage } from '@/pages/home'
 import { HandoverCreatePage } from '@/pages/handover-create'
-import { HandoverArrivalPage, HandoverOverviewPage } from '@/pages/handover-detail'
+import { HandoverArrivalPage, HandoverChatPage, HandoverOverviewPage, HandoverWorkspacePage } from '@/pages/handover-detail'
 import { HandoverInboxPage } from '@/pages/handover-inbox'
 import { NotFoundPage } from '@/pages/not-found'
 import { RoutePlaceholder } from './RoutePlaceholder'
@@ -21,8 +21,8 @@ export const router = createBrowserRouter([
   { path: '/handovers/received', element: <HandoverInboxPage /> },
   { path: '/handovers/:handoverId/arrival', element: <HandoverArrivalPage /> },
   { path: '/handovers/:handoverId/overview', element: <HandoverOverviewPage /> },
-  { path: '/handovers/:handoverId/chat', element: <RoutePlaceholder /> },
-  { path: '/handovers/:handoverId', element: <RoutePlaceholder /> },
+  { path: '/handovers/:handoverId/chat', element: <HandoverChatPage /> },
+  { path: '/handovers/:handoverId', element: <HandoverWorkspacePage /> },
   { path: '/reviews', element: <RoutePlaceholder /> },
   { path: '/reviews/:handoverId', element: <RoutePlaceholder /> },
   { path: '/404', element: <NotFoundPage /> },
