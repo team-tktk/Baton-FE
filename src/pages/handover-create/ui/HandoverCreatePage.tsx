@@ -212,11 +212,15 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     } finally { setPending(false) }
   }
 
-  const skipRemainingQuestions = async () => {
+  // 이 문항만 건너뛰고 다음으로 넘어간다. 마지막이면 남은 미응답을 정리하고 완료한다.
+  const skipQuestion = async (questionId: string, currentStep: number) => {
     if (!draftId || pending) return
     setPending(true)
     try {
-      await completeInterview()
+      await repository.skipQuestion(draftId, questionId)
+      setQuestions((current) => current?.map((item) => item.id === questionId ? { ...item, status: 'skipped', answer: null } : item) ?? current)
+      if (currentStep === (questions?.length ?? 0)) await completeInterview()
+      else navigate(`/handovers/new/interview/${currentStep + 1}`)
     } catch {
       showToast('건너뛰기를 반영하지 못했어요. 잠시 후 다시 시도해 주세요')
     } finally { setPending(false) }
@@ -261,7 +265,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           question={question}
           total={questions.length}
           onBack={() => navigate(`/handovers/new/interview/${currentStep - 1}`)}
-          onSkip={() => { void skipRemainingQuestions() }}
+          onSkip={() => { void skipQuestion(question.id, currentStep) }}
           onSubmit={(answer) => { void answerQuestion(question.id, currentStep, answer) }}
         />
       })()}
