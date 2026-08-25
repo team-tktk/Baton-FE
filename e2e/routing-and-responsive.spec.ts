@@ -63,7 +63,7 @@ test('matches the setup flow layout and recipient interaction', async ({ page, v
 
     expect(trackBox?.width).toBeCloseTo(440, 0)
     expect(trackBox?.height).toBe(2)
-    expect(fillBox?.width).toBeCloseTo(440 / 6, 0)
+    expect(fillBox?.width).toBeCloseTo(440 / 5, 0)
 
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: '업무 자료 올리기' }).click()
@@ -87,7 +87,7 @@ test('matches the DEMO upload layout and file metadata', async ({ page, viewport
   await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
 
   await expect(page.getByRole('button', { name: '홈으로' })).toBeVisible()
-  await expect(page.getByText('2 / 6')).toBeVisible()
+  await expect(page.getByText('2 / 5')).toBeVisible()
   await expect(page.getByRole('link', { name: 'BATON 홈' })).toHaveCount(0)
   await expect(page.getByText('DOCX · 2.4MB')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport?.width ?? 390)
