@@ -8,10 +8,12 @@ import { HandoverRepositoryProvider, MockHandoverRepository } from '@/entities/h
 import { ReviewInboxPage } from './ReviewInboxPage'
 
 describe('ReviewInboxPage', () => {
-  it('shows the reviews and counts each status from the loaded data', async () => {
+  it('opens on the pending tab and counts each status from the loaded data', async () => {
     const user = userEvent.setup()
     render(<HandoverRepositoryProvider repository={new MockHandoverRepository()}><MemoryRouter><ReviewInboxPage /></MemoryRouter></HandoverRepositoryProvider>)
-    expect(await screen.findAllByRole('article')).toHaveLength(3)
+    // 전체 탭이 없으므로 승인 대기로 시작하고, 보이는 목록도 승인 대기만이어야 한다.
+    expect(await screen.findAllByRole('article')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: '승인 대기 1' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('heading', { name: '검토할 인수인계' })).toBeInTheDocument()
     expect(screen.getByText('제출된 문서를 확인하고 승인하거나 보완 의견을 남기세요.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '홈으로' })).toBeInTheDocument()

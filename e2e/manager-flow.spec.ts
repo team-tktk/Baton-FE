@@ -10,5 +10,7 @@ test('comments, approves, and sees the updated review list', async ({ page }) =>
   await page.getByRole('button', { name: '인수인계 승인' }).click()
   await expect(page.getByRole('status')).toContainText('인수인계를 승인했어요')
   await page.getByRole('button', { name: /검토 목록/ }).click()
+  // 승인하면 승인 대기 탭에서 빠지므로 승인 완료 탭에서 확인한다.
+  await page.getByRole('navigation', { name: '검토 상태 필터' }).getByRole('button', { name: /승인 완료/ }).click()
   await expect(page.getByRole('button', { name: /모아스토어 운영팀 업무 인수인계/ })).toContainText('승인 완료')
 })
