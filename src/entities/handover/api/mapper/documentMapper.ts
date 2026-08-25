@@ -4,6 +4,8 @@ import type {
 } from '../../model/types'
 import type { HandoverDraftContent, TaskItemDto } from '../dto/types'
 
+const TOOL_SEPARATOR = ' — '
+
 /** 서버 status 문구는 자유 문자열이라, 뱃지 색만 대표적인 표현으로 추정한다. */
 function toneFor(status: string): HandoverTask['tone'] {
   if (/대기|보류|확인/.test(status)) return 'yellow'
@@ -52,7 +54,7 @@ export function toHandoverDocument(content: HandoverDraftContent, meta: Document
       team: person.team?.trim() || '',
       responsibility: person.helpWith?.trim() || '',
     })),
-    tools: (content.tools ?? []).map((tool) => [tool.name?.trim(), tool.description?.trim()].filter(Boolean).join(' — ')),
+    tools: (content.tools ?? []).map((tool) => [tool.name?.trim(), tool.description?.trim()].filter(Boolean).join(TOOL_SEPARATOR)),
     checklist: content.firstWeekChecklist ?? [],
     schedule: (content.schedule ?? []).map((row) => ({
       cycle: row.cycle?.trim() || '',
@@ -87,9 +89,12 @@ export function toDraftContent(document: HandoverDocument): HandoverDraftContent
     recurringTasks: document.recurringTasks.map(fromTask),
     rulesAndExceptions: document.criteria.map((criterion) => criterion.defaultText),
     stakeholders: document.people.map((person) => ({ name: person.name, team: person.team, helpWith: person.responsibility })),
+    // 첫 구분자에서만 자른다. split을 쓰면 설명 안의 ' — ' 뒤가 통째로 사라진다.
     tools: document.tools.map((tool) => {
-      const [name, description = ''] = tool.split(' — ')
-      return { name, description }
+      const separator = tool.indexOf(TOOL_SEPARATOR)
+      return separator === -1
+        ? { name: tool, description: '' }
+        : { name: tool.slice(0, separator), description: tool.slice(separator + TOOL_SEPARATOR.length) }
     }),
     schedule: document.schedule,
     accessAccounts: document.accessAccounts,
