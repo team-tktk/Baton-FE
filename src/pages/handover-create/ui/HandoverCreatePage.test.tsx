@@ -338,4 +338,33 @@ describe('HandoverCreatePage setup and upload', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/handovers/new/interview/2'))
     expect(await screen.findByRole('heading', { name: '둘째 질문인가요?' })).toBeInTheDocument()
   })
+
+  it('shows a waiting screen while the server rebuilds the draft', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    let finishComplete!: () => void
+    const pendingQuestion = { id: 'q-1', question: '유일한 질문인가요?', help: '설명', options: [], status: 'pending' as const, answer: null }
+    vi.spyOn(repository, 'startAnalysis').mockResolvedValue({ status: 'completed', progress: 100, currentStep: '완료', error: null })
+    vi.spyOn(repository, 'listQuestions')
+      .mockResolvedValueOnce([pendingQuestion])
+      .mockResolvedValue([{ ...pendingQuestion, status: 'answered', answer: '네' }])
+    vi.spyOn(repository, 'answerQuestion').mockResolvedValue()
+    vi.spyOn(repository, 'completeQuestions').mockReturnValue(new Promise<void>((resolve) => { finishComplete = resolve }))
+    renderFlow('/handovers/new/setup', repository)
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+    expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '인수인계 초안 만들기' }))
+
+    await user.type(await screen.findByRole('textbox', { name: '직접 답변' }), '네')
+    await user.click(screen.getByRole('button', { name: /답변 반영하고 초안 보기/ }))
+
+    // 초안 재생성은 몇 초 걸린다. 그동안 빈 화면이 아니라 안내가 보여야 한다.
+    expect(await screen.findByRole('heading', { name: /초안을 다시 만들고 있어요/ })).toBeInTheDocument()
+    expect(screen.getByText('답변 1개 반영 중')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '질문 건너뛰기' })).not.toBeInTheDocument()
+
+    finishComplete()
+  })
 })
