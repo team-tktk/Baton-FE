@@ -48,6 +48,7 @@ export interface HandoverCriterion {
   id: string
   title: string
   defaultText: string
+  question?: string
   options: string[]
   confirmedValue?: string
 }

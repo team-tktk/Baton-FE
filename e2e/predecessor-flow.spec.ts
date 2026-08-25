@@ -30,7 +30,7 @@ test('creates, confirms, and delivers a handover', async ({ page }) => {
   await page.getByRole('button', { name: '마케팅 담당자 확인 후 운영 팀장 마지막 확인' }).click()
   await page.getByRole('button', { name: '오늘 오후 3시' }).click()
   await page.getByRole('button', { name: '화요일' }).click()
-  await page.getByRole('button', { name: '인수인계 전달하기' }).click()
+  await page.getByRole('button', { name: '제출하기' }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/complete$/)
   await expect(page.getByRole('heading', { name: /정하늘님에게/ })).toBeVisible()
 })

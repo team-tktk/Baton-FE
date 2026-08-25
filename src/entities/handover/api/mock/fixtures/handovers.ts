@@ -67,20 +67,23 @@ export const primaryHandoverFixture: Handover = {
     criteria: [
       {
         id: 'coupon',
-        title: '쿠폰 승인 순서',
+        title: '쿠폰 할인 승인 순서',
         defaultText: '쿠폰 할인율이 10%를 넘으면 예산과 승인 순서를 확인합니다.',
-        options: ['마케팅 담당자 확인 후 운영 팀장 마지막 확인', '운영 팀장에게 바로 확인 요청'],
+        question: '10%를 넘는 쿠폰은 누구에게 먼저 확인하나요?',
+        options: ['마케팅 → 팀장', '팀장에게 바로'],
       },
       {
         id: 'delivery',
-        title: '배송업체 미회신',
+        title: '배송업체 회신 기준',
         defaultText: '배송업체 답변이 늦으면 물류팀에 먼저 공유합니다.',
-        options: ['오늘 오후 3시', '다음 영업일 오전'],
+        question: '답변이 늦을 때 언제 물류팀에 알리나요?',
+        options: ['오늘 오후 3시', '다음 날 오전'],
       },
       {
         id: 'report',
         title: '주문 현황 공유일',
         defaultText: '품절 가능 재고가 10개 미만이면 상품 노출을 조정합니다.',
+        question: '주간 주문 현황을 팀에 언제 공유하나요?',
         options: ['화요일', '수요일'],
       },
     ],

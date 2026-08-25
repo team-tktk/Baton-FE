@@ -2,7 +2,7 @@ import { Progress } from '@/shared/ui/progress'
 
 import styles from './HandoverProgress.module.css'
 
-const labels = ['기본 정보', '파일 업로드', 'AI 질문', '초안 확인', '전달 준비', '전달 완료']
+const labels = ['기본 정보', '파일 업로드', 'AI 질문', '초안 확인', '전달 완료']
 const TOTAL_STEPS = labels.length
 
 interface HandoverProgressProps {

@@ -1,24 +1,18 @@
 import type { Handover } from '@/entities/handover'
-import { ExportHandoverActions } from '@/features/export-handover'
-import { Button } from '@/shared/ui/button'
-import { Icon } from '@/shared/ui/icon'
-
 import styles from './CompletionStep.module.css'
 
 interface CompletionStepProps {
   handover: Handover
   onEdit: () => void
-  onFeedback: (message: string) => void
   onHome: () => void
 }
 
-export function CompletionStep({ handover, onEdit, onFeedback, onHome }: CompletionStepProps) {
+export function CompletionStep({ handover, onEdit, onHome }: CompletionStepProps) {
   return <main className={styles.main}>
-    <div className={styles.icon}><Icon name="check" /></div>
-    <span className={styles.kicker}>인수인계 전달 완료</span>
-    <h1>{handover.recipient.name}님에게<br />업무를 전달했어요</h1>
-    <p>{handover.deliveredAtLabel} · {handover.document.scope}</p>
-    <section><strong>{handover.title}</strong><span>문서는 언제든 다시 열어 수정할 수 있어요.</span><ExportHandoverActions handover={handover} onFeedback={onFeedback} /></section>
-    <div className={styles.actions}><Button variant="secondary" onClick={onEdit}>문서 수정하기</Button><Button onClick={onHome}>홈으로 돌아가기 <Icon name="arrow" /></Button></div>
+    <p className={styles.status}>✓ 전달 완료</p>
+    <h1>{handover.recipient.name}님에게<br />인수인계서를 전달했어요</h1>
+    <p className={styles.description}>수정한 내용은 받는 사람의 문서에도 바로 반영됩니다.</p>
+    <div className={styles.actions}><button type="button" className={styles.edit} onClick={onEdit}>문서 수정하기</button><button type="button" className={styles.home} onClick={onHome}>홈으로</button></div>
+    <time>2026. 09. 11. 14:30 전달</time>
   </main>
 }

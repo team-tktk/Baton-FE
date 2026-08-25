@@ -25,7 +25,7 @@ test('matches the setup flow layout and recipient interaction', async ({ page, v
   await page.goto('/handovers/new/setup')
 
   await expect(page.getByRole('button', { name: '홈으로' })).toBeVisible()
-  await expect(page.getByText('1 / 6')).toBeVisible()
+  await expect(page.getByText('1 / 5')).toBeVisible()
   await expect(page.getByRole('button', { name: '정하늘 선택 해제' })).toBeVisible()
   await expect(page.getByRole('listbox', { name: '멤버 목록' })).toBeHidden()
 

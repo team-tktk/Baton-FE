@@ -26,11 +26,11 @@ function renderFlow(initialPath: string, repository = new MockHandoverRepository
 }
 
 describe('HandoverCreatePage setup and upload', () => {
-  it('uses the six-step setup chrome and returns home', async () => {
+  it('uses the five-step setup chrome and returns home', async () => {
     const user = userEvent.setup()
     const router = renderFlow('/handovers/new/setup')
 
-    expect(screen.getByText('1 / 6')).toBeInTheDocument()
+    expect(screen.getByText('1 / 5')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'BATON 홈' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '홈으로' }))
