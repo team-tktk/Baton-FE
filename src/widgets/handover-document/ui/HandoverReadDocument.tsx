@@ -26,7 +26,7 @@ function TaskRow({ task }: { task: HandoverTask }) {
   return <div className={styles.taskRow}><Badge tone={task.tone}>{task.statusLabel}</Badge><strong>{task.title}</strong><p>{taskDescriptions[task.id] ?? task.description}</p></div>
 }
 
-export function HandoverReadDocument({ handover, onAttachmentOpen }: { handover: Handover; onAttachmentOpen?: (attachment: HandoverAttachment) => void }) {
+export function HandoverReadDocument({ handover, onAttachmentOpen }: { handover: Handover; onAttachmentOpen: (attachment: HandoverAttachment) => void }) {
   const document = handover.document
   const tasks = [...document.activeTasks, ...document.recurringTasks]
   return <>
@@ -40,7 +40,7 @@ export function HandoverReadDocument({ handover, onAttachmentOpen }: { handover:
     </article>
     <section className={styles.attachments}>
       <header><div><h2>첨부 문서</h2><p>AI 답변에 함께 사용되는 원본 자료입니다.</p></div><span>{handover.attachments.length}개</span></header>
-      {handover.attachments.map((attachment) => <button key={attachment.id} type="button" onClick={() => onAttachmentOpen?.(attachment)}><span className={styles.attachmentIcon}><Icon name="file" /></span><span><strong>{attachment.name}</strong><small>{attachmentMeta(attachment)}</small></span></button>)}
+      {handover.attachments.map((attachment) => <button key={attachment.id} type="button" onClick={() => onAttachmentOpen(attachment)}><span className={styles.attachmentIcon}><Icon name="file" /></span><span><strong>{attachment.name}</strong><small>{attachmentMeta(attachment)}</small></span></button>)}
     </section>
   </>
 }
