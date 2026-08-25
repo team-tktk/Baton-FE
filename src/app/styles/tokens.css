@@ -21,4 +21,21 @@
   --shadow-card: 0 16px 38px rgb(49 130 246 / 7%);
   --content-wide: 980px;
   --content-narrow: 720px;
+
+  /* Typography scale (min 12px for readability) */
+  --fs-3xs: 12px;
+  --fs-2xs: 12px;
+  --fs-xs: 13px;
+  --fs-sm: 14px;
+  --fs-base: 15px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 20px;
+  --fs-2xl: 22px;
+  --fs-3xl: 24px;
+  --fs-4xl: 28px;
+  --fs-5xl: 34px;
+  --fs-6xl: 40px;
+  --fs-7xl: 48px;
+  --fs-8xl: 56px;
 }
