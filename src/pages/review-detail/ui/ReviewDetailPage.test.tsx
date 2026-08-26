@@ -30,6 +30,9 @@ describe('ReviewDetailPage', () => {
     await user.click(screen.getByRole('button', { name: '코멘트 남기기' }))
     expect(await screen.findByText('<script>alert(1)</script>')).toBeInTheDocument()
     expect(document.querySelector('script')).not.toBeInTheDocument()
+    // 체크리스트가 전부 완료돼야 승인 버튼이 열린다.
+    expect(screen.getByRole('button', { name: '인수인계 승인' })).toBeDisabled()
+    await user.click(screen.getByRole('checkbox', { name: '필요한 첨부 자료와 권한이 준비됐어요' }))
     await user.click(screen.getByRole('button', { name: '인수인계 승인' }))
     expect(await screen.findByRole('status')).toHaveTextContent('인수인계를 승인했어요')
     expect(screen.getByRole('button', { name: '승인 완료' })).toBeInTheDocument()

@@ -48,7 +48,7 @@
 
 .commentButton { background: var(--blue-soft); color: var(--blue-dark); }
 .commentButton:disabled, .panel > footer button:disabled { cursor: not-allowed; opacity: .55; }
-.panel > footer { display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; border-top: 1px solid var(--line); padding: 18px 26px 24px; }
+.panel > footer { display: grid; grid-template-columns: 1fr; gap: 8px; border-top: 1px solid var(--line); padding: 18px 26px 24px; }
 .panel > footer button { background: var(--bg); color: var(--ink); }
 .panel > footer .approveButton { display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--blue); color: #fff; }
 .approveButton svg { width: 15px; }

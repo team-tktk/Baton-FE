@@ -16,12 +16,15 @@ import type {
   InterviewQuestion,
   ReviewComment,
   ReviewSummary,
+  SentSummary,
   UpdateHandoverInput,
 } from '../../model/types'
 import { memberFixtures } from './fixtures/members'
 import { primaryHandoverFixture, receivedHandoverFixtures } from './fixtures/handovers'
 import { fallbackQaResponse, qaResponseRules } from './fixtures/qa-responses'
 import { reviewSummaryFixtures } from './fixtures/reviews'
+import { sentSummaryFixtures } from './fixtures/sent'
+import { commentFixtures } from './fixtures/comments'
 
 const clone = <T,>(value: T): T => structuredClone(value)
 
@@ -32,6 +35,7 @@ export class MockHandoverRepository implements HandoverRepository {
   ])
   private readonly received = clone(receivedHandoverFixtures)
   private readonly reviews = clone(reviewSummaryFixtures)
+  private readonly sent = clone(sentSummaryFixtures)
   private analysisProgress = 0
 
   async listMembers(): Promise<HandoverParticipant[]> {
@@ -40,6 +44,10 @@ export class MockHandoverRepository implements HandoverRepository {
 
   async listReceivedHandovers(): Promise<HandoverSummary[]> {
     return clone(this.received)
+  }
+
+  async listSentHandovers(): Promise<SentSummary[]> {
+    return clone(this.sent)
   }
 
   async getHandover(id: HandoverId): Promise<Handover> {
@@ -234,6 +242,10 @@ export class MockHandoverRepository implements HandoverRepository {
     return clone(this.reviews)
   }
 
+  async listComments(id: HandoverId): Promise<ReviewComment[]> {
+    return clone(commentFixtures[id] ?? [])
+  }
+
   async addReviewComment(id: HandoverId, comment: string): Promise<ReviewComment> {
     const handover = await this.getMutable(id)
     const value = comment.trim()
@@ -251,10 +263,6 @@ export class MockHandoverRepository implements HandoverRepository {
   async saveReviewChecklist(id: HandoverId, items: Array<{ label: string; checked: boolean }>): Promise<void> {
     const handover = await this.getMutable(id)
     handover.review.checklist = items.map((item, index) => ({ id: `check-${index}`, label: item.label, checked: item.checked }))
-  }
-
-  async requestRevision(id: HandoverId): Promise<Handover> {
-    return this.changeStatus(id, 'revision-requested')
   }
 
   async approveHandover(id: HandoverId): Promise<Handover> {
@@ -290,7 +298,7 @@ export class MockHandoverRepository implements HandoverRepository {
     if (review) {
       review.status = handover.status
       review.statusLabel =
-        handover.status === 'approved' || handover.status === 'completed' ? '승인 완료' : handover.status === 'revision-requested' ? '보완 요청' : '승인 대기'
+        handover.status === 'approved' || handover.status === 'completed' ? '승인 완료' : '승인 대기'
     }
   }
 }

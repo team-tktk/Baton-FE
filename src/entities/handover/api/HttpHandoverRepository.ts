@@ -16,6 +16,7 @@ import type {
   InterviewQuestion,
   ReviewComment,
   ReviewSummary,
+  SentSummary,
   UpdateHandoverInput,
 } from '../model/types'
 import type {
@@ -27,7 +28,7 @@ import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandover
 import type { HandoverRepository } from './HandoverRepository'
 import { toDraftContent, toHandoverDocument } from './mapper/documentMapper'
 import { toChatExchange, toHandoverAnswer } from './mapper/chatMapper'
-import { formatListDate, toReceivedSummary, toReviewComment, toReviewSummary } from './mapper/receivedMapper'
+import { formatListDate, toReceivedSummary, toReviewComment, toReviewSummary, toSentSummary } from './mapper/receivedMapper'
 import { toAnalysisJob, toHandoverStatus, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
 
@@ -224,6 +225,11 @@ export class HttpHandoverRepository implements HandoverRepository {
     return (page.items ?? []).map((item) => toReceivedSummary(item))
   }
 
+  async listSentHandovers(): Promise<SentSummary[]> {
+    const page = await apiRequest<HandoverListResponse>('/api/v1/handovers/sent')
+    return (page.items ?? []).map((item) => toSentSummary(item))
+  }
+
   /** 상세 화면이 쓰는 정보는 인수인계 단건과 검토 응답 두 곳에 나뉘어 있다. */
   async getHandover(id: HandoverId): Promise<Handover> {
     const [handover, review] = await Promise.all([
@@ -309,6 +315,11 @@ export class HttpHandoverRepository implements HandoverRepository {
     return (page.items ?? []).map((item) => toReviewSummary(item))
   }
 
+  async listComments(id: HandoverId): Promise<ReviewComment[]> {
+    const items = await apiRequest<CommentResponse[]>(`/api/v1/handovers/${id}/comments`)
+    return (items ?? []).map((comment) => toReviewComment(comment))
+  }
+
   async addReviewComment(id: HandoverId, comment: string): Promise<ReviewComment> {
     const body: CommentRequest = { content: comment }
     const created = await apiRequest<CommentResponse>(`/api/v1/handovers/${id}/comments`, {
@@ -325,11 +336,6 @@ export class HttpHandoverRepository implements HandoverRepository {
       body: JSON.stringify(body),
       method: 'PATCH',
     })
-  }
-
-  async requestRevision(id: HandoverId): Promise<Handover> {
-    await apiRequest<HandoverResponse>(`/api/v1/handovers/${id}/request-revision`, { method: 'POST' })
-    return this.getHandover(id)
   }
 
   async approveHandover(id: HandoverId): Promise<Handover> {

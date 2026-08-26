@@ -55,7 +55,7 @@ export function HomePage() {
               <button className={styles.profile} type="button" onClick={() => setProfileOpen((value) => !value)}>
                 <i>{user.name.slice(0, 1)}</i><span>{user.name}</span><Icon name="chevron" />
               </button>
-              {profileOpen && <ProfileMenu onHandovers={() => navigate('/handovers/received')} />}
+              {profileOpen && <ProfileMenu onHandovers={() => navigate('/handovers/sent')} />}
             </>
           ) : null}
         </nav>

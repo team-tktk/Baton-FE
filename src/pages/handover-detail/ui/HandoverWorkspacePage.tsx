@@ -20,7 +20,6 @@ const STATUS_BADGE: Record<HandoverStatus, { label: string; tone: 'neutral' | 'b
   completed: { label: '확인 완료', tone: 'green' },
   approved: { label: '승인 완료 · 완료 처리 가능', tone: 'green' },
   'in-progress': { label: '진행 중', tone: 'yellow' },
-  'revision-requested': { label: '보완 요청', tone: 'yellow' },
   draft: { label: '작성 중', tone: 'neutral' },
   submitted: { label: '확인 전', tone: 'blue' },
 }

@@ -13,12 +13,14 @@ import type {
   InterviewQuestion,
   ReviewComment,
   ReviewSummary,
+  SentSummary,
   UpdateHandoverInput,
 } from '../model/types'
 
 export interface HandoverRepository {
   listMembers(): Promise<HandoverParticipant[]>
   listReceivedHandovers(): Promise<HandoverSummary[]>
+  listSentHandovers(): Promise<SentSummary[]>
   getHandover(id: HandoverId): Promise<Handover>
   createDraft(input: CreateHandoverInput): Promise<Handover>
   listFiles(id: HandoverId): Promise<HandoverAttachment[]>
@@ -42,8 +44,8 @@ export interface HandoverRepository {
   listSuggestedQuestions(id: HandoverId): Promise<string[]>
   askQuestion(id: HandoverId, question: string): Promise<HandoverAnswer>
   listReviews(): Promise<ReviewSummary[]>
+  listComments(id: HandoverId): Promise<ReviewComment[]>
   addReviewComment(id: HandoverId, comment: string): Promise<ReviewComment>
   saveReviewChecklist(id: HandoverId, items: Array<{ label: string; checked: boolean }>): Promise<void>
-  requestRevision(id: HandoverId): Promise<Handover>
   approveHandover(id: HandoverId): Promise<Handover>
 }
