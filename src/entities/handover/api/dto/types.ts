@@ -226,10 +226,18 @@ export interface ChatQuestionRequest {
   question: string
 }
 
+/**
+ * 답변 출처. `GENERAL_KNOWLEDGE`는 자료에 근거가 없어도 서버가 답을 만들어 준다
+ * (용어 설명·되묻는 질문·인계자 문의 안내가 모두 여기 섞여 온다).
+ * `NOT_FOUND`는 그 판단마저 실패했을 때만 오고 `answer`가 비어 있다.
+ */
+export type ChatAnswerSource = 'DOCUMENT' | 'GENERAL_KNOWLEDGE' | 'NOT_FOUND'
+
 export interface ChatAnswerResponse {
   messageId: string
   answer?: string | null
   grounded: boolean
+  answerSource?: ChatAnswerSource
   citations?: Citation[]
   fallbackContact?: string
 }
@@ -239,6 +247,7 @@ export interface ChatMessageResponse {
   question: string
   answer?: string | null
   grounded: boolean
+  answerSource?: ChatAnswerSource
   citations?: Citation[]
   createdAt: string
 }

@@ -52,7 +52,7 @@ export const test = base.extend<{ stubbedBackend: void }>({
   stubbedBackend: [async ({ page }, use) => {
     // 테스트마다 초기화되는 첨부 목록. 업로드 화면이 빈 상태로 시작하지 않도록 하나를 미리 넣어 둔다.
     let reviewApproved = false
-    const chatHistory: Array<{ id: string; question: string; answer: string | null; grounded: boolean; citations: Array<{ sourceId: string; title: string; locator: string }>; createdAt: string }> = []
+    const chatHistory: Array<{ id: string; question: string; answer: string | null; grounded: boolean; answerSource: string; citations: Array<{ sourceId: string; title: string; locator: string }>; createdAt: string }> = []
     const comments: Array<{ id: string; authorId: string; authorName: string; content: string; createdAt: string }> = []
     let files = [{
       id: 'file-autumn-sale',
@@ -139,17 +139,25 @@ export const test = base.extend<{ stubbedBackend: void }>({
       if (pathname.endsWith('/chat/messages')) {
         if (method === 'GET') return json({ items: chatHistory, hasNext: false })
         const body = JSON.parse(route.request().postData() ?? '{}') as { question?: string }
+        // 자료에 근거가 없으면 서버가 일반 지식으로 답한다. 답을 아예 못 만드는 NOT_FOUND는 드문 예외다.
         const grounded = /배송|늦/.test(body.question ?? '')
+        const answerSource = grounded ? 'DOCUMENT' : (body.question ?? '').includes('오류') ? 'NOT_FOUND' : 'GENERAL_KNOWLEDGE'
+        const answer = answerSource === 'DOCUMENT'
+          ? '오늘 오후 3시까지 답이 없으면 물류팀에 공유하세요.'
+          : answerSource === 'GENERAL_KNOWLEDGE'
+            ? '자료에는 없지만, 보통은 담당 팀에 먼저 공유하고 기록을 남겨요.'
+            : null
         const created = {
           id: `chat-${chatHistory.length + 1}`,
           question: body.question ?? '',
-          answer: grounded ? '오늘 오후 3시까지 답이 없으면 물류팀에 공유하세요.' : null,
+          answer,
           grounded,
+          answerSource,
           citations: grounded ? [{ sourceId: 'source-1', title: '문제 상황 대응 방법', locator: '할 일 목록' }] : [],
           createdAt: '2026-09-11T06:10:00Z',
         }
         chatHistory.push(created)
-        return json({ messageId: created.id, answer: created.answer, grounded, citations: created.citations, fallbackContact: grounded ? undefined : '이도현 팀장님께 문의해 주세요.' })
+        return json({ messageId: created.id, answer: created.answer, grounded, answerSource, citations: created.citations, fallbackContact: answerSource === 'NOT_FOUND' ? '이도현 팀장님께 문의해 주세요.' : undefined })
       }
       if (pathname.endsWith('/handovers/reviews')) {
         return json({

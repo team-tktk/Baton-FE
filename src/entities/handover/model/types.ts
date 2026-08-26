@@ -194,7 +194,7 @@ export interface HandoverAnswerCitation {
 
 export interface HandoverAnswer {
   text: string
-  /** 자료에서 근거를 찾았는지. false면 지어내지 않고 문의 안내를 준다. */
+  /** 업로드된 자료에서 근거를 찾았는지. false여도 AI가 일반 지식으로 답할 수 있고, 그때는 citations가 비어 있다. */
   grounded: boolean
   citations: HandoverAnswerCitation[]
 }
