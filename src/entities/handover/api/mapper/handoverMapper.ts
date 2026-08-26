@@ -7,7 +7,7 @@ const STATUS_BY_DTO: Record<HandoverStatusDto, HandoverStatus> = {
   ANSWERING: 'draft',
   EDITING: 'draft',
   PENDING_REVIEW: 'submitted',
-  REVISION_REQUESTED: 'revision-requested',
+  REVISION_REQUESTED: 'submitted',
   APPROVED: 'approved',
   COMPLETED: 'completed',
 }

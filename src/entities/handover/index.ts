@@ -34,5 +34,6 @@ export type {
   InterviewQuestion,
   ReviewComment,
   ReviewSummary,
+  SentSummary,
   UpdateHandoverInput,
 } from './model/types'

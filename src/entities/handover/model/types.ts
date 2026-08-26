@@ -4,7 +4,6 @@ export type HandoverStatus =
   | 'draft'
   | 'submitted'
   | 'in-progress'
-  | 'revision-requested'
   | 'approved'
   | 'completed'
 
@@ -173,6 +172,18 @@ export interface ReviewSummary {
   tone: 'yellow' | 'green'
   tasks: number
   files: number
+}
+
+/** 인계자(owner) 본인이 만든 인수인계 목록 카드. GET /handovers/sent 응답 기반. */
+export interface SentSummary {
+  id: HandoverId
+  title: string
+  scope: string
+  date: string
+  status: HandoverStatus
+  tasks: number
+  files: number
+  recipients: number
 }
 
 export interface HandoverAnswerCitation {
