@@ -9,18 +9,22 @@ import type {
   HandoverAttachment,
   HandoverChatExchange,
   HandoverDocument,
+  HandoverFileDownload,
   HandoverId,
   HandoverParticipant,
   HandoverSummary,
   InterviewQuestion,
   ReviewComment,
   ReviewSummary,
+  SentSummary,
   UpdateHandoverInput,
 } from '../../model/types'
 import { memberFixtures } from './fixtures/members'
 import { primaryHandoverFixture, receivedHandoverFixtures } from './fixtures/handovers'
 import { fallbackQaResponse, qaResponseRules } from './fixtures/qa-responses'
 import { reviewSummaryFixtures } from './fixtures/reviews'
+import { sentSummaryFixtures } from './fixtures/sent'
+import { commentFixtures } from './fixtures/comments'
 
 const clone = <T,>(value: T): T => structuredClone(value)
 
@@ -31,6 +35,7 @@ export class MockHandoverRepository implements HandoverRepository {
   ])
   private readonly received = clone(receivedHandoverFixtures)
   private readonly reviews = clone(reviewSummaryFixtures)
+  private readonly sent = clone(sentSummaryFixtures)
   private analysisProgress = 0
 
   async listMembers(): Promise<HandoverParticipant[]> {
@@ -39,6 +44,10 @@ export class MockHandoverRepository implements HandoverRepository {
 
   async listReceivedHandovers(): Promise<HandoverSummary[]> {
     return clone(this.received)
+  }
+
+  async listSentHandovers(): Promise<SentSummary[]> {
+    return clone(this.sent)
   }
 
   async getHandover(id: HandoverId): Promise<Handover> {
@@ -113,6 +122,15 @@ export class MockHandoverRepository implements HandoverRepository {
     this.syncSummaries(handover)
   }
 
+  async downloadFile(id: HandoverId, fileId: string): Promise<HandoverFileDownload> {
+    const handover = await this.getMutable(id)
+    const file = handover.attachments.find((attachment) => attachment.id === fileId)
+    if (!file) throw new RepositoryError('NOT_FOUND', '파일을 찾을 수 없어요.')
+    // 목업에는 실제 바이트가 없으므로 파일명이 담긴 자리표시 텍스트를 내려준다.
+    const blob = new Blob([`Mock file: ${file.name}`], { type: file.mimeType || 'application/octet-stream' })
+    return { blob, filename: file.name }
+  }
+
   async startAnalysis(id: HandoverId): Promise<AnalysisJob> {
     const handover = await this.getMutable(id)
     if (handover.attachments.length === 0) {
@@ -177,7 +195,7 @@ export class MockHandoverRepository implements HandoverRepository {
   }
 
   async completeHandover(id: HandoverId): Promise<Handover> {
-    return this.changeStatus(id, 'approved')
+    return this.changeStatus(id, 'completed')
   }
 
   async updateDraft(id: HandoverId, changes: UpdateHandoverInput): Promise<Handover> {
@@ -204,6 +222,10 @@ export class MockHandoverRepository implements HandoverRepository {
     return []
   }
 
+  async listSuggestedQuestions(): Promise<string[]> {
+    return ['첫날 가장 먼저 할 일은?', '배송 답변이 늦으면 누구에게 물어봐요?']
+  }
+
   async askQuestion(_id: HandoverId, question: string): Promise<HandoverAnswer> {
     const value = question.trim()
     if (!value) throw new RepositoryError('VALIDATION', '질문을 입력해 주세요.')
@@ -218,6 +240,10 @@ export class MockHandoverRepository implements HandoverRepository {
 
   async listReviews(): Promise<ReviewSummary[]> {
     return clone(this.reviews)
+  }
+
+  async listComments(id: HandoverId): Promise<ReviewComment[]> {
+    return clone(commentFixtures[id] ?? [])
   }
 
   async addReviewComment(id: HandoverId, comment: string): Promise<ReviewComment> {
@@ -237,10 +263,6 @@ export class MockHandoverRepository implements HandoverRepository {
   async saveReviewChecklist(id: HandoverId, items: Array<{ label: string; checked: boolean }>): Promise<void> {
     const handover = await this.getMutable(id)
     handover.review.checklist = items.map((item, index) => ({ id: `check-${index}`, label: item.label, checked: item.checked }))
-  }
-
-  async requestRevision(id: HandoverId): Promise<Handover> {
-    return this.changeStatus(id, 'revision-requested')
   }
 
   async approveHandover(id: HandoverId): Promise<Handover> {
@@ -269,14 +291,14 @@ export class MockHandoverRepository implements HandoverRepository {
     if (received) {
       received.scope = handover.document.scope
       received.status = handover.status
-      received.statusLabel = handover.status === 'approved' ? '확인 완료' : handover.status === 'in-progress' ? '진행 중' : '확인 전'
+      received.statusLabel = handover.status === 'completed' ? '확인 완료' : handover.status === 'in-progress' ? '진행 중' : '확인 전'
       received.files = handover.attachments.length
     }
     const review = this.reviews.find((item) => item.id === handover.id)
     if (review) {
       review.status = handover.status
       review.statusLabel =
-        handover.status === 'approved' ? '승인 완료' : handover.status === 'revision-requested' ? '보완 요청' : '승인 대기'
+        handover.status === 'approved' || handover.status === 'completed' ? '승인 완료' : '승인 대기'
     }
   }
 }

@@ -1,5 +1,6 @@
-import type { HandoverStatus, HandoverSummary, ReviewComment, ReviewSummary } from '../../model/types'
+import type { HandoverStatus, HandoverSummary, ReviewComment, ReviewSummary, SentSummary } from '../../model/types'
 import type { CommentResponse, HandoverSummaryResponse } from '../dto/types'
+import { toHandoverStatus } from './handoverMapper'
 
 /** 서버 날짜를 목록에서 읽기 쉬운 문구로 바꾼다. 오늘이면 시각만 보여 준다. */
 export function formatListDate(value: string | undefined, now = new Date()): string {
@@ -18,13 +19,13 @@ export function formatListDate(value: string | undefined, now = new Date()): str
  * 완료됐으면 완료, 아직 열어보지 않았으면 확인 전, 그 사이는 진행 중으로 본다.
  */
 function toReceivedStatus(summary: HandoverSummaryResponse): HandoverStatus {
-  if (summary.status === 'COMPLETED') return 'approved'
+  if (summary.status === 'COMPLETED') return 'completed'
   const receipt = summary.receiptStatus?.toUpperCase()
   return !receipt || receipt === 'UNREAD' ? 'submitted' : 'in-progress'
 }
 
 const RECEIVED_LABEL: Record<string, { label: string; tone: HandoverSummary['tone'] }> = {
-  approved: { label: '확인 완료', tone: 'green' },
+  completed: { label: '확인 완료', tone: 'green' },
   'in-progress': { label: '진행 중', tone: 'yellow' },
   submitted: { label: '확인 전', tone: 'blue' },
 }
@@ -57,14 +58,27 @@ export function toReviewComment(comment: CommentResponse, now?: Date): ReviewCom
 
 const REVIEW_LABEL: Record<string, { label: string; tone: ReviewSummary['tone'] }> = {
   approved: { label: '승인 완료', tone: 'green' },
-  'revision-requested': { label: '보완 요청', tone: 'yellow' },
   submitted: { label: '승인 대기', tone: 'yellow' },
+}
+
+/** 인계자 관점 목록. 세분화된 서버 상태를 공통 상태로 접고, 대표 업무명을 카드 제목으로 쓴다. */
+export function toSentSummary(summary: HandoverSummaryResponse, now?: Date): SentSummary {
+  return {
+    id: summary.id,
+    title: summary.title,
+    scope: summary.workScopeSummary?.trim() || summary.title,
+    date: formatListDate(summary.submittedAt ?? summary.createdAt, now),
+    status: toHandoverStatus(summary.status),
+    tasks: summary.workScopeCount ?? 0,
+    files: summary.fileCount ?? 0,
+    recipients: summary.recipientCount ?? 0,
+  }
 }
 
 export function toReviewSummary(summary: HandoverSummaryResponse, now?: Date): ReviewSummary {
   const status: HandoverStatus = summary.status === 'APPROVED' || summary.status === 'COMPLETED'
     ? 'approved'
-    : summary.status === 'REVISION_REQUESTED' ? 'revision-requested' : 'submitted'
+    : 'submitted'
   const presentation = REVIEW_LABEL[status] ?? REVIEW_LABEL.submitted
   return {
     id: summary.id,

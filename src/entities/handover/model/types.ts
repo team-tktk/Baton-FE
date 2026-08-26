@@ -4,8 +4,8 @@ export type HandoverStatus =
   | 'draft'
   | 'submitted'
   | 'in-progress'
-  | 'revision-requested'
   | 'approved'
+  | 'completed'
 
 export interface HandoverParticipant {
   id: string
@@ -31,6 +31,12 @@ export interface HandoverAttachment {
   mimeType: string
   size: number
   status: AttachmentStatus
+}
+
+// 원본 파일 다운로드 응답: 서버가 준 바이트와 파일명(Content-Disposition에서 읽거나 첨부 이름으로 대체).
+export interface HandoverFileDownload {
+  blob: Blob
+  filename: string
 }
 
 export interface InterviewOption {
@@ -168,6 +174,18 @@ export interface ReviewSummary {
   files: number
 }
 
+/** 인계자(owner) 본인이 만든 인수인계 목록 카드. GET /handovers/sent 응답 기반. */
+export interface SentSummary {
+  id: HandoverId
+  title: string
+  scope: string
+  date: string
+  status: HandoverStatus
+  tasks: number
+  files: number
+  recipients: number
+}
+
 export interface HandoverAnswerCitation {
   sourceId: string
   title: string
@@ -176,7 +194,7 @@ export interface HandoverAnswerCitation {
 
 export interface HandoverAnswer {
   text: string
-  /** 자료에서 근거를 찾았는지. false면 지어내지 않고 문의 안내를 준다. */
+  /** 업로드된 자료에서 근거를 찾았는지. false여도 AI가 일반 지식으로 답할 수 있고, 그때는 citations가 비어 있다. */
   grounded: boolean
   citations: HandoverAnswerCitation[]
 }

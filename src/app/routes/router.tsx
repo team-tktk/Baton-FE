@@ -5,6 +5,7 @@ import { HomePage } from '@/pages/home'
 import { HandoverCreatePage } from '@/pages/handover-create'
 import { HandoverArrivalPage, HandoverChatPage, HandoverOverviewPage, HandoverWorkspacePage } from '@/pages/handover-detail'
 import { HandoverInboxPage } from '@/pages/handover-inbox'
+import { SentHandoverPage, SentHandoverDetailPage } from '@/pages/handover-sent'
 import { NotFoundPage } from '@/pages/not-found'
 import { ReviewDetailPage } from '@/pages/review-detail'
 import { ReviewInboxPage } from '@/pages/review-inbox'
@@ -21,6 +22,8 @@ export const router = createBrowserRouter([
   { path: '/handovers/new/document', element: <RequireAuth><HandoverCreatePage step="document" /></RequireAuth> },
   { path: '/handovers/new/complete', element: <RequireAuth><HandoverCreatePage step="complete" /></RequireAuth> },
   { path: '/handovers/received', element: <RequireAuth><HandoverInboxPage /></RequireAuth> },
+  { path: '/handovers/sent', element: <RequireAuth><SentHandoverPage /></RequireAuth> },
+  { path: '/handovers/sent/:handoverId', element: <RequireAuth><SentHandoverDetailPage /></RequireAuth> },
   { path: '/handovers/:handoverId/arrival', element: <RequireAuth><HandoverArrivalPage /></RequireAuth> },
   { path: '/handovers/:handoverId/overview', element: <RequireAuth><HandoverOverviewPage /></RequireAuth> },
   { path: '/handovers/:handoverId/chat', element: <RequireAuth><HandoverChatPage /></RequireAuth> },

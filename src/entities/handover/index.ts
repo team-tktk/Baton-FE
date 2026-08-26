@@ -19,6 +19,7 @@ export type {
   HandoverAnswerCitation,
   HandoverChatExchange,
   HandoverAttachment,
+  HandoverFileDownload,
   HandoverAccessRow,
   HandoverConfirmedCriterion,
   HandoverCriterion,
@@ -33,5 +34,6 @@ export type {
   InterviewQuestion,
   ReviewComment,
   ReviewSummary,
+  SentSummary,
   UpdateHandoverInput,
 } from './model/types'
