@@ -38,15 +38,31 @@ describe('handover workspace pages', () => {
     click.mockRestore()
   })
 
-  it('keeps the handover AI panel beside the document without a trigger', async () => {
+  it('folds and reopens the handover AI panel beside the document', async () => {
+    const user = userEvent.setup()
     renderPage(<HandoverWorkspacePage />, '/handovers/handover-moastore-operations')
 
-    // 여닫는 장치 없이 문서 옆에 늘 떠 있다. 모달이 아니라 보조 영역이다.
+    // 문서 옆에 펼친 채로 시작한다. 모달이 아니라 보조 영역이다.
     expect(await screen.findByRole('heading', { name: '문서에 대해 물어보세요' })).toBeInTheDocument()
-    expect(screen.getByText('자료 기반')).toBeInTheDocument()
-    expect(screen.getByLabelText('AI에게 질문')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'AI 질문 패널 닫기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'AI에게 질문' })).not.toBeInTheDocument()
+
+    // 애니메이션을 위해 접어도 DOM에 남기고 inert로 뺀다.
+    // jsdom은 inert의 의미를 구현하지 않아 role 조회로는 걸러지지 않으므로 속성으로 확인한다.
+    const panel = screen.getByRole('complementary', { name: '문서에 대해 물어보세요' })
+    expect(panel).not.toHaveAttribute('inert')
+
+    await user.click(screen.getByRole('button', { name: 'AI 질문 패널 접기' }))
+
+    // 접으면 포커스가 다시 여는 손잡이로 옮겨간다.
+    expect(panel).toHaveAttribute('inert')
+    const trigger = screen.getByRole('button', { name: 'AI에게 질문' })
+    expect(trigger).toHaveFocus()
+
+    await user.click(trigger)
+
+    expect(panel).not.toHaveAttribute('inert')
+    expect(screen.queryByRole('button', { name: 'AI에게 질문' })).not.toBeInTheDocument()
   })
 
   it('renders the dedicated chat route', async () => {

@@ -27,10 +27,22 @@ const STATUS_BADGE: Record<HandoverStatus, { label: string; tone: 'neutral' | 'b
 export function HandoverWorkspacePage() {
   const navigate = useNavigate()
   const repository = useHandoverRepository()
+  const [aiOpen, setAiOpen] = useState(true)
   const [completing, setCompleting] = useState(false)
   const { showToast } = useToast()
   const { error, handover, handoverId, retry } = useHandoverDetail()
   const acknowledged = useRef<string | null>(null)
+  const aiTriggerRef = useRef<HTMLButtonElement>(null)
+  const aiPanelRef = useRef<HTMLElement>(null)
+  const settled = useRef(false)
+
+  // 패널을 여닫으면 방금 누른 버튼이 화면에서 빠져 포커스가 흩어진다. 새로 나타난 쪽으로 옮긴다.
+  // 첫 렌더에서는 옮기지 않는다. 사용자가 누르지도 않았는데 포커스를 빼앗으면 안 된다.
+  useEffect(() => {
+    if (!settled.current) { settled.current = true; return }
+    if (aiOpen) aiPanelRef.current?.focus()
+    else aiTriggerRef.current?.focus()
+  }, [aiOpen])
 
   // 인수자가 문서를 처음 열었을 때 한 번만 수신 확인을 보낸다. 서버는 멱등이다.
   useEffect(() => {
@@ -68,22 +80,27 @@ export function HandoverWorkspacePage() {
   return <main className={styles.workspace}>
     <header className={styles.workspaceHeader}>
       <button type="button" onClick={() => navigate('/handovers/received')}><Icon name="back" /> 받은 인수인계</button>
+      <div className={styles.workspaceTitle}>
+        <Badge tone={badge.tone}>{badge.label}</Badge>
+        <strong>{handover.owner.name}님에게 받은 인수인계</strong>
+        <small>{handover.team} · {handover.deliveredAtLabel} 전달</small>
+      </div>
       <div className={styles.workspaceTools}>
         {handover.status === 'approved' && (
           <button disabled={completing} type="button" onClick={() => void complete()}>
             <Icon name="check" /> {completing ? '처리 중…' : '인수인계 완료'}
           </button>
         )}
-        <div className={styles.workspaceTitle}>
-          <Badge tone={badge.tone}>{badge.label}</Badge>
-          <strong>{handover.owner.name}님에게 받은 인수인계</strong>
-          <small>{handover.team} · {handover.deliveredAtLabel} 전달</small>
-        </div>
+        {!aiOpen && (
+          <button className={styles.aiReopen} ref={aiTriggerRef} type="button" onClick={() => setAiOpen(true)}>
+            <Icon name="chat" /> AI에게 질문
+          </button>
+        )}
       </div>
     </header>
-    <div className={styles.workspaceGrid}>
+    <div className={`${styles.workspaceGrid} ${aiOpen ? '' : styles.workspaceGridWide}`.trim()}>
       <div className={styles.workspaceDocument}><HandoverReadDocument handover={handover} onAttachmentOpen={downloadAttachment} /></div>
-      <HandoverAiPanel key={handover.id} handoverId={handover.id} />
+      <HandoverAiPanel key={handover.id} folded={!aiOpen} handoverId={handover.id} panelRef={aiPanelRef} onClose={() => setAiOpen(false)} />
     </div>
   </main>
 }
