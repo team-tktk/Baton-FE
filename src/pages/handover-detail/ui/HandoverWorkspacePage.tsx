@@ -27,12 +27,10 @@ const STATUS_BADGE: Record<HandoverStatus, { label: string; tone: 'neutral' | 'b
 export function HandoverWorkspacePage() {
   const navigate = useNavigate()
   const repository = useHandoverRepository()
-  const [aiOpen, setAiOpen] = useState(false)
   const [completing, setCompleting] = useState(false)
   const { showToast } = useToast()
   const { error, handover, handoverId, retry } = useHandoverDetail()
   const acknowledged = useRef<string | null>(null)
-  const aiTriggerRef = useRef<HTMLButtonElement>(null)
 
   // 인수자가 문서를 처음 열었을 때 한 번만 수신 확인을 보낸다. 서버는 멱등이다.
   useEffect(() => {
@@ -70,18 +68,22 @@ export function HandoverWorkspacePage() {
   return <main className={styles.workspace}>
     <header className={styles.workspaceHeader}>
       <button type="button" onClick={() => navigate('/handovers/received')}><Icon name="back" /> 받은 인수인계</button>
-      <div className={styles.workspaceTitle}><small>{handover.team} · {handover.deliveredAtLabel} 전달</small><strong>{handover.owner.name}님에게 받은 인수인계</strong></div>
       <div className={styles.workspaceTools}>
-        <Badge tone={badge.tone}>{badge.label}</Badge>
         {handover.status === 'approved' && (
           <button disabled={completing} type="button" onClick={() => void complete()}>
             <Icon name="check" /> {completing ? '처리 중…' : '인수인계 완료'}
           </button>
         )}
-        <button ref={aiTriggerRef} type="button" onClick={() => setAiOpen(true)}><Icon name="chat" /> AI에게 질문</button>
+        <div className={styles.workspaceTitle}>
+          <Badge tone={badge.tone}>{badge.label}</Badge>
+          <strong>{handover.owner.name}님에게 받은 인수인계</strong>
+          <small>{handover.team} · {handover.deliveredAtLabel} 전달</small>
+        </div>
       </div>
     </header>
-    <div className={styles.workspaceDocument}><HandoverReadDocument handover={handover} onAttachmentOpen={downloadAttachment} /></div>
-    <HandoverAiPanel key={handover.id} attachmentCount={handover.attachments.length} handoverId={handover.id} open={aiOpen} returnFocusRef={aiTriggerRef} onClose={() => setAiOpen(false)} />
+    <div className={styles.workspaceGrid}>
+      <div className={styles.workspaceDocument}><HandoverReadDocument handover={handover} onAttachmentOpen={downloadAttachment} /></div>
+      <HandoverAiPanel key={handover.id} handoverId={handover.id} />
+    </div>
   </main>
 }
