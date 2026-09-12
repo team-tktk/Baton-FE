@@ -38,15 +38,26 @@ describe('handover workspace pages', () => {
     click.mockRestore()
   })
 
-  it('keeps the handover AI panel beside the document without a trigger', async () => {
+  it('folds and reopens the handover AI panel beside the document', async () => {
+    const user = userEvent.setup()
     renderPage(<HandoverWorkspacePage />, '/handovers/handover-moastore-operations')
 
-    // 여닫는 장치 없이 문서 옆에 늘 떠 있다. 모달이 아니라 보조 영역이다.
+    // 문서 옆에 열린 채로 시작한다. 모달이 아니라 보조 영역이다.
     expect(await screen.findByRole('heading', { name: '문서에 대해 물어보세요' })).toBeInTheDocument()
-    expect(screen.getByText('자료 기반')).toBeInTheDocument()
-    expect(screen.getByLabelText('AI에게 질문')).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'AI 질문 패널 닫기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'AI에게 질문' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'AI 질문 패널 접기' }))
+
+    // 접으면 접근성 트리에서 빠지고, 다시 여는 버튼으로 포커스가 옮겨간다.
+    expect(screen.queryByRole('heading', { name: '문서에 대해 물어보세요' })).not.toBeInTheDocument()
+    const trigger = screen.getByRole('button', { name: 'AI에게 질문' })
+    expect(trigger).toHaveFocus()
+
+    await user.click(trigger)
+
+    expect(screen.getByRole('heading', { name: '문서에 대해 물어보세요' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'AI에게 질문' })).not.toBeInTheDocument()
   })
 
   it('renders the dedicated chat route', async () => {
