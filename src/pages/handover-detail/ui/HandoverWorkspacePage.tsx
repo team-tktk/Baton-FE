@@ -81,11 +81,6 @@ export function HandoverWorkspacePage() {
     <header className={styles.workspaceHeader}>
       <button type="button" onClick={() => navigate('/handovers/received')}><Icon name="back" /> 받은 인수인계</button>
       <div className={styles.workspaceTools}>
-        {!aiOpen && (
-          <button className={styles.aiReopen} ref={aiTriggerRef} type="button" onClick={() => setAiOpen(true)}>
-            <Icon name="chat" /> AI에게 질문
-          </button>
-        )}
         {handover.status === 'approved' && (
           <button disabled={completing} type="button" onClick={() => void complete()}>
             <Icon name="check" /> {completing ? '처리 중…' : '인수인계 완료'}
@@ -100,7 +95,13 @@ export function HandoverWorkspacePage() {
     </header>
     <div className={`${styles.workspaceGrid} ${aiOpen ? '' : styles.workspaceGridWide}`.trim()}>
       <div className={styles.workspaceDocument}><HandoverReadDocument handover={handover} onAttachmentOpen={downloadAttachment} /></div>
-      <HandoverAiPanel key={handover.id} handoverId={handover.id} hidden={!aiOpen} panelRef={aiPanelRef} onClose={() => setAiOpen(false)} />
+      <HandoverAiPanel key={handover.id} folded={!aiOpen} handoverId={handover.id} panelRef={aiPanelRef} onClose={() => setAiOpen(false)} />
     </div>
+    {/* 접힌 패널을 다시 끌어내는 손잡이. 패널이 있던 오른쪽 가장자리에 붙는다. */}
+    {!aiOpen && (
+      <button className={styles.aiReopen} ref={aiTriggerRef} type="button" onClick={() => setAiOpen(true)}>
+        <Icon name="chat" /> AI에게 질문
+      </button>
+    )}
   </main>
 }
