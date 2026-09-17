@@ -164,6 +164,146 @@ export interface HandoverDocument {
   confirmedCriteria: HandoverConfirmedCriterion[]
 }
 
+/** 서버 문서와 그 버전. 저장·보완 적용 때 revision을 baseRevision으로 돌려보내 덮어쓰기를 막는다. */
+export interface HandoverDraft {
+  document: HandoverDocument
+  revision: number
+}
+
+/** 준비도 영역. 보완 요청 경로(/items/{area}/fixes)에 그대로 쓰므로 서버 값을 유지한다. */
+export type ReadinessArea = 'SCOPE' | 'PROCEDURE' | 'COMPLETION' | 'EXCEPTION' | 'SCHEDULE' | 'CONTACTS' | 'ACCESS' | 'EVIDENCE'
+
+/** 서버 문서 섹션 */
+export type DocumentSection =
+  | 'PURPOSE'
+  | 'COMPLETION_CRITERIA'
+  | 'ONGOING_TASKS'
+  | 'RECURRING_TASKS'
+  | 'RULES_AND_EXCEPTIONS'
+  | 'STAKEHOLDERS'
+  | 'TOOLS'
+  | 'SCHEDULE'
+  | 'ACCESS_ACCOUNTS'
+  | 'FIRST_WEEK_CHECKLIST'
+  | 'CONFIRMED_CRITERIA'
+
+/** 섹션이 화면 문서 모델의 어느 필드에 해당하는지 */
+export interface DocumentSectionFields {
+  PURPOSE: 'purpose'
+  COMPLETION_CRITERIA: 'completionStandard'
+  ONGOING_TASKS: 'activeTasks'
+  RECURRING_TASKS: 'recurringTasks'
+  RULES_AND_EXCEPTIONS: 'criteria'
+  STAKEHOLDERS: 'people'
+  TOOLS: 'tools'
+  SCHEDULE: 'schedule'
+  ACCESS_ACCOUNTS: 'accessAccounts'
+  FIRST_WEEK_CHECKLIST: 'checklist'
+  CONFIRMED_CRITERIA: 'confirmedCriteria'
+}
+
+/** 섹션 하나의 내용. section에 따라 value의 모양이 정해진다. */
+export type DocumentSectionValue = {
+  [S in DocumentSection]: { section: S; value: HandoverDocument[DocumentSectionFields[S]] }
+}[DocumentSection]
+
+export type ReadinessGrade = 'ready' | 'needs-improvement' | 'not-ready'
+
+/** 막대는 이 네 단계(100·50·25·0%)뿐이다. */
+export type ReadinessItemStatus = 'sufficient' | 'partial' | 'conflict' | 'missing'
+
+export interface ReadinessEvidence {
+  /** 업로드 파일 id. downloadFile로 원본을 연다. */
+  fileId: string
+  fileName: string
+  locator: string
+}
+
+export interface ReadinessAreaResult {
+  area: ReadinessArea
+  label: string
+  criteria: string
+  weight: number
+  status: ReadinessItemStatus
+  statusLabel: string
+  percent: number
+  /** "중요한 확인"에 올릴 항목(최대 3개) */
+  keyIssue: boolean
+  section: DocumentSection
+  sectionLabel: string
+  /** 문서에서 강조할 문장. 없으면 null */
+  anchorText: string | null
+  summary: string
+  resolution: string
+  evidence: ReadinessEvidence[]
+}
+
+export interface HandoverReadiness {
+  evaluationId: string
+  rubricVersion: string
+  score: number
+  /** 중요한 확인을 모두 해결했을 때의 예상 점수 */
+  potentialScore: number
+  grade: ReadinessGrade
+  gradeLabel: string
+  keyIssueCount: number
+  /** 평가 이후 문서나 자료가 바뀌었다. 다시 평가해야 한다. */
+  stale: boolean
+  draftRevision: number
+  evaluatedAt: string
+  /** 잃은 점수가 큰 영역부터 */
+  areas: ReadinessAreaResult[]
+}
+
+export interface ReadinessRubric {
+  version: string
+  areas: Array<{ area: ReadinessArea; label: string; criteria: string; weight: number; sections: DocumentSection[] }>
+  statusPercent: Record<ReadinessItemStatus, number>
+  readyScore: number
+  minimumScore: number
+  keyIssueCount: number
+}
+
+export type ReadinessFixStatus = 'needs-input' | 'proposed' | 'applied' | 'discarded'
+
+export interface ReadinessFixQuestion {
+  id: string
+  question: string
+  reason: string
+  answer: string | null
+}
+
+export interface ReadinessFixAnswer {
+  questionId: string
+  answer: string
+}
+
+export interface ReadinessFix {
+  id: string
+  area: ReadinessArea
+  areaLabel: string
+  section: DocumentSection
+  sectionLabel: string
+  status: ReadinessFixStatus
+  baseRevision: number
+  /** 보완안을 만든 뒤 문서가 바뀌어 적용할 수 없다. 새로 만들어야 한다. */
+  stale: boolean
+  appliedRevision: number | null
+  before: DocumentSectionValue
+  /** 수정안이 아직 없으면(추가 질문 대기) null */
+  after: DocumentSectionValue | null
+  changeSummary: string
+  questions: ReadinessFixQuestion[]
+  evidence: ReadinessEvidence[]
+}
+
+export interface ReadinessFixApplied {
+  fix: ReadinessFix
+  draft: HandoverDraft
+  /** 재평가만 실패하면 null. evaluateReadiness를 다시 부른다. */
+  readiness: HandoverReadiness | null
+}
+
 export interface ReviewComment {
   id: string
   authorName: string

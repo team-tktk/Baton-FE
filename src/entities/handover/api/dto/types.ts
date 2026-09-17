@@ -201,11 +201,127 @@ export interface HandoverDraftContent {
 
 export interface HandoverDraftResponse {
   content: HandoverDraftContent
+  /** 내용이 바뀔 때마다 1씩 오른다. 저장·보완 적용 때 baseRevision으로 되돌려 보낸다. */
+  revision?: number
   updatedAt: string
 }
 
 export interface UpdateDraftRequest {
   content: HandoverDraftContent
+  /** 보내면 그사이 문서가 바뀐 경우 409 AI_DRAFT_REVISION_CONFLICT로 거절된다. 생략하면 마지막 저장이 이긴다. */
+  baseRevision?: number
+}
+
+export type ReadinessAreaDto = 'SCOPE' | 'PROCEDURE' | 'COMPLETION' | 'EXCEPTION' | 'SCHEDULE' | 'CONTACTS' | 'ACCESS' | 'EVIDENCE'
+
+export type DraftSectionDto =
+  | 'PURPOSE'
+  | 'COMPLETION_CRITERIA'
+  | 'ONGOING_TASKS'
+  | 'RECURRING_TASKS'
+  | 'RULES_AND_EXCEPTIONS'
+  | 'STAKEHOLDERS'
+  | 'TOOLS'
+  | 'SCHEDULE'
+  | 'ACCESS_ACCOUNTS'
+  | 'FIRST_WEEK_CHECKLIST'
+  | 'CONFIRMED_CRITERIA'
+
+export type ReadinessGradeDto = 'READY' | 'NEEDS_IMPROVEMENT' | 'NOT_READY'
+
+export type ReadinessStatusDto = 'SUFFICIENT' | 'PARTIAL' | 'MISSING' | 'CONFLICT'
+
+/** sourceId는 업로드 파일 id와 같다(GET /files/{sourceId}/download로 원본을 연다). */
+export interface ReadinessEvidenceDto {
+  sourceId?: string | null
+  fileName?: string | null
+  locator?: string | null
+}
+
+export interface ReadinessAreaResponse {
+  area: ReadinessAreaDto
+  label: string
+  criteria?: string
+  weight: number
+  status: ReadinessStatusDto
+  statusLabel: string
+  percent: number
+  keyIssue: boolean
+  section: DraftSectionDto
+  sectionLabel: string
+  anchorText?: string | null
+  summary?: string | null
+  resolution?: string | null
+  evidence?: ReadinessEvidenceDto[]
+}
+
+export interface ReadinessResponse {
+  evaluationId: string
+  rubricVersion: string
+  score: number
+  potentialScore: number
+  grade: ReadinessGradeDto
+  gradeLabel: string
+  keyIssueCount: number
+  stale: boolean
+  draftRevision: number
+  evaluatedAt: string
+  /** 잃은 점수가 큰 영역부터 온다. */
+  areas?: ReadinessAreaResponse[]
+}
+
+export interface ReadinessRubricResponse {
+  version: string
+  areas?: Array<{ area: ReadinessAreaDto; label: string; criteria?: string; weight: number; sections?: DraftSectionDto[] }>
+  statusPercent?: Partial<Record<ReadinessStatusDto, number>>
+  readyScore: number
+  minimumScore: number
+  keyIssueCount: number
+}
+
+export type ReadinessFixStatusDto = 'NEEDS_INPUT' | 'PROPOSED' | 'APPLIED' | 'DISCARDED'
+
+export interface FixQuestionDto {
+  id: string
+  question: string
+  reason?: string | null
+  answer?: string | null
+}
+
+/** before/after는 content.{sectionField}와 같은 형식이라 섹션마다 모양이 다르다. */
+export interface ReadinessFixResponse {
+  fixId: string
+  area: ReadinessAreaDto
+  areaLabel: string
+  section: DraftSectionDto
+  sectionLabel: string
+  sectionField?: string
+  status: ReadinessFixStatusDto
+  baseRevision: number
+  stale: boolean
+  appliedRevision?: number | null
+  before?: unknown
+  after?: unknown
+  changeSummary?: string | null
+  questions?: FixQuestionDto[]
+  evidence?: ReadinessEvidenceDto[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface FixAnswerRequest {
+  answers: Array<{ questionId: string; answer: string }>
+}
+
+export interface ApplyFixRequest {
+  baseRevision: number
+}
+
+export interface ApplyFixResponse {
+  fix: ReadinessFixResponse
+  document: HandoverDraftResponse
+  /** 적용은 됐지만 재평가만 실패하면 null이다. 이때는 evaluate를 다시 부른다. */
+  readiness?: ReadinessResponse | null
 }
 
 export interface HandoverSummaryResponse {

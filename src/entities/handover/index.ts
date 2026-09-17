@@ -6,6 +6,7 @@ export { useHandoverRepository } from './api/useHandoverRepository'
 export { HttpHandoverRepository } from './api/HttpHandoverRepository'
 export { MockHandoverRepository } from './api/mock/MockHandoverRepository'
 export { summarizeMasking } from './api/mapper/maskingMapper'
+export { applySectionValue, DOCUMENT_SECTION_FIELDS, readSectionValue } from './api/mapper/readinessMapper'
 export { AttachmentList } from './ui/AttachmentList'
 export { HandoverStatusBadge } from './ui/HandoverStatusBadge'
 export { PersonSummary } from './ui/PersonSummary'
@@ -15,6 +16,8 @@ export type {
   AnalysisStatus,
   AttachmentStatus,
   CreateHandoverInput,
+  DocumentSection,
+  DocumentSectionValue,
   Handover,
   HandoverAnswer,
   HandoverAnswerCitation,
@@ -25,9 +28,11 @@ export type {
   HandoverConfirmedCriterion,
   HandoverCriterion,
   HandoverDocument,
+  HandoverDraft,
   HandoverId,
   HandoverParticipant,
   HandoverPerson,
+  HandoverReadiness,
   HandoverScheduleRow,
   HandoverStatus,
   HandoverSummary,
@@ -38,6 +43,17 @@ export type {
   MaskingReview,
   MaskingSummary,
   MaskingType,
+  ReadinessArea,
+  ReadinessAreaResult,
+  ReadinessEvidence,
+  ReadinessFix,
+  ReadinessFixAnswer,
+  ReadinessFixApplied,
+  ReadinessFixQuestion,
+  ReadinessFixStatus,
+  ReadinessGrade,
+  ReadinessItemStatus,
+  ReadinessRubric,
   ReviewComment,
   ReviewSummary,
   SentSummary,

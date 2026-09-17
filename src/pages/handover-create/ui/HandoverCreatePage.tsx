@@ -111,7 +111,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     if (step !== 'document' || !draftId) return
     let ignore = false
     Promise.all([repository.getHandover(draftId), repository.getDocument(draftId)])
-      .then(([handover, document]) => { if (!ignore) setDraft({ ...handover, document }) })
+      .then(([handover, { document }]) => { if (!ignore) setDraft({ ...handover, document }) })
       .catch(() => { if (!ignore) showToast('인수인계 초안을 불러오지 못했어요') })
     return () => { ignore = true }
   }, [draftId, repository, showToast, step])
