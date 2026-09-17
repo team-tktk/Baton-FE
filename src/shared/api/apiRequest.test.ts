@@ -72,8 +72,18 @@ describe('apiRequest', () => {
     await expect(apiRequest('/api/v1/auth/me')).rejects.toMatchObject({
       code: 'http',
       message: '로그인이 필요합니다',
+      serverCode: 'AUTH_REQUIRED',
       status: 401,
     })
+  })
+
+  it('keeps the server code empty when the error body has none', async () => {
+    vi.stubGlobal('fetch', vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ detail: '실패' }), {
+      headers: { 'Content-Type': 'application/problem+json' },
+      status: 409,
+    })))
+
+    await expect(apiRequest('/api/example')).rejects.toMatchObject({ status: 409, serverCode: null })
   })
 
   it('uses a safe message when an error response is not JSON', async () => {

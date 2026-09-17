@@ -83,6 +83,19 @@ describe('HttpHandoverRepository masking', () => {
     expect(fetchSpy.mock.calls[0][1]?.method).toBe('DELETE')
   })
 
+  it('follows a running analysis but does not mistake unconfirmed masking for it', async () => {
+    const problem = (code: string) => new Response(JSON.stringify({ status: 409, detail: code, code }), { headers: { 'Content-Type': 'application/json' }, status: 409 })
+    const job = new Response(JSON.stringify({ jobId: 'job-1', status: 'PARSING', progress: 20, currentStep: '자료 읽는 중', updatedAt: '2026-09-17T00:00:00Z' }), { headers: { 'Content-Type': 'application/json' }, status: 200 })
+    const running = vi.fn<typeof fetch>().mockResolvedValueOnce(problem('AI_ANALYSIS_ALREADY_RUNNING')).mockResolvedValueOnce(job)
+    vi.stubGlobal('fetch', running)
+    await expect(repository.startAnalysis('handover-1')).resolves.toMatchObject({ status: 'running', progress: 20 })
+
+    const masking = vi.fn<typeof fetch>().mockResolvedValue(problem('MASKING_NOT_CONFIRMED'))
+    vi.stubGlobal('fetch', masking)
+    await expect(repository.startAnalysis('handover-1')).rejects.toMatchObject({ status: 409, serverCode: 'MASKING_NOT_CONFIRMED' })
+    expect(masking).toHaveBeenCalledTimes(1)
+  })
+
   it('confirms a file and surfaces the server reason when items remain', async () => {
     const confirmed = respond({ ...review, status: 'INDEXED', confirmed: true, text: null, candidates: [] })
     await expect(repository.confirmMasking('handover-1', 'file-1')).resolves.toMatchObject({ status: 'ready', confirmed: true, text: null })

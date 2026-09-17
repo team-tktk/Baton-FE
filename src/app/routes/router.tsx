@@ -17,6 +17,7 @@ export const router = createBrowserRouter([
   },
   { path: '/handovers/new/setup', element: <RequireAuth><HandoverCreatePage step="setup" /></RequireAuth> },
   { path: '/handovers/new/upload', element: <RequireAuth><HandoverCreatePage step="upload" /></RequireAuth> },
+  { path: '/handovers/new/masking', element: <RequireAuth><HandoverCreatePage step="masking" /></RequireAuth> },
   { path: '/handovers/new/analyzing', element: <RequireAuth><HandoverCreatePage step="analyzing" /></RequireAuth> },
   { path: '/handovers/new/interview/:step', element: <RequireAuth><HandoverCreatePage step="interview" /></RequireAuth> },
   { path: '/handovers/new/document', element: <RequireAuth><HandoverCreatePage step="document" /></RequireAuth> },

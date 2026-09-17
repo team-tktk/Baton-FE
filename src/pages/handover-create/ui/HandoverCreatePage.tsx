@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import type { AnalysisJob, Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
+import type { AnalysisJob, Handover, HandoverAttachment, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, DraftFinalizing, FileUploader, HandoverProgress, InterviewWizard, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
@@ -15,11 +15,26 @@ import { AppHeader } from '@/widgets/app-header'
 import styles from './HandoverCreatePage.module.css'
 import { CompletionStep } from './CompletionStep'
 import { DocumentStep } from './DocumentStep'
+import { MaskingStep } from './MaskingStep'
 
 /** 폴링이 연속으로 이만큼 실패하면 서버 장애로 보고 실패 화면으로 전환한다(약 12초). */
 const ANALYSIS_POLL_FAILURE_LIMIT = 5
 
-interface HandoverCreatePageProps { step: 'setup' | 'upload' | 'analyzing' | 'interview' | 'document' | 'complete' }
+type CreateStep = 'setup' | 'upload' | 'masking' | 'analyzing' | 'interview' | 'document' | 'complete'
+interface HandoverCreatePageProps { step: CreateStep }
+
+/** 스테퍼에 보여 줄 단계 번호. 완료 화면은 스테퍼를 숨긴다. */
+const STEP_NUMBER: Record<Exclude<CreateStep, 'complete'>, number> = {
+  setup: 1,
+  upload: 2,
+  masking: 3,
+  analyzing: 4,
+  interview: 5,
+  document: 6,
+}
+
+/** 홈으로 버튼을 띄우는 단계. 나머지는 앱 헤더를 쓴다. */
+const HOME_BUTTON_STEPS: CreateStep[] = ['setup', 'upload', 'masking', 'document']
 
 export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const navigate = useNavigate()
@@ -56,19 +71,25 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     }
   }, [dispatch, draftId, repository, showToast])
 
+  // 검수 단계에서도 최신 파일 상태가 필요하다. 업로드 직후 바로 넘어오면 아직 읽는 중일 수 있다.
+  const tracksFiles = step === 'upload' || step === 'masking'
   useEffect(() => {
-    if (step !== 'upload') return
+    if (!tracksFiles) return
     void refreshFiles()
-  }, [refreshFiles, step])
+  }, [refreshFiles, tracksFiles])
 
   // 업로드 직후에는 서버가 텍스트를 추출하는 중이라, 완료될 때까지만 목록을 다시 읽는다.
   // 목록 자체가 아니라 처리 중 여부만 의존해야 갱신할 때마다 주기가 리셋되지 않는다.
   const hasProcessingFile = state.attachments.some((file) => file.status === 'processing')
   useEffect(() => {
-    if (step !== 'upload' || !hasProcessingFile) return
+    if (!tracksFiles || !hasProcessingFile) return
     const timer = setInterval(() => { void refreshFiles() }, 2000)
     return () => clearInterval(timer)
-  }, [hasProcessingFile, refreshFiles, step])
+  }, [hasProcessingFile, refreshFiles, tracksFiles])
+
+  const replaceAttachments = useCallback((attachments: HandoverAttachment[]) => {
+    dispatch({ type: 'attachments/loaded', attachments })
+  }, [dispatch])
 
   useEffect(() => {
     if (step !== 'interview' || !draftId) return
@@ -128,9 +149,11 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }
 
   // 서버가 사유를 주면 그대로 보여 준다. 파일이 없을 때와 서버 장애를 구분해야 한다.
+  // 검수를 확정하지 않은 파일이 남아 있으면 업로드가 아니라 검수 단계로 돌려보낸다.
   const failAnalysis = useCallback((reason: unknown) => {
     showToast(reason instanceof ApiError ? reason.message : '분석을 시작하지 못했어요. 잠시 후 다시 시도해 주세요')
-    navigate('/handovers/new/upload')
+    const maskingPending = reason instanceof ApiError && reason.serverCode === 'MASKING_NOT_CONFIRMED'
+    navigate(maskingPending ? '/handovers/new/masking' : '/handovers/new/upload')
   }, [navigate, showToast])
 
   useEffect(() => {
@@ -255,8 +278,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
 
   return (
     <>
-      {(step === 'setup' || step === 'upload' || step === 'document') ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
-      {step !== 'analyzing' && step !== 'complete' && <HandoverProgress compact={step === 'setup' || step === 'upload' || step === 'document'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : 4} />}
+      {HOME_BUTTON_STEPS.includes(step) ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
+      {step !== 'complete' && <HandoverProgress besideHomeButton={HOME_BUTTON_STEPS.includes(step)} current={STEP_NUMBER[step]} />}
+      {step === 'masking' && <MaskingStep attachments={state.attachments} handoverId={draftId} onAttachmentsChange={replaceAttachments} onBack={() => navigate('/handovers/new/upload')} onFeedback={showToast} onProceed={() => navigate('/handovers/new/analyzing')} />}
       {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} job={analysis} onRetry={retryAnalysis} /></main>}
       {step === 'interview' && finalizing && <main className={styles.analysisMain}><DraftFinalizing answered={answeredCount} /></main>}
       {step === 'interview' && !finalizing && questions !== null && questions.length > 0 && (() => {
@@ -294,7 +318,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           <section>
             <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 파일 모으기</div><h1>{user?.name ?? '내'}님의 업무 파일을 올려주세요</h1><p>업무에 사용하던 자료를 올리면 AI가 인수인계 초안을 만들어드려요.</p></header>
             <FileUploader attachments={state.attachments} uploading={pending} onReject={showToast} onRemove={(attachmentId) => void removeFile(attachmentId)} onSelect={(files) => void uploadFiles(files)} />
-            <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button disabled={state.attachments.length === 0} onClick={() => navigate('/handovers/new/analyzing')}>인수인계 초안 만들기</Button></footer>
+            <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button disabled={state.attachments.length === 0 || hasProcessingFile} onClick={() => navigate('/handovers/new/masking')}>{hasProcessingFile ? '파일을 읽는 중…' : '민감정보 확인하기'} <Icon name="arrow" /></Button></footer>
           </section>
         )}
       </main>

@@ -190,7 +190,8 @@ export class HttpHandoverRepository implements HandoverRepository {
       return toAnalysisJob(await apiRequest<AnalysisJobResponse>(`/api/v1/handovers/${id}/analysis`, { method: 'POST' }))
     } catch (caught) {
       // 이미 돌고 있는 작업이면 새로 시작할 필요 없이 현재 상태를 따라간다.
-      if (caught instanceof ApiError && caught.status === 409) return this.getAnalysis(id)
+      // 409는 마스킹 미확정(MASKING_NOT_CONFIRMED)일 때도 오므로 코드로 구분한다.
+      if (caught instanceof ApiError && caught.serverCode === 'AI_ANALYSIS_ALREADY_RUNNING') return this.getAnalysis(id)
       throw caught
     }
   }

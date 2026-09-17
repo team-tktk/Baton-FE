@@ -31,6 +31,7 @@ function renderFlow(initialPath: string, repository = new MockHandoverRepository
     { path: '/', element: <p>홈 화면</p> },
     { path: '/handovers/new/setup', element: <HandoverCreatePage step="setup" /> },
     { path: '/handovers/new/upload', element: <HandoverCreatePage step="upload" /> },
+    { path: '/handovers/new/masking', element: <HandoverCreatePage step="masking" /> },
     { path: '/handovers/new/analyzing', element: <HandoverCreatePage step="analyzing" /> },
     { path: '/handovers/new/interview/:step', element: <HandoverCreatePage step="interview" /> },
   ], { initialEntries: [initialPath] })
@@ -54,17 +55,25 @@ async function pickMember(user: UserEvent, pickerName: string, member: RegExp) {
   await user.click(await scope.findByRole('option', { name: member }))
 }
 
+/** 업로드 화면에서 분석까지 간다. 목업 파일은 검수가 필요 없어 검수 단계는 빈 화면이다. */
+async function proceedToAnalysis(user: UserEvent) {
+  await user.click(screen.getByRole('button', { name: /민감정보 확인하기/ }))
+  expect(await screen.findByRole('heading', { name: '검수할 민감정보가 없어요' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /AI 분석 시작/ }))
+}
+
 async function fillSetup(user: UserEvent, workItem = '프로모션 운영') {
   await pickMember(user, RECIPIENTS, /정하늘/)
   await user.type(screen.getByRole('textbox', { name: '1번 업무' }), workItem)
 }
 
 describe('HandoverCreatePage setup and upload', () => {
-  it('uses the five-step setup chrome and returns home', async () => {
+  it('uses the six-step setup chrome and returns home', async () => {
     const user = userEvent.setup()
     const router = renderFlow('/handovers/new/setup')
 
-    expect(screen.getByText('1 / 5')).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem').filter((item) => item.closest('nav'))).toHaveLength(6)
+    expect(screen.getByRole('listitem', { current: 'step' })).toHaveTextContent('기본 정보')
     expect(screen.queryByRole('link', { name: 'BATON 홈' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '홈으로' }))
@@ -299,9 +308,9 @@ describe('HandoverCreatePage setup and upload', () => {
 
     await fillSetup(user)
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
-    // 파일 목록이 채워져야 초안 만들기 버튼이 열린다.
+    // 파일 목록이 채워져야 다음 단계 버튼이 열린다.
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '인수인계 초안 만들기' }))
+    await proceedToAnalysis(user)
     expect(await screen.findByText('자료를 읽는 중')).toBeInTheDocument()
 
     // 폴링이 연속으로 실패하면 안내와 재시도 버튼이 떠야 한다.
@@ -310,6 +319,33 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('서버가 응답하지 않습니다')
     expect(screen.getByRole('button', { name: '다시 분석하기' })).toBeInTheDocument()
     vi.useRealTimers()
+  })
+
+  it('sends the user back to the masking step when a file is still unconfirmed', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    vi.spyOn(repository, 'startAnalysis').mockRejectedValue(new ApiError('마스킹 검수를 확정하지 않은 파일이 있습니다', { code: 'http', status: 409, serverCode: 'MASKING_NOT_CONFIRMED' }))
+    const router = renderFlow('/handovers/new/setup', repository)
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+    expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
+    await proceedToAnalysis(user)
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/handovers/new/masking'))
+    expect(screen.getByRole('status')).toHaveTextContent('마스킹 검수를 확정하지 않은 파일이 있습니다')
+  })
+
+  it('keeps the next step closed while an uploaded file is still being read', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    vi.spyOn(repository, 'listFiles').mockResolvedValue([{ id: 'file-1', name: '읽는중.pdf', mimeType: 'application/pdf', size: 10, status: 'processing' }])
+    renderFlow('/handovers/new/setup', repository)
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+
+    expect(await screen.findByRole('button', { name: /파일을 읽는 중/ })).toBeDisabled()
   })
 
   it('skips only the current question and moves to the next one', async () => {
@@ -327,7 +363,7 @@ describe('HandoverCreatePage setup and upload', () => {
     await fillSetup(user)
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '인수인계 초안 만들기' }))
+    await proceedToAnalysis(user)
 
     expect(await screen.findByRole('heading', { name: '첫 질문인가요?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '질문 건너뛰기' }))
@@ -355,7 +391,7 @@ describe('HandoverCreatePage setup and upload', () => {
     await fillSetup(user)
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '인수인계 초안 만들기' }))
+    await proceedToAnalysis(user)
 
     await user.type(await screen.findByRole('textbox', { name: '직접 답변' }), '네')
     await user.click(screen.getByRole('button', { name: /답변 반영하고 초안 보기/ }))
