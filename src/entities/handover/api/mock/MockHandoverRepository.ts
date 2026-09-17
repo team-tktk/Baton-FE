@@ -14,11 +14,15 @@ import type {
   HandoverParticipant,
   HandoverSummary,
   InterviewQuestion,
+  MaskingCandidate,
+  MaskingRangeInput,
+  MaskingReview,
   ReviewComment,
   ReviewSummary,
   SentSummary,
   UpdateHandoverInput,
 } from '../../model/types'
+import { summarizeMasking } from '../mapper/maskingMapper'
 import { memberFixtures } from './fixtures/members'
 import { primaryHandoverFixture, receivedHandoverFixtures } from './fixtures/handovers'
 import { fallbackQaResponse, qaResponseRules } from './fixtures/qa-responses'
@@ -36,6 +40,8 @@ export class MockHandoverRepository implements HandoverRepository {
   private readonly received = clone(receivedHandoverFixtures)
   private readonly reviews = clone(reviewSummaryFixtures)
   private readonly sent = clone(sentSummaryFixtures)
+  /** 검수 대기 파일을 흉내 내려면 테스트에서 직접 넣는다. 없으면 검수할 것이 없는 파일로 본다. */
+  readonly maskingReviews = new Map<string, MaskingReview>()
   private analysisProgress = 0
 
   async listMembers(): Promise<HandoverParticipant[]> {
@@ -119,7 +125,71 @@ export class MockHandoverRepository implements HandoverRepository {
   async deleteFile(id: HandoverId, fileId: string): Promise<void> {
     const handover = await this.getMutable(id)
     handover.attachments = handover.attachments.filter((file) => file.id !== fileId)
+    this.maskingReviews.delete(fileId)
     this.syncSummaries(handover)
+  }
+
+  async getMaskingReview(id: HandoverId, fileId: string): Promise<MaskingReview> {
+    const handover = await this.getMutable(id)
+    const stored = this.maskingReviews.get(fileId)
+    if (stored) return clone(stored)
+    const file = handover.attachments.find((item) => item.id === fileId)
+    if (!file) throw new RepositoryError('NOT_FOUND', '파일을 찾을 수 없어요.')
+    return { fileId, fileName: file.name, status: file.status, confirmed: false, text: null, summary: summarizeMasking([]), candidates: [] }
+  }
+
+  async decideMaskingCandidate(id: HandoverId, fileId: string, candidateId: string, applied: boolean): Promise<MaskingCandidate> {
+    await this.getMutable(id)
+    const review = this.getReviewable(fileId)
+    const candidate = review.candidates.find((item) => item.id === candidateId)
+    if (!candidate) throw new RepositoryError('NOT_FOUND', '마스킹 항목을 찾을 수 없어요.')
+    candidate.applied = applied
+    candidate.pendingReview = false
+    review.summary = summarizeMasking(review.candidates)
+    return clone(candidate)
+  }
+
+  async addMaskingCandidate(id: HandoverId, fileId: string, range: MaskingRangeInput): Promise<MaskingCandidate> {
+    await this.getMutable(id)
+    const review = this.getReviewable(fileId)
+    const candidate: MaskingCandidate = {
+      id: `manual-${review.candidates.length + 1}`,
+      type: range.type ?? 'CUSTOM',
+      typeLabel: '직접 마스킹',
+      origin: 'manual',
+      start: range.start,
+      end: range.end,
+      confidence: 100,
+      applied: true,
+      needsReview: false,
+      pendingReview: false,
+      preview: '***',
+    }
+    review.candidates = [...review.candidates, candidate].sort((left, right) => left.start - right.start)
+    review.summary = summarizeMasking(review.candidates)
+    return clone(candidate)
+  }
+
+  async removeMaskingCandidate(id: HandoverId, fileId: string, candidateId: string): Promise<void> {
+    await this.getMutable(id)
+    const review = this.getReviewable(fileId)
+    review.candidates = review.candidates.filter((item) => item.id !== candidateId)
+    review.summary = summarizeMasking(review.candidates)
+  }
+
+  async confirmMasking(id: HandoverId, fileId: string): Promise<MaskingReview> {
+    const handover = await this.getMutable(id)
+    const review = this.getReviewable(fileId)
+    if (review.summary.remaining > 0) throw new RepositoryError('VALIDATION', `확인하지 않은 항목이 ${review.summary.remaining}개 남아 있어요.`)
+    Object.assign(review, { confirmed: true, status: 'ready', text: null })
+    handover.attachments = handover.attachments.map((file) => file.id === fileId ? { ...file, status: 'ready', pendingReviewCount: 0 } : file)
+    return clone(review)
+  }
+
+  private getReviewable(fileId: string) {
+    const review = this.maskingReviews.get(fileId)
+    if (!review || review.status !== 'review') throw new RepositoryError('VALIDATION', '검수 대기 상태가 아닌 파일이에요.')
+    return review
   }
 
   async downloadFile(id: HandoverId, fileId: string): Promise<HandoverFileDownload> {
