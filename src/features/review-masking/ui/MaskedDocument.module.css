@@ -1,0 +1,16 @@
+.document { overflow-y: auto; padding: 34px 40px 40px; color: var(--text); font-size: var(--fs-sm); line-height: 2.05; white-space: pre-wrap; word-break: break-word; }
+/* 줄 안에 흐르는 인라인 강조. 줄 높이를 흔들지 않도록 세로 여백을 주지 않는다. */
+.mark { display: inline; margin: 0 2px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: inherit; cursor: pointer; padding: 1px 6px; font: inherit; line-height: inherit; text-align: left; transition: background .15s ease, box-shadow .15s ease; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.mark small { margin-left: 6px; border-radius: 6px; padding: 1px 6px; font-size: var(--fs-3xs); font-weight: 800; vertical-align: 1px; }
+.applied { border-color: #b9d4f7; background: var(--blue-faint); color: var(--blue-dark); font-weight: 700; }
+.applied small { background: var(--blue); color: #fff; }
+.kept { border-style: dashed; border-color: #c8d1dc; }
+.kept small { background: #eef1f5; color: var(--sub); }
+.pending { border-color: #f3b6b6; background: #fff4f4; color: #b42318; font-weight: 700; }
+.pending small { background: #e5484d; color: #fff; }
+.selected { box-shadow: 0 0 0 3px rgb(49 130 246 / 28%); }
+.mark:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+@media (max-width: 760px) {
+  .document { padding: 24px 20px 28px; }
+}

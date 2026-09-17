@@ -20,7 +20,21 @@ test('creates, confirms, and delivers a handover', async ({ page }) => {
   await page.getByLabel('가을_할인전_준비_메모.docx 삭제').click()
   await page.locator('input[type="file"]').setInputFiles({ name: '새_운영_메모.pdf', mimeType: 'application/pdf', buffer: Buffer.from('mock') })
   await expect(page.getByText('새_운영_메모.pdf')).toBeVisible()
-  await page.getByRole('button', { name: /인수인계 초안 만들기/ }).click()
+  // 좁은 화면은 상태 배지를 숨기므로 존재만 확인한다.
+  await expect(page.getByText('민감정보 확인 필요')).toHaveCount(1)
+  await page.getByRole('button', { name: /민감정보 확인하기/ }).click()
+  await expect(page).toHaveURL(/\/handovers\/new\/masking$/)
+
+  // 확인이 필요한 계좌번호를 체크해야 확정할 수 있다.
+  await expect(page.locator('[aria-current="step"]')).toContainText('민감정보 확인')
+  await expect(page.getByRole('region', { name: '새_운영_메모.pdf 추출 텍스트' })).toContainText('min***@example.com')
+  const confirm = page.getByRole('button', { name: '확정하고 AI 분석 시작' })
+  await expect(confirm).toBeDisabled()
+  await page.getByRole('checkbox', { name: '계좌번호 110-***-***789 가리기' }).check()
+  await expect(confirm).toBeEnabled()
+  await confirm.click()
+  await expect(page.getByRole('dialog', { name: '민감정보 검수를 확정할까요?' })).toContainText('가려질 항목 2개')
+  await page.getByRole('button', { name: '확정하고 분석 시작' }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/interview\/1$/, { timeout: 10_000 })
 
   await page.getByRole('radio', { name: /주문·쿠폰 오류/ }).click()

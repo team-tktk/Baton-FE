@@ -54,7 +54,7 @@ export const test = base.extend<{ stubbedBackend: void }>({
     let reviewApproved = false
     const chatHistory: Array<{ id: string; question: string; answer: string | null; grounded: boolean; answerSource: string; citations: Array<{ sourceId: string; title: string; locator: string }>; createdAt: string }> = []
     const comments: Array<{ id: string; authorId: string; authorName: string; content: string; createdAt: string }> = []
-    let files = [{
+    let files: Array<{ id: string; fileName: string; mimeType: string; size: number; status: string; remainingReviewCount?: number; createdAt: string }> = [{
       id: 'file-autumn-sale',
       fileName: '가을_할인전_준비_메모.docx',
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -62,6 +62,22 @@ export const test = base.extend<{ stubbedBackend: void }>({
       status: 'INDEXED',
       createdAt: '2026-08-25T00:00:00Z',
     }]
+
+    // 새로 올린 파일은 마스킹 검수 대기로 멈춘다. 이메일은 자동으로 가리고, 계좌번호는 사람이 확인해야 한다.
+    const MASKING_TEXT = '담당자 이메일: min@example.com\n지급 계좌: 110-123-456789'
+    type StubCandidate = { id: string; type: string; typeLabel: string; origin: string; startOffset: number; endOffset: number; confidencePercent: number; applied: boolean; needsReview: boolean; pendingReview: boolean; preview: string }
+    const maskingReviews = new Map<string, { confirmed: boolean; candidates: StubCandidate[] }>()
+    const newCandidates = (): StubCandidate[] => [
+      { id: 'candidate-email', type: 'EMAIL', typeLabel: '이메일', origin: 'DETECTED', startOffset: MASKING_TEXT.indexOf('min@'), endOffset: MASKING_TEXT.indexOf('min@') + 'min@example.com'.length, confidencePercent: 98, applied: true, needsReview: false, pendingReview: false, preview: 'min***@example.com' },
+      { id: 'candidate-account', type: 'ACCOUNT', typeLabel: '계좌번호', origin: 'DETECTED', startOffset: MASKING_TEXT.indexOf('110-'), endOffset: MASKING_TEXT.length, confidencePercent: 78, applied: false, needsReview: true, pendingReview: true, preview: '110-***-***789' },
+    ]
+    const summarize = (candidates: StubCandidate[]) => ({
+      total: candidates.length,
+      autoMasked: candidates.filter((item) => item.origin === 'DETECTED' && !item.needsReview).length,
+      needsReview: candidates.filter((item) => item.needsReview).length,
+      remaining: candidates.filter((item) => item.pendingReview).length,
+      applied: candidates.filter((item) => item.applied).length,
+    })
 
     const questions: Array<{ id: string; type: string; questionText: string; reason: string; options: Array<{ label: string; description: string }>; status: string; answer: string | null }> = [
       {
@@ -122,18 +138,47 @@ export const test = base.extend<{ stubbedBackend: void }>({
         if (method === 'POST') {
           const fileName = /filename="([^"]+)"/.exec(route.request().postData() ?? '')?.[1] ?? '업로드파일.pdf'
           const id = `file-${files.length + 1}`
-          files.push({ id, fileName, mimeType: 'application/pdf', size: 4, status: 'INDEXED', createdAt: '2026-08-25T00:00:00Z' })
-          return json({ sourceDocumentId: id, fileName, status: 'INDEXED' }, 201)
+          files.push({ id, fileName, mimeType: 'application/pdf', size: 4, status: 'MASKING_REVIEW', remainingReviewCount: 1, createdAt: '2026-08-25T00:00:00Z' })
+          maskingReviews.set(id, { confirmed: false, candidates: newCandidates() })
+          return json({ sourceDocumentId: id, fileName, status: 'MASKING_REVIEW' }, 201)
         }
       }
-      // 마스킹 검수. 스텁 파일은 검수 없이 INDEXED로 올라가므로 조회는 빈 검수 결과를 준다.
+      // 마스킹 검수. 검수 기록이 없는 파일(처음부터 있던 파일)은 빈 결과를 준다.
       const masking = /\/files\/([^/]+)\/masking(\/.*)?$/.exec(pathname)
       if (masking) {
         const file = files.find((item) => item.id === masking[1])
         if (!file) return json({ title: '파일을 찾을 수 없습니다', status: 404, detail: '파일을 찾을 수 없습니다', code: 'AI_SOURCE_DOCUMENT_NOT_FOUND' }, 404)
-        const review = { fileId: file.id, fileName: file.fileName, status: file.status, confirmed: false, text: null, summary: { total: 0, autoMasked: 0, needsReview: 0, remaining: 0, applied: 0 }, candidates: [] }
-        if (method === 'GET' && !masking[2]) return json(review)
-        return json({ title: '검수 대기 상태가 아닙니다', status: 409, detail: '검수 대기 상태가 아닙니다', code: 'MASKING_NOT_IN_REVIEW' }, 409)
+        const record = maskingReviews.get(file.id)
+        const inReview = file.status === 'MASKING_REVIEW' && record && !record.confirmed
+        const view = () => ({
+          fileId: file.id,
+          fileName: file.fileName,
+          status: file.status,
+          confirmed: record?.confirmed ?? false,
+          text: inReview ? MASKING_TEXT : null,
+          summary: summarize(record?.candidates ?? []),
+          candidates: record?.candidates ?? [],
+        })
+        if (method === 'GET' && !masking[2]) return json(view())
+        if (!inReview || !record) return json({ title: '검수 대기 상태가 아닙니다', status: 409, detail: '검수 대기 상태가 아닙니다', code: 'MASKING_NOT_IN_REVIEW' }, 409)
+        const decided = /^\/candidates\/([^/]+)$/.exec(masking[2] ?? '')
+        if (method === 'PATCH' && decided) {
+          const candidate = record.candidates.find((item) => item.id === decided[1])
+          if (!candidate) return json({ status: 404, detail: '없는 항목', code: 'MASKING_CANDIDATE_NOT_FOUND' }, 404)
+          candidate.applied = (JSON.parse(route.request().postData() ?? '{}') as { applied?: boolean }).applied ?? candidate.applied
+          candidate.pendingReview = false
+          file.remainingReviewCount = summarize(record.candidates).remaining
+          return json(candidate)
+        }
+        if (method === 'POST' && masking[2] === '/confirm') {
+          const { remaining } = summarize(record.candidates)
+          if (remaining > 0) return json({ status: 409, detail: `확인하지 않은 항목이 ${remaining}개 남아 있습니다`, code: 'MASKING_REVIEW_INCOMPLETE' }, 409)
+          record.confirmed = true
+          file.status = 'INDEXED'
+          file.remainingReviewCount = 0
+          return json(view())
+        }
+        return json({ status: 400, detail: '지원하지 않는 요청', code: 'BAD_REQUEST' }, 400)
       }
       if (method === 'DELETE' && /\/files\/[^/]+$/.test(pathname)) {
         files = files.filter((file) => !pathname.endsWith(file.id))
@@ -259,6 +304,9 @@ export const test = base.extend<{ stubbedBackend: void }>({
       }
       if (pathname.endsWith('/analysis')) {
         if (method === 'POST') {
+          if (files.some((file) => file.status === 'MASKING_REVIEW')) {
+            return json({ status: 409, detail: '마스킹 검수를 확정하지 않은 파일이 있습니다', code: 'MASKING_NOT_CONFIRMED' }, 409)
+          }
           return json({ jobId: 'job-1', status: 'GENERATING_DRAFT', progress: 80, currentStep: '초안을 만드는 중', error: null, updatedAt: '2026-08-25T00:00:00Z' }, 202)
         }
         return json({ jobId: 'job-1', status: 'COMPLETED', progress: 100, currentStep: '초안 준비 완료', error: null, updatedAt: '2026-08-25T00:00:00Z' })

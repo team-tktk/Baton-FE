@@ -25,7 +25,9 @@ test('matches the setup flow layout and recipient interaction', async ({ page, v
   await page.goto('/handovers/new/setup')
 
   await expect(page.getByRole('button', { name: '홈으로' })).toBeVisible()
-  await expect(page.getByText('1 / 5')).toBeVisible()
+  const stepper = page.getByRole('navigation', { name: '인수인계 진행 상황' })
+  await expect(stepper.getByRole('listitem')).toHaveCount(6)
+  await expect(stepper.locator('[aria-current="step"]')).toContainText('기본 정보')
   await expect(page.getByRole('listbox', { name: '업무를 받는 사람 목록' })).toBeHidden()
 
   const recipientCombobox = page.getByRole('combobox', { name: '업무를 받는 사람 검색' })
@@ -57,13 +59,11 @@ test('matches the setup flow layout and recipient interaction', async ({ page, v
     await expect(page.getByRole('heading', { name: '업무를 받는 사람' })).toHaveCSS('font-weight', '700')
     await expect(page.getByRole('heading', { name: '넘길 업무' })).toHaveCSS('font-weight', '700')
 
-    const progressbar = page.getByRole('progressbar', { name: '기본 정보 단계' })
-    const trackBox = await progressbar.locator('span').boundingBox()
-    const fillBox = await progressbar.locator('i').boundingBox()
-
-    expect(trackBox?.width).toBeCloseTo(440, 0)
-    expect(trackBox?.height).toBe(2)
-    expect(fillBox?.width).toBeCloseTo(440 / 5, 0)
+    // 스테퍼는 "홈으로" 버튼과 겹치지 않으면서 여섯 단계 이름을 한 줄에 모두 보여 준다.
+    const homeBox = await page.getByRole('button', { name: '홈으로' }).boundingBox()
+    const stepperBox = await stepper.boundingBox()
+    expect(stepperBox?.x ?? 0).toBeGreaterThan((homeBox?.x ?? 0) + (homeBox?.width ?? 0))
+    await expect(stepper.getByText('초안 확인')).toBeVisible()
 
     await page.keyboard.press('Escape')
     await page.getByRole('textbox', { name: '1번 업무' }).fill('프로모션 운영')
@@ -92,7 +92,7 @@ test('matches the DEMO upload layout and file metadata', async ({ page, viewport
   await expect(page).toHaveURL(/\/handovers\/new\/upload$/)
 
   await expect(page.getByRole('button', { name: '홈으로' })).toBeVisible()
-  await expect(page.getByText('2 / 5')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: '인수인계 진행 상황' }).locator('[aria-current="step"]')).toContainText('파일 업로드')
   await expect(page.getByRole('link', { name: 'BATON 홈' })).toHaveCount(0)
   await expect(page.getByText('DOCX · 2.4MB')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport?.width ?? 390)

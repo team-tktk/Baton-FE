@@ -1,16 +1,39 @@
 .progress { width: min(1040px, calc(100% - 40px)); margin: 26px auto 0; }
-.copy { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; color: var(--sub); font-size: var(--fs-2xs); }
-.copy strong { color: var(--blue-dark); }
-.compact { width: min(440px, calc(100% - 240px)); margin-top: 20px; }
-.compact .copy { margin-bottom: 7px; color: var(--muted); font-size: var(--fs-3xs); }
-.compact .copy strong { font-size: var(--fs-3xs); }
-.compact .copy span { font-weight: 700; }
-.compactBar > span { height: 2px; background: #e3e8ee; }
+.besideHome { width: min(1040px, calc(100% - 240px)); margin-top: 18px; }
+.progress ol { display: flex; align-items: center; margin: 0; padding: 0; list-style: none; }
+.progress li { display: flex; flex: 1; align-items: center; color: var(--muted); font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; }
+.progress li:last-child { flex: none; }
+/* 단계 사이 연결선. 마지막 단계에는 그리지 않는다. */
+.progress li:not(:last-child)::after { content: ''; flex: 1; height: 1px; margin: 0 12px; background: var(--line); }
+.progress li.done:not(:last-child)::after { background: #b9d4f7; }
+/* 번호와 이름을 한 묶음으로 두고, 현재 단계는 이 묶음 아래에만 밑줄을 긋는다. */
+.step { display: flex; align-items: center; gap: 9px; padding: 6px 0 10px; }
+.marker { display: grid; flex: none; width: 28px; height: 28px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: #fff; color: var(--muted); font-size: var(--fs-2xs); font-weight: 800; transition: background .2s ease, border-color .2s ease; }
+.marker svg { width: 14px; height: 14px; }
+.done { color: var(--sub); }
+.done .marker { border-color: #b9d4f7; background: var(--blue-soft); color: var(--blue-dark); }
+.current { color: var(--blue-dark); }
+.current .step { box-shadow: inset 0 -2px 0 var(--blue); }
+.current .marker { border-color: var(--blue); background: var(--blue); color: #fff; box-shadow: 0 6px 16px rgb(49 130 246 / 24%); }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mobileCurrent { display: none; margin: 8px 0 0; color: var(--blue-dark); font-size: var(--fs-2xs); font-weight: 800; }
+
+@media (max-width: 1100px) {
+  .progress li { font-size: var(--fs-2xs); }
+  .progress li:not(:last-child)::after { margin: 0 8px; }
+}
+
+/* 좁은 화면에서는 번호만 잇고 현재 단계 이름을 아래에 적는다. */
+@media (max-width: 860px) {
+  .label { display: none; }
+  .current .step { box-shadow: none; }
+  .mobileCurrent { display: block; }
+}
 
 @media (max-width: 760px) {
-  .compact { width: min(440px, calc(100% - 120px)); }
+  .besideHome { width: min(440px, calc(100% - 120px)); }
 }
 
 @media (max-width: 520px) {
-  .compact { width: calc(100% - 40px); margin-top: 72px; }
+  .besideHome { width: calc(100% - 40px); margin-top: 72px; }
 }

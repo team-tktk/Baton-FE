@@ -13,9 +13,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // 마스킹처럼 운영에서 꺼 둔 기능을 확인할 때는 로컬 백엔드로 돌린다.
+      // 예) VITE_API_PROXY_TARGET=http://localhost:8080 npm run dev
       '/api': {
         changeOrigin: true,
-        target: 'http://3.37.128.127:8080',
+        target: process.env.VITE_API_PROXY_TARGET ?? 'http://3.37.128.127:8080',
       },
     },
   },
