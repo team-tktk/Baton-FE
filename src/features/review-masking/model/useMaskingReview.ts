@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { HandoverAttachment, MaskingCandidate, MaskingReview } from '@/entities/handover'
+import type { HandoverAttachment, MaskingCandidate, MaskingRangeInput, MaskingReview } from '@/entities/handover'
 import { summarizeMasking, useHandoverRepository } from '@/entities/handover'
 import { ApiError } from '@/shared/api'
 
@@ -23,9 +23,13 @@ interface UseMaskingReviewOptions {
 const delay = (ms: number) => new Promise((resolve) => { setTimeout(resolve, ms) })
 const messageOf = (caught: unknown, fallback: string) => caught instanceof ApiError ? caught.message : fallback
 
+function withCandidates(review: MaskingReview, candidates: MaskingCandidate[]): MaskingReview {
+  const ordered = [...candidates].sort((left, right) => left.start - right.start)
+  return { ...review, candidates: ordered, summary: summarizeMasking(ordered) }
+}
+
 function withCandidate(review: MaskingReview, candidate: MaskingCandidate): MaskingReview {
-  const candidates = review.candidates.map((item) => item.id === candidate.id ? candidate : item)
-  return { ...review, candidates, summary: summarizeMasking(candidates) }
+  return withCandidates(review, review.candidates.map((item) => item.id === candidate.id ? candidate : item))
 }
 
 export function useMaskingReview({ attachments, handoverId, onAttachmentsChange, onFeedback }: UseMaskingReviewOptions) {
@@ -104,6 +108,39 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
       if (alive.current) setSavingIds((ids) => ids.filter((id) => id !== candidateId))
     }
   }, [handoverId, onFeedback, repository, reviews])
+
+  /** 사용자가 원문에서 고른 구간을 직접 가릴 항목으로 추가한다. 성공하면 추가된 항목을 돌려준다. */
+  const addRange = useCallback(async (fileId: string, range: MaskingRangeInput) => {
+    if (!handoverId) return null
+    try {
+      const added = await repository.addMaskingCandidate(handoverId, fileId, range)
+      if (!alive.current) return null
+      setReviews((current) => current[fileId]
+        ? { ...current, [fileId]: withCandidates(current[fileId], [...current[fileId].candidates, added]) }
+        : current)
+      return added
+    } catch (caught) {
+      if (alive.current) onFeedback(messageOf(caught, '구간을 추가하지 못했어요. 잠시 후 다시 시도해 주세요'))
+      return null
+    }
+  }, [handoverId, onFeedback, repository])
+
+  /** 직접 추가한 항목만 지울 수 있다. 자동으로 찾은 항목은 체크를 해제한다. */
+  const removeCandidate = useCallback(async (fileId: string, candidateId: string) => {
+    if (!handoverId) return
+    setSavingIds((ids) => [...ids, candidateId])
+    try {
+      await repository.removeMaskingCandidate(handoverId, fileId, candidateId)
+      if (!alive.current) return
+      setReviews((current) => current[fileId]
+        ? { ...current, [fileId]: withCandidates(current[fileId], current[fileId].candidates.filter((item) => item.id !== candidateId)) }
+        : current)
+    } catch (caught) {
+      if (alive.current) onFeedback(messageOf(caught, '항목을 지우지 못했어요. 잠시 후 다시 시도해 주세요'))
+    } finally {
+      if (alive.current) setSavingIds((ids) => ids.filter((id) => id !== candidateId))
+    }
+  }, [handoverId, onFeedback, repository])
 
   const reloadReview = useCallback(async (fileId: string) => {
     if (!handoverId) return null
@@ -184,6 +221,7 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
 
   return {
     activeFileId,
+    addRange,
     applied,
     canConfirm: !loading && !loadError && openReviews.length > 0 && remaining === 0 && !progress && savingIds.length === 0,
     confirmAll,
@@ -193,6 +231,7 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
     progress,
     reload,
     remaining,
+    removeCandidate,
     reviewFiles,
     reviews,
     savingIds,

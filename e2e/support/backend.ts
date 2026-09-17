@@ -170,6 +170,26 @@ export const test = base.extend<{ stubbedBackend: void }>({
           file.remainingReviewCount = summarize(record.candidates).remaining
           return json(candidate)
         }
+        if (method === 'DELETE' && decided) {
+          const candidate = record.candidates.find((item) => item.id === decided[1])
+          if (!candidate) return json({ status: 404, detail: '없는 항목', code: 'MASKING_CANDIDATE_NOT_FOUND' }, 404)
+          if (candidate.origin !== 'MANUAL') return json({ status: 409, detail: '자동으로 찾은 항목은 삭제할 수 없습니다', code: 'MASKING_CANDIDATE_NOT_DELETABLE' }, 409)
+          record.candidates = record.candidates.filter((item) => item.id !== candidate.id)
+          return route.fulfill({ status: 204, body: '' })
+        }
+        if (method === 'POST' && masking[2] === '/candidates') {
+          const body = JSON.parse(route.request().postData() ?? '{}') as { startOffset: number; endOffset: number; type?: string }
+          const picked = MASKING_TEXT.slice(body.startOffset, body.endOffset)
+          if (body.startOffset >= body.endOffset || body.endOffset > MASKING_TEXT.length || !picked.trim()) {
+            return json({ status: 400, detail: '문서 범위를 벗어났거나 빈 구간입니다', code: 'MASKING_INVALID_RANGE' }, 400)
+          }
+          if (record.candidates.some((item) => item.startOffset < body.endOffset && body.startOffset < item.endOffset)) {
+            return json({ status: 409, detail: '이미 항목이 있는 구간과 겹칩니다', code: 'MASKING_RANGE_OVERLAP' }, 409)
+          }
+          const added: StubCandidate = { id: `candidate-manual-${record.candidates.length + 1}`, type: body.type ?? 'CUSTOM', typeLabel: '직접 마스킹', origin: 'MANUAL', startOffset: body.startOffset, endOffset: body.endOffset, confidencePercent: 100, applied: true, needsReview: false, pendingReview: false, preview: `${picked[0]}***` }
+          record.candidates = [...record.candidates, added].sort((left, right) => left.startOffset - right.startOffset)
+          return json(added, 201)
+        }
         if (method === 'POST' && masking[2] === '/confirm') {
           const { remaining } = summarize(record.candidates)
           if (remaining > 0) return json({ status: 409, detail: `확인하지 않은 항목이 ${remaining}개 남아 있습니다`, code: 'MASKING_REVIEW_INCOMPLETE' }, 409)

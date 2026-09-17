@@ -108,14 +108,25 @@ export function MaskingStep({ attachments, handoverId, onAttachmentsChange, onBa
           <header>
             <Icon name="file" />
             <strong>{activeFile?.name}</strong>
-            <span>AI가 읽은 텍스트 기준</span>
+            <span>드래그해서 직접 가릴 수 있어요 · AI가 읽은 텍스트 기준</span>
           </header>
           {!activeReview ? (
             <p className={styles.placeholder}>검수 내용을 불러오는 중이에요…</p>
           ) : activeReview.confirmed || activeReview.text === null ? (
             <p className={styles.placeholder}>검수를 확정했어요. 원문은 서버에서 삭제되고 가린 내용만 남았어요.</p>
           ) : (
-            <MaskedDocument candidates={activeReview.candidates} fileName={activeReview.fileName} selectedId={selectedCandidateId} text={activeReview.text} onSelect={selectFromDocument} />
+            <MaskedDocument
+              candidates={activeReview.candidates}
+              fileName={activeReview.fileName}
+              key={activeReview.fileId}
+              selectedId={selectedCandidateId}
+              text={activeReview.text}
+              onAddRange={busy ? undefined : async (range) => {
+                const added = await review.addRange(activeReview.fileId, range)
+                if (added) setSelectedCandidateId(added.id)
+              }}
+              onSelect={selectFromDocument}
+            />
           )}
         </section>
 
@@ -129,6 +140,7 @@ export function MaskingStep({ attachments, handoverId, onAttachmentsChange, onBa
               selectedId={selectedCandidateId}
               summary={activeReview.summary}
               onSelect={selectFromList}
+              onRemove={(candidateId) => { void review.removeCandidate(activeFile.id, candidateId) }}
               onToggle={(candidateId, applied) => { void review.toggle(activeFile.id, candidateId, applied) }}
             />
           )}

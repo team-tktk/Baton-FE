@@ -38,6 +38,9 @@
 .needs { background: #ffe9e9; color: #b42318; }
 .reviewed { background: var(--green-soft); color: var(--green); }
 .manual { background: var(--violet-soft); color: var(--violet); }
+.remove { border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--sub); cursor: pointer; padding: 3px 8px; font-size: var(--fs-3xs); font-weight: 750; }
+.remove:hover:not(:disabled) { border-color: #f3b6b6; color: #b42318; }
+.remove:disabled { opacity: .5; cursor: default; }
 .empty { margin: 0; border-radius: 13px; background: #f7f8fa; padding: 22px; color: var(--muted); font-size: var(--fs-2xs); text-align: center; }
 
 @media (max-width: 520px) {
