@@ -11,6 +11,9 @@ import type {
   HandoverParticipant,
   HandoverSummary,
   InterviewQuestion,
+  MaskingCandidate,
+  MaskingRangeInput,
+  MaskingReview,
   ReviewComment,
   ReviewSummary,
   SentSummary,
@@ -27,6 +30,12 @@ export interface HandoverRepository {
   uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment>
   deleteFile(id: HandoverId, fileId: string): Promise<void>
   downloadFile(id: HandoverId, fileId: string): Promise<HandoverFileDownload>
+  getMaskingReview(id: HandoverId, fileId: string): Promise<MaskingReview>
+  decideMaskingCandidate(id: HandoverId, fileId: string, candidateId: string, applied: boolean): Promise<MaskingCandidate>
+  addMaskingCandidate(id: HandoverId, fileId: string, range: MaskingRangeInput): Promise<MaskingCandidate>
+  removeMaskingCandidate(id: HandoverId, fileId: string, candidateId: string): Promise<void>
+  /** 되돌릴 수 없다. 서버가 원문을 지우고 가린 텍스트만 남긴다. */
+  confirmMasking(id: HandoverId, fileId: string): Promise<MaskingReview>
   startAnalysis(id: HandoverId): Promise<AnalysisJob>
   getAnalysis(id: HandoverId): Promise<AnalysisJob>
   retryAnalysis(id: HandoverId): Promise<AnalysisJob>

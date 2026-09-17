@@ -126,6 +126,15 @@ export const test = base.extend<{ stubbedBackend: void }>({
           return json({ sourceDocumentId: id, fileName, status: 'INDEXED' }, 201)
         }
       }
+      // 마스킹 검수. 스텁 파일은 검수 없이 INDEXED로 올라가므로 조회는 빈 검수 결과를 준다.
+      const masking = /\/files\/([^/]+)\/masking(\/.*)?$/.exec(pathname)
+      if (masking) {
+        const file = files.find((item) => item.id === masking[1])
+        if (!file) return json({ title: '파일을 찾을 수 없습니다', status: 404, detail: '파일을 찾을 수 없습니다', code: 'AI_SOURCE_DOCUMENT_NOT_FOUND' }, 404)
+        const review = { fileId: file.id, fileName: file.fileName, status: file.status, confirmed: false, text: null, summary: { total: 0, autoMasked: 0, needsReview: 0, remaining: 0, applied: 0 }, candidates: [] }
+        if (method === 'GET' && !masking[2]) return json(review)
+        return json({ title: '검수 대기 상태가 아닙니다', status: 409, detail: '검수 대기 상태가 아닙니다', code: 'MASKING_NOT_IN_REVIEW' }, 409)
+      }
       if (method === 'DELETE' && /\/files\/[^/]+$/.test(pathname)) {
         files = files.filter((file) => !pathname.endsWith(file.id))
         return route.fulfill({ status: 204, body: '' })

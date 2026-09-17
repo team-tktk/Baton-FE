@@ -69,7 +69,11 @@ export interface HandoverResponse {
   updatedAt: string
 }
 
-export type FileStatusDto = 'EXTRACTING' | 'INDEXED' | 'FAILED'
+/**
+ * 마스킹 검수가 켜진 서버에서는 추출 뒤 MASKING_REVIEW에서 멈추고 사용자 확정을 기다린다.
+ * 확정하면 INDEXING(임베딩 중)을 거쳐 INDEXED가 된다.
+ */
+export type FileStatusDto = 'EXTRACTING' | 'MASKING_REVIEW' | 'INDEXING' | 'INDEXED' | 'FAILED'
 
 export interface FileMetadataResponse {
   id: string
@@ -77,7 +81,55 @@ export interface FileMetadataResponse {
   mimeType: string
   size: number
   status: FileStatusDto
+  /** 마스킹 검수에서 아직 확인하지 않은 항목 수. 검수 대기 파일이 아니면 0이다. */
+  remainingReviewCount?: number
   createdAt: string
+}
+
+export type MaskingTypeDto = 'EMAIL' | 'PHONE' | 'ACCOUNT' | 'RRN' | 'CARD' | 'BUSINESS_NO' | 'CUSTOM'
+
+export interface MaskingCandidateResponse {
+  id: string
+  type: MaskingTypeDto
+  typeLabel: string
+  origin: 'DETECTED' | 'MANUAL'
+  /** text 기준 [start, end) 구간. Java와 JS 모두 UTF-16 단위라 substring 위치가 그대로 맞는다. */
+  startOffset: number
+  endOffset: number
+  confidencePercent: number
+  applied: boolean
+  needsReview: boolean
+  pendingReview: boolean
+  preview: string
+}
+
+export interface MaskingSummaryDto {
+  total: number
+  autoMasked: number
+  needsReview: number
+  remaining: number
+  applied: number
+}
+
+export interface MaskingReviewResponse {
+  fileId: string
+  fileName: string
+  status: FileStatusDto
+  confirmed: boolean
+  /** MASKING_REVIEW일 때만 내려온다. 확정하면 원문이 삭제되어 null이다. */
+  text?: string | null
+  summary: MaskingSummaryDto
+  candidates?: MaskingCandidateResponse[]
+}
+
+export interface CandidateDecisionRequest {
+  applied: boolean
+}
+
+export interface ManualCandidateRequest {
+  startOffset: number
+  endOffset: number
+  type?: MaskingTypeDto
 }
 
 export interface FileUploadResponse {

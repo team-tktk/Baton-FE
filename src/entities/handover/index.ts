@@ -5,6 +5,7 @@ export {
 export { useHandoverRepository } from './api/useHandoverRepository'
 export { HttpHandoverRepository } from './api/HttpHandoverRepository'
 export { MockHandoverRepository } from './api/mock/MockHandoverRepository'
+export { summarizeMasking } from './api/mapper/maskingMapper'
 export { AttachmentList } from './ui/AttachmentList'
 export { HandoverStatusBadge } from './ui/HandoverStatusBadge'
 export { PersonSummary } from './ui/PersonSummary'
@@ -32,6 +33,11 @@ export type {
   HandoverSummary,
   HandoverTask,
   InterviewQuestion,
+  MaskingCandidate,
+  MaskingRangeInput,
+  MaskingReview,
+  MaskingSummary,
+  MaskingType,
   ReviewComment,
   ReviewSummary,
   SentSummary,

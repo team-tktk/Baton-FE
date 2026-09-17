@@ -14,7 +14,8 @@ export interface HandoverParticipant {
   team: string
 }
 
-export type AttachmentStatus = 'processing' | 'ready' | 'failed'
+/** review는 추출이 끝나 민감정보 검수를 기다리는 상태다. 사용자가 확정하기 전까지 바뀌지 않는다. */
+export type AttachmentStatus = 'processing' | 'review' | 'ready' | 'failed'
 
 export type AnalysisStatus = 'running' | 'completed' | 'failed'
 
@@ -31,6 +32,55 @@ export interface HandoverAttachment {
   mimeType: string
   size: number
   status: AttachmentStatus
+  /** 검수에서 아직 확인하지 않은 항목 수. 없으면 0으로 본다. */
+  pendingReviewCount?: number
+}
+
+export type MaskingType = 'EMAIL' | 'PHONE' | 'ACCOUNT' | 'RRN' | 'CARD' | 'BUSINESS_NO' | 'CUSTOM'
+
+export interface MaskingCandidate {
+  id: string
+  type: MaskingType
+  typeLabel: string
+  origin: 'detected' | 'manual'
+  /** 원문 text 기준 [start, end) */
+  start: number
+  end: number
+  confidence: number
+  /** 확정할 때 가릴지 여부(체크박스) */
+  applied: boolean
+  /** 사람이 확인해야 하는 항목인지 */
+  needsReview: boolean
+  /** 확인이 필요한데 아직 적용·해제를 누르지 않았는지 */
+  pendingReview: boolean
+  preview: string
+}
+
+export interface MaskingSummary {
+  total: number
+  /** 자동으로 찾았고 확인이 필요 없는 항목 */
+  autoMasked: number
+  needsReview: number
+  /** 0이어야 확정할 수 있다 */
+  remaining: number
+  applied: number
+}
+
+export interface MaskingReview {
+  fileId: string
+  fileName: string
+  status: AttachmentStatus
+  confirmed: boolean
+  /** 검수 대기일 때만 있다. 확정하면 원문이 서버에서 삭제된다. */
+  text: string | null
+  summary: MaskingSummary
+  candidates: MaskingCandidate[]
+}
+
+export interface MaskingRangeInput {
+  start: number
+  end: number
+  type?: MaskingType
 }
 
 // 원본 파일 다운로드 응답: 서버가 준 바이트와 파일명(Content-Disposition에서 읽거나 첨부 이름으로 대체).

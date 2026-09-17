@@ -14,20 +14,27 @@ import type {
   HandoverParticipant,
   HandoverSummary,
   InterviewQuestion,
+  MaskingCandidate,
+  MaskingRangeInput,
+  MaskingReview,
   ReviewComment,
   ReviewSummary,
   SentSummary,
   UpdateHandoverInput,
 } from '../model/types'
 import type {
+  CandidateDecisionRequest,
   ChatAnswerResponse,
   ChatMessagePageResponse,
   ChatQuestionRequest,
+  MaskingCandidateResponse,
+  MaskingReviewResponse,
 } from './dto/types'
 import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, HandoverDraftResponse, ChecklistItemInput, CommentRequest, CommentResponse, HandoverListResponse, MemberPageResponse, QuestionAnswerRequest, ReviewChecklistRequest, ReviewDetailResponse, UpdateDraftRequest } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
 import { toDraftContent, toHandoverDocument } from './mapper/documentMapper'
 import { toChatExchange, toHandoverAnswer } from './mapper/chatMapper'
+import { toManualCandidateRequest, toMaskingCandidate, toMaskingReview } from './mapper/maskingMapper'
 import { formatListDate, toReceivedSummary, toReviewComment, toReviewSummary, toSentSummary } from './mapper/receivedMapper'
 import { toAnalysisJob, toHandoverStatus, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
@@ -128,11 +135,39 @@ export class HttpHandoverRepository implements HandoverRepository {
       mimeType: file.type,
       size: file.size,
       status: toAttachmentStatus(uploaded.status),
+      pendingReviewCount: 0,
     }
   }
 
   async deleteFile(id: HandoverId, fileId: string): Promise<void> {
     await apiRequest<void>(`/api/v1/handovers/${id}/files/${fileId}`, { method: 'DELETE' })
+  }
+
+  async getMaskingReview(id: HandoverId, fileId: string): Promise<MaskingReview> {
+    return toMaskingReview(await apiRequest<MaskingReviewResponse>(`/api/v1/handovers/${id}/files/${fileId}/masking`))
+  }
+
+  async decideMaskingCandidate(id: HandoverId, fileId: string, candidateId: string, applied: boolean): Promise<MaskingCandidate> {
+    const body: CandidateDecisionRequest = { applied }
+    return toMaskingCandidate(await apiRequest<MaskingCandidateResponse>(`/api/v1/handovers/${id}/files/${fileId}/masking/candidates/${candidateId}`, {
+      body: JSON.stringify(body),
+      method: 'PATCH',
+    }))
+  }
+
+  async addMaskingCandidate(id: HandoverId, fileId: string, range: MaskingRangeInput): Promise<MaskingCandidate> {
+    return toMaskingCandidate(await apiRequest<MaskingCandidateResponse>(`/api/v1/handovers/${id}/files/${fileId}/masking/candidates`, {
+      body: JSON.stringify(toManualCandidateRequest(range)),
+      method: 'POST',
+    }))
+  }
+
+  async removeMaskingCandidate(id: HandoverId, fileId: string, candidateId: string): Promise<void> {
+    await apiRequest<void>(`/api/v1/handovers/${id}/files/${fileId}/masking/candidates/${candidateId}`, { method: 'DELETE' })
+  }
+
+  async confirmMasking(id: HandoverId, fileId: string): Promise<MaskingReview> {
+    return toMaskingReview(await apiRequest<MaskingReviewResponse>(`/api/v1/handovers/${id}/files/${fileId}/masking/confirm`, { method: 'POST' }))
   }
 
   // 원본 파일은 JSON이 아니라 바이트로 내려오므로 apiRequest(JSON 전용) 대신 직접 fetch 한다.
