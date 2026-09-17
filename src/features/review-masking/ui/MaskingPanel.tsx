@@ -21,6 +21,7 @@ interface MaskingPanelProps {
   savingIds: string[]
   selectedId: string | null
   summary: MaskingSummary
+  onRemove?: (candidateId: string) => void
   onSelect: (candidateId: string) => void
   onToggle: (candidateId: string, applied: boolean) => void
 }
@@ -31,7 +32,7 @@ function matches(candidate: MaskingCandidate, filter: Filter) {
   return true
 }
 
-export function MaskingPanel({ candidates, confirmed, disabled = false, onSelect, onToggle, savingIds, selectedId, summary }: MaskingPanelProps) {
+export function MaskingPanel({ candidates, confirmed, disabled = false, onRemove, onSelect, onToggle, savingIds, selectedId, summary }: MaskingPanelProps) {
   const [filter, setFilter] = useState<Filter>('all')
   const visible = candidates.filter((candidate) => matches(candidate, filter))
 
@@ -41,7 +42,7 @@ export function MaskingPanel({ candidates, confirmed, disabled = false, onSelect
         <span className={styles.shield}><Icon name="shield" /></span>
         <div>
           <h2 id="masking-panel-title">민감정보를 확인해 주세요</h2>
-          <p>체크한 항목은 확정할 때 가려지고, AI에는 가려진 내용만 전달돼요.</p>
+          <p>체크한 항목은 확정할 때 가려지고, AI에는 가려진 내용만 전달돼요. 빠진 정보는 문서에서 드래그해 직접 가릴 수 있어요.</p>
         </div>
       </header>
 
@@ -69,7 +70,7 @@ export function MaskingPanel({ candidates, confirmed, disabled = false, onSelect
       </div>
 
       {candidates.length === 0 ? (
-        <p className={styles.empty}>자동으로 찾은 민감정보가 없어요.</p>
+        <p className={styles.empty}>자동으로 찾은 민감정보가 없어요. 가릴 내용이 있으면 문서에서 드래그해 주세요.</p>
       ) : visible.length === 0 ? (
         <p className={styles.empty}>조건에 맞는 항목이 없어요.</p>
       ) : (
@@ -95,7 +96,19 @@ export function MaskingPanel({ candidates, confirmed, disabled = false, onSelect
                     : candidate.needsReview
                       ? <em className={styles.reviewed}>확인함</em>
                       : <em className={styles.autoBadge}>자동</em>}
-                <small>신뢰도 {candidate.confidence}%</small>
+                {candidate.origin === 'manual' && onRemove
+                  ? (
+                    <button
+                      aria-label={`직접 추가한 ${candidate.preview} 삭제`}
+                      className={styles.remove}
+                      disabled={disabled || confirmed || savingIds.includes(candidate.id)}
+                      type="button"
+                      onClick={() => onRemove(candidate.id)}
+                    >
+                      삭제
+                    </button>
+                  )
+                  : <small>신뢰도 {candidate.confidence}%</small>}
               </span>
             </li>
           ))}

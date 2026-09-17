@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -37,6 +37,17 @@ function setup({ attachments = [file('review')], review = makeReview(true) }: { 
 
   render(<HandoverRepositoryProvider repository={repository}><Harness /></HandoverRepositoryProvider>)
   return { onFeedback, onProceed, repository, user: userEvent.setup() }
+}
+
+/** 원문 일반 구간 하나 안에서 글자를 고른다. 실제 드래그처럼 선택 영역을 만든다. */
+function selectInSegment(region: HTMLElement, segmentIndex: number, from: number, to: number) {
+  const segment = region.querySelectorAll('[data-text-segment]')[segmentIndex]
+  const range = document.createRange()
+  range.setStart(segment.firstChild!, from)
+  range.setEnd(segment.firstChild!, to)
+  const selection = window.getSelection()!
+  selection.removeAllRanges()
+  selection.addRange(range)
 }
 
 const confirmButton = () => screen.getByRole('button', { name: '확정하고 AI 분석 시작' })
@@ -114,6 +125,60 @@ describe('MaskingStep', () => {
     expect(await screen.findByText('확인이 필요한 항목 1개를 먼저 확인해 주세요')).toBeInTheDocument()
     expect(confirmButton()).toBeDisabled()
     expect(onProceed).not.toHaveBeenCalled()
+  })
+
+  it('masks a dragged range and removes it again', async () => {
+    const { repository, user } = setup({ review: makeReview(false) })
+    const add = vi.spyOn(repository, 'addMaskingCandidate')
+    const remove = vi.spyOn(repository, 'removeMaskingCandidate')
+    const region = await screen.findByRole('region', { name: '업무협약서.docx 추출 텍스트' })
+
+    // 두 번째 일반 구간은 "\n지급 계좌: "다. "지급 계좌"만 고른다.
+    selectInSegment(region, 1, 1, 6)
+    fireEvent.mouseUp(region)
+    await user.click(screen.getByRole('button', { name: '이 부분 가리기' }))
+
+    const emailEnd = TEXT.indexOf(EMAIL) + EMAIL.length
+    expect(add).toHaveBeenCalledWith(HANDOVER_ID, 'file-1', { start: emailEnd + 1, end: emailEnd + 6 })
+    expect(TEXT.slice(emailEnd + 1, emailEnd + 6)).toBe('지급 계좌')
+    const removeButton = await screen.findByRole('button', { name: '직접 추가한 *** 삭제' })
+    expect(screen.getByText('직접 추가')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이 부분 가리기' })).not.toBeInTheDocument()
+
+    await user.click(removeButton)
+
+    expect(remove).toHaveBeenCalledWith(HANDOVER_ID, 'file-1', 'manual-3')
+    await waitFor(() => expect(screen.queryByText('직접 추가')).not.toBeInTheDocument())
+  })
+
+  it('offers the action for a touch selection that never sends mouseup', async () => {
+    setup({ review: makeReview(false) })
+    const region = await screen.findByRole('region', { name: '업무협약서.docx 추출 텍스트' })
+
+    // 휴대폰은 길게 눌러 고르고 핸들로 조정한다. 선택 변경 이벤트만 온다.
+    selectInSegment(region, 1, 1, 6)
+    document.dispatchEvent(new Event('selectionchange'))
+
+    expect(await screen.findByRole('button', { name: '이 부분 가리기' })).toBeInTheDocument()
+  })
+
+  it('explains instead of sending a range that overlaps a found item', async () => {
+    const { repository } = setup({ review: makeReview(false) })
+    const add = vi.spyOn(repository, 'addMaskingCandidate')
+    const region = await screen.findByRole('region', { name: '업무협약서.docx 추출 텍스트' })
+
+    // 첫 구간 시작부터 이메일을 건너 두 번째 구간까지 고른다.
+    const [first, second] = region.querySelectorAll('[data-text-segment]')
+    const range = document.createRange()
+    range.setStart(first.firstChild!, 0)
+    range.setEnd(second.firstChild!, 3)
+    window.getSelection()!.removeAllRanges()
+    window.getSelection()!.addRange(range)
+    fireEvent.mouseUp(region)
+
+    expect(screen.getByRole('status')).toHaveTextContent('이미 표시된 항목과 겹쳐요')
+    expect(screen.queryByRole('button', { name: '이 부분 가리기' })).not.toBeInTheDocument()
+    expect(add).not.toHaveBeenCalled()
   })
 
   it('lets the flow continue when no file needs review', async () => {

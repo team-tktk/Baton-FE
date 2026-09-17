@@ -1,6 +1,6 @@
 import { expect, test } from './support/backend'
 
-test('creates, confirms, and delivers a handover', async ({ page }) => {
+test('creates, confirms, and delivers a handover', async ({ isMobile, page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /인수인계 하기/ }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/setup$/)
@@ -32,8 +32,37 @@ test('creates, confirms, and delivers a handover', async ({ page }) => {
   await expect(confirm).toBeDisabled()
   await page.getByRole('checkbox', { name: '계좌번호 110-***-***789 가리기' }).check()
   await expect(confirm).toBeEnabled()
+
+  // 자동으로 못 찾은 "지급 계좌"를 직접 가린다.
+  // 데스크톱은 실제 마우스로 드래그하고, 휴대폰은 길게 눌러 고른 결과처럼 선택 영역만 만든다.
+  const region = page.getByRole('region', { name: '새_운영_메모.pdf 추출 텍스트' })
+  const drag = await region.evaluate((root, selectOnly) => {
+    const node = root.querySelectorAll('[data-text-segment]')[1].firstChild!
+    const range = document.createRange()
+    range.setStart(node, 1)
+    range.setEnd(node, 6)
+    if (selectOnly) {
+      window.getSelection()!.removeAllRanges()
+      window.getSelection()!.addRange(range)
+      return null
+    }
+    const rects = range.getClientRects()
+    const first = rects[0]
+    const last = rects[rects.length - 1]
+    return { from: first.left + 1, to: last.right - 1, y: first.top + first.height / 2 }
+  }, isMobile)
+  if (drag) {
+    await page.mouse.move(drag.from, drag.y)
+    await page.mouse.down()
+    await page.mouse.move(drag.to, drag.y, { steps: 5 })
+    await page.mouse.up()
+  }
+  await page.getByRole('button', { name: '이 부분 가리기' }).click()
+  await expect(page.getByText('직접 추가')).toBeVisible()
+  await expect(region.getByRole('button', { name: /^직접 마스킹 지\*\*\*, 가림$/ })).toBeVisible()
+
   await confirm.click()
-  await expect(page.getByRole('dialog', { name: '민감정보 검수를 확정할까요?' })).toContainText('가려질 항목 2개')
+  await expect(page.getByRole('dialog', { name: '민감정보 검수를 확정할까요?' })).toContainText('가려질 항목 3개')
   await page.getByRole('button', { name: '확정하고 분석 시작' }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/interview\/1$/, { timeout: 10_000 })
 
