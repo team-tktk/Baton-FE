@@ -31,3 +31,7 @@
 .emptySlot button { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; min-height: 36px; margin-top: 8px; border: 0; border-radius: 10px; background: var(--blue); color: #fff; cursor: pointer; padding: 0 14px; font-size: var(--fs-2xs); font-weight: 800; }
 .emptySlot button:disabled { background: #eef1f4; color: var(--muted); cursor: default; }
 .emptySlot button svg { width: 15px; height: 15px; }
+/* 보완을 적용한 섹션을 잠깐 밝혀 어디가 바뀌었는지 보여 준다. */
+.page [data-just-applied='true'] { border-radius: 14px; animation: just-applied 2.6s ease-out; }
+@keyframes just-applied { 0%, 45% { background: #e8f8f1; box-shadow: 0 0 0 10px #e8f8f1; } }
+@media (prefers-reduced-motion: reduce) { .page [data-just-applied='true'] { animation: none; background: #e8f8f1; box-shadow: 0 0 0 10px #e8f8f1; } }

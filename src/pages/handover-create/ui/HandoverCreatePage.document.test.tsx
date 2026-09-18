@@ -172,7 +172,8 @@ describe('HandoverCreatePage document step AI fixes', () => {
     await user.click(dialog.getByRole('button', { name: '문서에 적용' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(apply).toHaveBeenCalledWith(ID, 'fix-1', 1)
-    expect(await screen.findByText('업무 기준과 예외에 보완 내용을 반영했어요')).toBeInTheDocument()
+    expect(await screen.findByText('업무 기준과 예외에 반영했어요 · 점수 75점 → 83점')).toBeInTheDocument()
+    expect(window.document.getElementById('draft-section-rules-and-exceptions')).toHaveAttribute('data-just-applied', 'true')
     expect(screen.getByLabelText('업무 기준 4 내용 편집')).toHaveTextContent('예외 상황별 담당자와 처리 순서를 적어 주세요.')
     expect(screen.getByText('83')).toBeInTheDocument()
     expect(within(screen.getByRole('region', { name: '중요한 확인' })).queryByRole('button', { name: /예외 대응/ })).not.toBeInTheDocument()
@@ -201,7 +202,7 @@ describe('HandoverCreatePage document step AI fixes', () => {
     await user.click(dialog.getByRole('button', { name: '문서에 적용' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(window.document.getElementById('draft-section-access-accounts')).toHaveTextContent('정산 시스템 조회 권한')
-    expect(screen.getByText('75')).toBeInTheDocument()
+    expect(await screen.findByText('접근 권한과 계정에 반영했어요 · 점수 65점 → 75점')).toBeInTheDocument()
   })
 
   it('does not start a fix while the evaluation is outdated and discards a cancelled one', async () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import type { ReadinessFixResponse, ReadinessResponse } from '../dto/types'
 import { primaryHandoverFixture } from '../mock/fixtures/handovers'
-import { applySectionValue, readSectionValue, toDocumentSectionValue, toHandoverReadiness, toReadinessFix } from './readinessMapper'
+import { applySectionValue, readSectionValue, toDocumentSectionValue, toHandoverReadiness, toReadableText, toReadinessFix } from './readinessMapper'
 
 const fix: ReadinessFixResponse = {
   fixId: 'fix-1',
@@ -80,6 +80,14 @@ describe('readinessMapper', () => {
       stale: true,
       areas: [{ status: 'conflict', anchorText: null, resolution: '', criteria: '', evidence: [] }],
     })
+  })
+
+  it('replaces section code names in AI text with screen names and fixes the particle', () => {
+    expect(toReadableText('RULES_AND_EXCEPTIONS와 CONFIRMED_CRITERIA를 동일하게 수정해 주세요.'))
+      .toBe('‘업무 기준과 예외’와 ‘확인된 업무 기준’을 동일하게 수정해 주세요.')
+    expect(toReadableText('상세 절차를 recurringTasks에 보완해 주세요.')).toBe('상세 절차를 ‘반복 업무’에 보완해 주세요.')
+    expect(toReadableText('TOOLS으로 옮기고 PURPOSE이다')).toBe('‘사용 도구와 자료’로 옮기고 ‘업무 개요’이다')
+    expect(toReadableText(null)).toBe('')
   })
 
   it('reads and replaces a single section of a document', () => {

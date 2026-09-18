@@ -89,3 +89,8 @@ button.row > svg { width: 14px; height: 14px; color: var(--muted); }
 .actions button.fix:disabled { border-color: var(--line); background: #eef1f4; color: var(--muted); cursor: default; }
 .actions button.fix svg { width: 15px; height: 15px; }
 .detail > .blockedNote { margin: -2px 0 0; color: var(--muted); font-size: var(--fs-3xs); line-height: 1.5; }
+.recheck { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: -4px; }
+.recheck span { color: var(--muted); font-size: var(--fs-3xs); line-height: 1.5; }
+.recheck button { flex: none; min-height: 32px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--sub); cursor: pointer; padding: 0 12px; font-size: var(--fs-2xs); font-weight: 750; }
+.recheck button:hover:not(:disabled) { border-color: #cfd6de; color: var(--text); }
+.recheck button:disabled { opacity: .5; cursor: default; }

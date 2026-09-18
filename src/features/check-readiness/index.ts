@@ -1,3 +1,4 @@
+export { appliedMessage } from './model/appliedMessage'
 export { canEditInDocument, containsAnchor, isSectionEmpty, sectionElementId, toDraftIssues } from './model/draftIssues'
 export type { DraftIssue, DraftIssueMap } from './model/draftIssues'
 export { checkBeforeSubmit } from './model/submitCheck'

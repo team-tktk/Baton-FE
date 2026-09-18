@@ -109,6 +109,49 @@ const FIX_STATUSES: Record<ReadinessFixStatusDto, ReadinessFixStatus> = {
   DISCARDED: 'discarded',
 }
 
+/** 서버 섹션 이름(DraftSection 라벨). AI 문구에 섞여 오는 코드명을 이 이름으로 바꿔 보여 준다. */
+const SECTION_LABELS: Record<DocumentSection, string> = {
+  PURPOSE: '업무 개요',
+  COMPLETION_CRITERIA: '완료 기준',
+  ONGOING_TASKS: '진행 중인 업무',
+  RECURRING_TASKS: '반복 업무',
+  RULES_AND_EXCEPTIONS: '업무 기준과 예외',
+  STAKEHOLDERS: '주요 관계자',
+  TOOLS: '사용 도구와 자료',
+  SCHEDULE: '업무 일정',
+  ACCESS_ACCOUNTS: '접근 권한과 계정',
+  FIRST_WEEK_CHECKLIST: '첫 주 체크리스트',
+  CONFIRMED_CRITERIA: '확인된 업무 기준',
+}
+
+const CODE_LABELS = new Map<string, string>(
+  (Object.keys(SECTION_LABELS) as DocumentSection[]).flatMap((section) => [
+    [section, SECTION_LABELS[section]],
+    [CONTENT_KEYS[section], SECTION_LABELS[section]],
+  ]),
+)
+const PARTICLES = [['을', '를'], ['이', '가'], ['은', '는'], ['과', '와'], ['으로', '로']] as const
+// 조사는 뒤에 한글이 이어지지 않을 때만 고친다('이다'의 '이'처럼 조사가 아닌 경우를 건드리지 않기 위해).
+const CODE_PATTERN = new RegExp(`\\b(${[...CODE_LABELS.keys()].join('|')})\\b(?:(${PARTICLES.flat().join('|')})(?![가-힣]))?`, 'g')
+
+// 한글 마지막 글자의 받침 여부로 조사를 고른다('로'는 받침 ㄹ이면 '로').
+function particleFor(label: string, particle: string) {
+  const pair = PARTICLES.find((candidate) => (candidate as readonly string[]).includes(particle))
+  if (!pair) return particle
+  const code = label.charCodeAt(label.length - 1) - 0xac00
+  const coda = code >= 0 && code <= 11171 ? code % 28 : 0
+  if (pair[0] === '으로') return coda === 0 || coda === 8 ? '로' : '으로'
+  return coda === 0 ? pair[1] : pair[0]
+}
+
+/** AI 문구의 섹션 코드명(RULES_AND_EXCEPTIONS, recurringTasks 등)을 화면 이름으로 바꾼다. */
+export function toReadableText(text: string | null | undefined) {
+  return (text ?? '').trim().replace(CODE_PATTERN, (_match, code: string, particle?: string) => {
+    const label = CODE_LABELS.get(code) ?? code
+    return `‘${label}’${particle ? particleFor(label, particle) : ''}`
+  })
+}
+
 function toEvidence(items: ReadinessEvidenceDto[] | undefined): ReadinessEvidence[] {
   // 파일 id가 없으면 열 수 없으므로 뺀다(이름이 매칭되지 않은 근거).
   return (items ?? []).flatMap((item) => item.sourceId
@@ -129,8 +172,8 @@ function toAreaResult(area: ReadinessAreaResponse): ReadinessAreaResult {
     section: area.section,
     sectionLabel: area.sectionLabel,
     anchorText: area.anchorText?.trim() || null,
-    summary: area.summary?.trim() || '',
-    resolution: area.resolution?.trim() || '',
+    summary: toReadableText(area.summary),
+    resolution: toReadableText(area.resolution),
     evidence: toEvidence(area.evidence),
   }
 }
@@ -188,11 +231,11 @@ export function toReadinessFix(fix: ReadinessFixResponse): ReadinessFix {
     appliedRevision: fix.appliedRevision ?? null,
     before: toDocumentSectionValue(fix.section, fix.before),
     after: hasProposal ? toDocumentSectionValue(fix.section, fix.after) : null,
-    changeSummary: fix.changeSummary?.trim() || '',
+    changeSummary: toReadableText(fix.changeSummary),
     questions: (fix.questions ?? []).map((question) => ({
       id: question.id,
-      question: question.question,
-      reason: question.reason?.trim() || '',
+      question: toReadableText(question.question),
+      reason: toReadableText(question.reason),
       answer: question.answer ?? null,
     })),
     evidence: toEvidence(fix.evidence),

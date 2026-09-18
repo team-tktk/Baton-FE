@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import type { DocumentSection, Handover, HandoverDraft, ReadinessArea, ReadinessEvidence, ReadinessFixApplied } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import type { SubmitCheck } from '@/features/check-readiness'
-import { ReadinessFixDialog, ReadinessPanel, ReadinessSubmitDialog, checkBeforeSubmit, sectionElementId, toDraftIssues, useDocumentReadiness, useReadinessFix } from '@/features/check-readiness'
+import { ReadinessFixDialog, ReadinessPanel, ReadinessSubmitDialog, appliedMessage, checkBeforeSubmit, sectionElementId, toDraftIssues, useDocumentReadiness, useReadinessFix } from '@/features/check-readiness'
 import { ApiError } from '@/shared/api'
 import { saveBlob } from '@/shared/lib/download'
 import { HandoverDraftEditor } from '@/widgets/handover-document'
@@ -32,12 +32,15 @@ interface DocumentStepProps {
 const prefersReducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 // 짚은 섹션으로 옮기고, 강조 문장이 있으면 그 칸에, 없으면 첫 편집 칸에 커서를 둔다.
-function locateSection(section: DocumentSection) {
+function locateSection(section: DocumentSection, focus = true) {
   const target = window.document.getElementById(sectionElementId(section))
-  if (!target) return
+  if (!target) return null
   target.scrollIntoView?.({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' })
-  const field = target.querySelector<HTMLElement>('[role="textbox"][data-highlighted="true"]') ?? target.querySelector<HTMLElement>('[role="textbox"]')
-  field?.focus({ preventScroll: true })
+  if (focus) {
+    const field = target.querySelector<HTMLElement>('[role="textbox"][data-highlighted="true"]') ?? target.querySelector<HTMLElement>('[role="textbox"]')
+    field?.focus({ preventScroll: true })
+  }
+  return target
 }
 
 export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onReloadDocument, onSubmit, revision, saveDraft, ...editorProps }: DocumentStepProps) {
@@ -48,11 +51,25 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
   // 평가 뒤 문서가 바뀌면 서버가 보완을 거절한다(READINESS_STALE). 먼저 저장하고 다시 평가하게 한다.
   const fixBlocked = dirty || Boolean(readiness.readiness?.stale) || readiness.phase === 'evaluating'
 
+  // 적용한 섹션. 새 문서가 그려진 뒤(revision이 바뀐 뒤) 그 자리로 옮겨 잠깐 강조한다.
+  const appliedSection = useRef<DocumentSection | null>(null)
+  useEffect(() => {
+    const section = appliedSection.current
+    if (!section) return
+    appliedSection.current = null
+    const target = locateSection(section, false)
+    target?.setAttribute('data-just-applied', 'true')
+    const timer = setTimeout(() => target?.removeAttribute('data-just-applied'), 2600)
+    return () => { clearTimeout(timer); target?.removeAttribute('data-just-applied') }
+  }, [revision])
+
   const applied = (result: ReadinessFixApplied) => {
+    const previousScore = readiness.readiness?.score ?? null
+    appliedSection.current = result.fix.section
     onDraftReplaced(result.draft)
     if (result.readiness) readiness.replaceReadiness(result.readiness)
     else void readiness.reevaluate()
-    editorProps.onFeedback(`${result.fix.sectionLabel}에 보완 내용을 반영했어요`)
+    editorProps.onFeedback(appliedMessage(result, previousScore))
   }
   const fix = useReadinessFix({
     handoverId,
@@ -97,7 +114,7 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
           fixBlocked={fixBlocked}
           readiness={readiness.readiness}
           onFix={(area) => startFix(area.area)}
-          onLocate={locateSection}
+          onLocate={(section) => { locateSection(section) }}
           onOpenEvidence={openEvidence}
           onReevaluate={() => { void readiness.reevaluate() }}
         />
