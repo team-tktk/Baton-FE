@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 
-import type { DocumentSection, Handover, ReadinessEvidence } from '@/entities/handover'
+import type { DocumentSection, Handover, HandoverDraft, ReadinessArea, ReadinessEvidence, ReadinessFixApplied } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import type { SubmitCheck } from '@/features/check-readiness'
-import { ReadinessPanel, ReadinessSubmitDialog, checkBeforeSubmit, sectionElementId, toDraftIssues, useDocumentReadiness } from '@/features/check-readiness'
+import { ReadinessFixDialog, ReadinessPanel, ReadinessSubmitDialog, checkBeforeSubmit, sectionElementId, toDraftIssues, useDocumentReadiness, useReadinessFix } from '@/features/check-readiness'
 import { ApiError } from '@/shared/api'
 import { saveBlob } from '@/shared/lib/download'
 import { HandoverDraftEditor } from '@/widgets/handover-document'
@@ -20,6 +20,10 @@ interface DocumentStepProps {
   pending: boolean
   returningFromComplete: boolean
   saveDraft: () => Promise<boolean>
+  /** 보완을 적용해 서버가 돌려준 문서로 바꾼다. */
+  onDraftReplaced: (draft: HandoverDraft) => void
+  /** 그사이 다른 곳에서 문서가 바뀌었을 때 최신 문서를 다시 읽는다. */
+  onReloadDocument: () => Promise<void>
   onFeedback: (message: string) => void
   onFieldChange: (field: string, value: string) => void
   onSubmit: () => void
@@ -36,11 +40,30 @@ function locateSection(section: DocumentSection) {
   field?.focus({ preventScroll: true })
 }
 
-export function DocumentStep({ dirty, handover, handoverId, onSubmit, revision, saveDraft, ...editorProps }: DocumentStepProps) {
+export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onReloadDocument, onSubmit, revision, saveDraft, ...editorProps }: DocumentStepProps) {
   const repository = useHandoverRepository()
   const readiness = useDocumentReadiness({ handoverId, saveDraft })
   const [check, setCheck] = useState<SubmitCheck | null>(null)
   const issues = useMemo(() => toDraftIssues(readiness.readiness), [readiness.readiness])
+  // 평가 뒤 문서가 바뀌면 서버가 보완을 거절한다(READINESS_STALE). 먼저 저장하고 다시 평가하게 한다.
+  const fixBlocked = dirty || Boolean(readiness.readiness?.stale) || readiness.phase === 'evaluating'
+
+  const applied = (result: ReadinessFixApplied) => {
+    onDraftReplaced(result.draft)
+    if (result.readiness) readiness.replaceReadiness(result.readiness)
+    else void readiness.reevaluate()
+    editorProps.onFeedback(`${result.fix.sectionLabel}에 보완 내용을 반영했어요`)
+  }
+  const fix = useReadinessFix({
+    handoverId,
+    revision,
+    onApplied: applied,
+    onConflict: () => { void onReloadDocument().then(() => readiness.refresh()) },
+  })
+  const startFix = (area: ReadinessArea) => {
+    const target = readiness.readiness?.areas.find((item) => item.area === area)
+    if (target && !fixBlocked) void fix.start(target)
+  }
 
   const submit = () => {
     const next = checkBeforeSubmit(readiness.readiness, readiness.phase, dirty)
@@ -63,7 +86,7 @@ export function DocumentStep({ dirty, handover, handoverId, onSubmit, revision, 
   return <main className={styles.main}>
     <div className={styles.layout}>
       <div className={styles.document}>
-        <HandoverDraftEditor key={revision ?? 'draft'} {...editorProps} handover={handover} issues={issues} onSubmit={submit} />
+        <HandoverDraftEditor key={revision ?? 'draft'} {...editorProps} fillBlocked={fixBlocked} handover={handover} issues={issues} onFillSection={startFix} onSubmit={submit} />
       </div>
       <aside className={styles.aside}>
         <ReadinessPanel
@@ -71,13 +94,22 @@ export function DocumentStep({ dirty, handover, handoverId, onSubmit, revision, 
           document={handover.document}
           error={readiness.error}
           phase={readiness.phase}
+          fixBlocked={fixBlocked}
           readiness={readiness.readiness}
+          onFix={(area) => startFix(area.area)}
           onLocate={locateSection}
           onOpenEvidence={openEvidence}
           onReevaluate={() => { void readiness.reevaluate() }}
         />
       </aside>
     </div>
+    <ReadinessFixDialog
+      session={fix.session}
+      onAnswer={(answers) => { void fix.answer(answers) }}
+      onApply={() => { void fix.apply() }}
+      onClose={fix.close}
+      onOpenEvidence={openEvidence}
+    />
     <ReadinessSubmitDialog
       check={check}
       saving={editorProps.returningFromComplete}

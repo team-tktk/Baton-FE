@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import type { DocumentSection, Handover, HandoverTask } from '@/entities/handover'
+import type { DocumentSection, Handover, HandoverTask, ReadinessArea } from '@/entities/handover'
 import type { DraftIssue, DraftIssueMap } from '@/features/check-readiness'
 import { containsAnchor, sectionElementId } from '@/features/check-readiness'
 import { EditableField } from '@/features/edit-handover'
@@ -18,6 +18,10 @@ interface HandoverDraftEditorProps {
   onFeedback: (message: string) => void
   onFieldChange: (field: string, value: string) => void
   onSubmit: () => void
+  /** 비어 있는 섹션을 AI 보완으로 채운다. 없으면 버튼을 그리지 않는다. */
+  onFillSection?: (area: ReadinessArea) => void
+  /** 평가가 지금 문서와 맞지 않아 보완을 시작할 수 없다. */
+  fillBlocked?: boolean
 }
 
 function MockTable({ headers, rows, highlighted = [] }: { headers: string[]; rows: ReactNode[][]; highlighted?: boolean[] }) {
@@ -56,7 +60,13 @@ export function HandoverDraftEditor(props: HandoverDraftEditorProps) {
       <h2>{title}</h2>
       <IssueFlags issues={issues[key]} />
       {description && <p>{description}</p>}
-      {hasContent ? content() : <div className={styles.emptySlot}><strong>비어 있어요</strong>준비도 패널의 해결 방법을 참고해 채워 주세요.</div>}
+      {hasContent ? content() : <div className={styles.emptySlot}>
+        <strong>비어 있어요</strong>
+        {props.onFillSection
+          ? <>{props.fillBlocked ? '문서가 평가 뒤에 바뀌었어요. 저장하고 다시 평가한 뒤 채울 수 있어요.' : '업로드한 자료에서 찾아 채우고, 없으면 몇 가지만 물어볼게요.'}
+            <button disabled={props.fillBlocked} type="button" onClick={() => props.onFillSection?.(issues[key]![0]!.area)}><Icon name="spark" />AI로 채우기</button></>
+          : '준비도 패널의 해결 방법을 참고해 채워 주세요.'}
+      </div>}
     </section>
   }
 

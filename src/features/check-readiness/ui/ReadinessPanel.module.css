@@ -84,3 +84,8 @@ button.row > svg { width: 14px; height: 14px; color: var(--muted); }
 .rowLabel small { color: var(--muted); font-size: var(--fs-3xs); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } .all > summary svg { transition: none; } }
+.actions button.fix { display: inline-flex; align-items: center; gap: 6px; border-color: var(--blue); background: var(--blue); color: #fff; }
+.actions button.fix:hover:not(:disabled) { border-color: var(--blue-dark); background: var(--blue-dark); color: #fff; }
+.actions button.fix:disabled { border-color: var(--line); background: #eef1f4; color: var(--muted); cursor: default; }
+.actions button.fix svg { width: 15px; height: 15px; }
+.detail > .blockedNote { margin: -2px 0 0; color: var(--muted); font-size: var(--fs-3xs); line-height: 1.5; }

@@ -40,8 +40,8 @@ describe('HandoverDraftEditor', () => {
     render(<HandoverDraftEditor
       handover={handover}
       issues={{
-        RULES_AND_EXCEPTIONS: [{ label: '예외 대응', status: 'partial', statusLabel: '일부 부족', anchorText: '쿠폰 할인율이 10%를 넘으면', evidenceName: '운영 매뉴얼.pdf' }],
-        ACCESS_ACCOUNTS: [{ label: '접근 권한', status: 'missing', statusLabel: '누락', anchorText: null, evidenceName: null }],
+        RULES_AND_EXCEPTIONS: [{ area: 'EXCEPTION', label: '예외 대응', status: 'partial', statusLabel: '일부 부족', anchorText: '쿠폰 할인율이 10%를 넘으면', evidenceName: '운영 매뉴얼.pdf' }],
+        ACCESS_ACCOUNTS: [{ area: 'ACCESS', label: '접근 권한', status: 'missing', statusLabel: '누락', anchorText: null, evidenceName: null }],
       }}
       pending={false}
       returningFromComplete={false}
