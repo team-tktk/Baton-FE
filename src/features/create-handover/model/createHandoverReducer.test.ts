@@ -13,6 +13,12 @@ const attachment: HandoverAttachment = {
 }
 
 describe('createHandoverReducer', () => {
+  it('clears document edits once they are saved', () => {
+    const edited = createHandoverReducer(createInitialCreateHandoverState(), { type: 'document/changed', field: 'purpose', value: '새 목적' })
+    expect(edited.documentEdits).toEqual({ purpose: '새 목적' })
+    expect(createHandoverReducer(edited, { type: 'document/reset' }).documentEdits).toEqual({})
+  })
+
   it('starts empty so nothing demo-shaped reaches the server', () => {
     const state = createInitialCreateHandoverState()
 

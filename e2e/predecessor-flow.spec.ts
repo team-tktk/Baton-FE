@@ -77,7 +77,13 @@ test('creates, confirms, and delivers a handover', async ({ isMobile, page }) =>
   // 서버가 만든 초안이 그대로 보여야 한다.
   await expect(page.getByText('가을 정기 할인전 준비')).toBeVisible()
   await expect(page.getByText('주간 주문 현황 정리')).toBeVisible()
+  // 처음 들어오면 바로 준비도를 평가한다. 80점 미만이라 제출 전에 한 번 확인받는다.
+  const readiness = page.getByRole('region', { name: '인수인계 준비도' })
+  await expect(readiness.getByRole('heading', { name: '중요한 확인 3건' })).toBeVisible()
+  await expect(readiness).toContainText('75')
   await page.getByRole('button', { name: '제출하기' }).click()
+  await expect(page.getByRole('dialog', { name: '준비도가 75점이에요' })).toBeVisible()
+  await page.getByRole('button', { name: '그래도 제출하기' }).click()
   await expect(page).toHaveURL(/\/handovers\/new\/complete$/)
   await expect(page.getByRole('heading', { name: /정하늘님에게/ })).toBeVisible()
 })
