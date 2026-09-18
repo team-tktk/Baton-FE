@@ -111,11 +111,6 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
       <p><Icon name="alert" />{dirty ? '고친 내용은 아직 점수에 반영되지 않았어요.' : '평가한 뒤 문서나 자료가 바뀌었어요.'} 저장하고 다시 평가하면 점수가 새로 계산돼요.</p>
       {onReevaluate && <button className={styles.primary} type="button" onClick={onReevaluate}>저장하고 다시 평가</button>}
     </div>}
-    {/* 점수가 최신이어도 사용자가 찾을 수 있게 늘 둔다. 내용이 같으면 서버가 같은 결과를 바로 돌려준다. */}
-    {!outdated && onReevaluate && <div className={styles.recheck}>
-      <span>지금 문서 기준 점수예요. 내용이 같으면 다시 평가해도 같아요.</span>
-      <button disabled={evaluating} type="button" onClick={onReevaluate}>다시 평가</button>
-    </div>}
 
     <section aria-label="중요한 확인" className={styles.keyIssues}>
       <h3>중요한 확인 <span>{keyIssues.length}건</span></h3>

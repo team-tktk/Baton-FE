@@ -28,9 +28,9 @@ describe('ReadinessPanel', () => {
     expect(screen.getByText('보완 필요')).toBeInTheDocument()
     expect(screen.getByText(/까지 올라가요/)).toHaveTextContent('중요한 확인을 해결하면 100점까지 올라가요')
     expect(screen.queryByRole('button', { name: '저장하고 다시 평가' })).not.toBeInTheDocument()
-    // 점수가 최신이어도 다시 평가할 길은 늘 보인다.
-    await user.click(screen.getByRole('button', { name: '다시 평가' }))
-    expect(onReevaluate).toHaveBeenCalledTimes(1)
+    // 평가가 최신이면 다시 평가해도 같은 결과라 버튼을 두지 않는다.
+    expect(screen.queryByRole('button', { name: /다시 평가/ })).not.toBeInTheDocument()
+    expect(onReevaluate).not.toHaveBeenCalled()
 
     const keyIssues = within(screen.getByRole('region', { name: '중요한 확인' }))
     expect(keyIssues.getByRole('heading', { name: '중요한 확인 3건' })).toBeInTheDocument()
