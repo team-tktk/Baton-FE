@@ -25,6 +25,8 @@ export type CreateHandoverAction =
   | { type: 'document/changed'; field: string; value: string }
   /** 고친 내용을 서버에 저장했거나 최신 문서로 바꿨을 때. 수정 기록이 순번 기반 키라 남겨 두면 엉뚱한 항목을 덮는다. */
   | { type: 'document/reset' }
+  /** 저장한 수정 기록만 지운다. 저장하는 사이에 새로 고친 칸은 남겨야 한다. */
+  | { type: 'document/saved'; edits: Record<string, string> }
   | { type: 'submission/completed'; handover: Handover }
   | { type: 'reset' }
 
@@ -82,6 +84,11 @@ export function createHandoverReducer(
       return { ...state, documentEdits: { ...state.documentEdits, [action.field]: action.value } }
     case 'document/reset':
       return { ...state, documentEdits: {} }
+    case 'document/saved':
+      return {
+        ...state,
+        documentEdits: Object.fromEntries(Object.entries(state.documentEdits).filter(([field, value]) => action.edits[field] !== value)),
+      }
     case 'submission/completed':
       return { ...state, submittedHandover: action.handover }
     case 'reset':

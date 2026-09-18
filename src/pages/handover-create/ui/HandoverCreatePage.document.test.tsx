@@ -80,6 +80,34 @@ describe('HandoverCreatePage document step readiness', () => {
     expect(screen.getByLabelText('업무 목적 편집')).toHaveTextContent('정하늘님이 프로모션 운영을 혼자 이어 갈 수 있게 합니다.')
   })
 
+  it('keeps an edit made while the save is still in flight and saves only once', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    const original = repository.saveDocument.bind(repository)
+    let release: () => void = () => {}
+    const save = vi.spyOn(repository, 'saveDocument').mockImplementation(async (...args) => {
+      await new Promise<void>((resolve) => { release = resolve })
+      return original(...args)
+    })
+    const router = renderFlow(repository)
+    await reachDocument(user, router)
+
+    editPurpose('저장할 목적')
+    await user.click(await screen.findByRole('button', { name: '저장하고 다시 평가' }))
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1))
+
+    const scope = screen.getByLabelText('담당 업무 편집')
+    scope.textContent = '저장 중에 고친 범위'
+    fireEvent.blur(scope)
+    expect(screen.getByRole('button', { name: /제출하기/ })).toBeDisabled()
+    await act(async () => { release() })
+
+    await waitFor(() => expect(screen.getByText(/고친 내용은 아직 점수에 반영되지 않았어요/)).toBeInTheDocument())
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(screen.getByLabelText('업무 목적 편집')).toHaveTextContent('저장할 목적')
+    expect(screen.getByLabelText('담당 업무 편집')).toHaveTextContent('저장 중에 고친 범위')
+  })
+
   it('reloads the latest document instead of overwriting a change made elsewhere', async () => {
     const user = userEvent.setup()
     const repository = new MockHandoverRepository()
