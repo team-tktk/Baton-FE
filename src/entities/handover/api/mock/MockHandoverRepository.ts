@@ -50,7 +50,7 @@ const serverError = (status: number, serverCode: string, message: string) =>
   new ApiError(message, { code: 'http', status, serverCode })
 
 const SECTION_LABELS: Record<Section, string> = {
-  PURPOSE: '업무 목적',
+  PURPOSE: '업무 개요',
   COMPLETION_CRITERIA: '완료 기준',
   ONGOING_TASKS: '진행 중인 업무',
   RECURRING_TASKS: '반복 업무',
@@ -60,7 +60,7 @@ const SECTION_LABELS: Record<Section, string> = {
   SCHEDULE: '업무 일정',
   ACCESS_ACCOUNTS: '접근 권한과 계정',
   FIRST_WEEK_CHECKLIST: '첫 주 체크리스트',
-  CONFIRMED_CRITERIA: '확정한 기준',
+  CONFIRMED_CRITERIA: '확인된 업무 기준',
 }
 
 const isEmptySection = (value: unknown) => (typeof value === 'string' ? !value.trim() : Array.isArray(value) && value.length === 0)

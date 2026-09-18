@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import type { AnalysisJob, Handover, HandoverAttachment, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
@@ -48,6 +48,11 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [pending, setPending] = useState(false)
   const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null)
   const [draft, setDraft] = useState<Handover | null>(null)
+  /** 서버 문서 버전. 저장할 때 돌려보내 그사이 바뀐 문서를 덮어쓰지 않게 한다. */
+  const [revision, setRevision] = useState<number | null>(null)
+  const savingRef = useRef<Promise<boolean> | null>(null)
+  /** 저장 중에는 제출을 막는다. 제출이 저장 전 화면 내용으로 나가지 않게 하기 위해서다. */
+  const [saving, setSaving] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisJob | null>(null)
   const [finalizing, setFinalizing] = useState(false)
   const params = useParams()
@@ -111,7 +116,11 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     if (step !== 'document' || !draftId) return
     let ignore = false
     Promise.all([repository.getHandover(draftId), repository.getDocument(draftId)])
-      .then(([handover, { document }]) => { if (!ignore) setDraft({ ...handover, document }) })
+      .then(([handover, loaded]) => {
+        if (ignore) return
+        setDraft({ ...handover, document: loaded.document })
+        setRevision(loaded.revision)
+      })
       .catch(() => { if (!ignore) showToast('인수인계 초안을 불러오지 못했어요') })
     return () => { ignore = true }
   }, [draftId, repository, showToast, step])
@@ -259,11 +268,63 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits)
     : null
 
+  // 순번 기반 수정 기록을 반영한 결과가 서버 문서와 다를 때만 저장할 것이 있다.
+  const dirty = Boolean(draft && visibleDocument) && JSON.stringify(visibleDocument?.document) !== JSON.stringify(draft?.document)
+
+  const reloadDocument = async () => {
+    if (!draftId) return
+    try {
+      const latest = await repository.getDocument(draftId)
+      setDraft((current) => current ? { ...current, document: latest.document } : current)
+      setRevision(latest.revision)
+      dispatch({ type: 'document/reset' })
+    } catch {
+      showToast('최신 문서를 불러오지 못했어요. 새로고침해 주세요')
+    }
+  }
+
+  /**
+   * 화면에서 고친 내용을 서버에 저장하고 수정 기록을 비운다. 준비도는 서버 문서를 채점하므로 평가 전에 부른다.
+   * 그사이 다른 곳에서 문서가 바뀌었으면 덮어쓰지 않고 최신 문서를 다시 불러온다.
+   */
+  const saveDraft = (): Promise<boolean> => {
+    // 저장이 진행 중이면 같은 결과를 기다린다. 같은 revision으로 두 번 보내면 뒤의 것이 충돌로 거절된다.
+    if (savingRef.current) return savingRef.current
+    if (!draftId || !draft || !visibleDocument) return Promise.resolve(false)
+    if (!dirty) return Promise.resolve(true)
+    const savedDocument = visibleDocument.document
+    const savedEdits = state.documentEdits
+    const request = (async () => {
+      try {
+        const saved = await repository.saveDocument(draftId, savedDocument, revision ?? undefined)
+        setDraft((current) => current ? { ...current, document: savedDocument } : current)
+        setRevision(saved)
+        // 저장하는 사이 새로 고친 칸은 남긴다. 저장한 문서 위에 그대로 다시 얹힌다.
+        dispatch({ type: 'document/saved', edits: savedEdits })
+        return true
+      } catch (caught) {
+        if (caught instanceof ApiError && caught.serverCode === 'AI_DRAFT_REVISION_CONFLICT') {
+          showToast('다른 곳에서 문서가 바뀌어 최신 문서를 다시 불러왔어요. 방금 고친 내용은 다시 입력해 주세요')
+          await reloadDocument()
+        } else {
+          showToast(caught instanceof ApiError ? caught.message : '문서를 저장하지 못했어요. 잠시 후 다시 시도해 주세요')
+        }
+        return false
+      } finally {
+        savingRef.current = null
+        setSaving(false)
+      }
+    })()
+    savingRef.current = request
+    setSaving(true)
+    return request
+  }
+
   const submitDocument = async () => {
     if (!visibleDocument || !state.draftId) return
     setPending(true)
     try {
-      await repository.saveDocument(state.draftId, visibleDocument.document)
+      if (!(await saveDraft())) return
       const completed = await repository.submitHandover(state.draftId)
       setDraft(completed)
       dispatch({ type: 'submission/completed', handover: completed })
@@ -300,7 +361,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           onSubmit={(answer) => { void answerQuestion(question.id, currentStep, answer) }}
         />
       })()}
-      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
+      {step === 'document' && visibleDocument && <DocumentStep dirty={dirty} handover={visibleDocument} handoverId={draftId} pending={pending || saving} revision={revision} saveDraft={saveDraft} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onHome={() => navigate('/')} />}
       {(step === 'setup' || step === 'upload') && (
       <main className={step === 'setup' ? styles.setupMain : styles.uploadMain}>

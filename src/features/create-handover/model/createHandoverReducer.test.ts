@@ -13,6 +13,24 @@ const attachment: HandoverAttachment = {
 }
 
 describe('createHandoverReducer', () => {
+  it('clears document edits once they are saved', () => {
+    const edited = createHandoverReducer(createInitialCreateHandoverState(), { type: 'document/changed', field: 'purpose', value: '새 목적' })
+    expect(edited.documentEdits).toEqual({ purpose: '새 목적' })
+    expect(createHandoverReducer(edited, { type: 'document/reset' }).documentEdits).toEqual({})
+  })
+
+  it('keeps edits made while a save was in flight', () => {
+    let state = createHandoverReducer(createInitialCreateHandoverState(), { type: 'document/changed', field: 'purpose', value: '저장한 목적' })
+    const saved = state.documentEdits
+    state = createHandoverReducer(state, { type: 'document/changed', field: 'scope', value: '저장 중에 고친 범위' })
+    state = createHandoverReducer(state, { type: 'document/changed', field: 'purpose', value: '저장 중에 다시 고친 목적' })
+
+    expect(createHandoverReducer(state, { type: 'document/saved', edits: saved }).documentEdits).toEqual({
+      scope: '저장 중에 고친 범위',
+      purpose: '저장 중에 다시 고친 목적',
+    })
+  })
+
   it('starts empty so nothing demo-shaped reaches the server', () => {
     const state = createInitialCreateHandoverState()
 
