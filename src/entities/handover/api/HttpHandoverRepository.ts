@@ -9,32 +9,46 @@ import type {
   HandoverAttachment,
   HandoverChatExchange,
   HandoverDocument,
+  HandoverDraft,
   HandoverFileDownload,
   HandoverId,
   HandoverParticipant,
+  HandoverReadiness,
   HandoverSummary,
   InterviewQuestion,
   MaskingCandidate,
   MaskingRangeInput,
   MaskingReview,
+  ReadinessArea,
+  ReadinessFix,
+  ReadinessFixAnswer,
+  ReadinessFixApplied,
+  ReadinessRubric,
   ReviewComment,
   ReviewSummary,
   SentSummary,
   UpdateHandoverInput,
 } from '../model/types'
 import type {
+  ApplyFixRequest,
+  ApplyFixResponse,
   CandidateDecisionRequest,
   ChatAnswerResponse,
   ChatMessagePageResponse,
   ChatQuestionRequest,
+  FixAnswerRequest,
   MaskingCandidateResponse,
   MaskingReviewResponse,
+  ReadinessFixResponse,
+  ReadinessResponse,
+  ReadinessRubricResponse,
 } from './dto/types'
 import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, HandoverDraftResponse, ChecklistItemInput, CommentRequest, CommentResponse, HandoverListResponse, MemberPageResponse, QuestionAnswerRequest, ReviewChecklistRequest, ReviewDetailResponse, UpdateDraftRequest } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
 import { toDraftContent, toHandoverDocument } from './mapper/documentMapper'
 import { toChatExchange, toHandoverAnswer } from './mapper/chatMapper'
 import { toManualCandidateRequest, toMaskingCandidate, toMaskingReview } from './mapper/maskingMapper'
+import { toHandoverReadiness, toReadinessFix, toReadinessRubric } from './mapper/readinessMapper'
 import { formatListDate, toReceivedSummary, toReviewComment, toReviewSummary, toSentSummary } from './mapper/receivedMapper'
 import { toAnalysisJob, toHandoverStatus, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
@@ -45,6 +59,21 @@ function formatUpdatedAt(value: string | undefined) {
   return Number.isNaN(parsed.getTime())
     ? ''
     : `${parsed.getFullYear()}. ${String(parsed.getMonth() + 1).padStart(2, '0')}. ${String(parsed.getDate()).padStart(2, '0')}.`
+}
+
+function toHandoverDraft(draft: HandoverDraftResponse, handover: HandoverResponse): HandoverDraft {
+  const recipientNames = handover.participants
+    .filter((participant) => participant.role === 'RECIPIENT')
+    .map((participant) => participant.name)
+    .filter(Boolean)
+  const document = toHandoverDocument(draft.content ?? {}, {
+    title: handover.title?.trim() || '업무 인수인계',
+    intro: `${handover.owner.name}님의 업무를 ${recipientNames.join(', ') || '인수자'}님에게 전달합니다.`,
+    scope: handover.workScopes.map((scope) => scope.title).filter(Boolean).join(' · '),
+    statusLabel: 'AI 초안 · 확인 중',
+    updatedAtLabel: formatUpdatedAt(draft.updatedAt),
+  })
+  return { document, revision: draft.revision ?? 0 }
 }
 
 const DOWNLOAD_ERROR_MESSAGE = '파일을 내려받지 못했어요.'
@@ -230,30 +259,77 @@ export class HttpHandoverRepository implements HandoverRepository {
     await apiRequest<unknown>(`/api/v1/handovers/${id}/questions/complete`, { method: 'POST' })
   }
 
-  async getDocument(id: HandoverId): Promise<HandoverDocument> {
+  async getDocument(id: HandoverId): Promise<HandoverDraft> {
     const [draft, handover] = await Promise.all([
       apiRequest<HandoverDraftResponse>(`/api/v1/handovers/${id}/document`),
       apiRequest<HandoverResponse>(`/api/v1/handovers/${id}`),
     ])
-    const recipientNames = handover.participants
-      .filter((participant) => participant.role === 'RECIPIENT')
-      .map((participant) => participant.name)
-      .filter(Boolean)
-    return toHandoverDocument(draft.content ?? {}, {
-      title: handover.title?.trim() || '업무 인수인계',
-      intro: `${handover.owner.name}님의 업무를 ${recipientNames.join(', ') || '인수자'}님에게 전달합니다.`,
-      scope: handover.workScopes.map((scope) => scope.title).filter(Boolean).join(' · '),
-      statusLabel: 'AI 초안 · 확인 중',
-      updatedAtLabel: formatUpdatedAt(draft.updatedAt),
-    })
+    return toHandoverDraft(draft, handover)
   }
 
-  async saveDocument(id: HandoverId, document: HandoverDocument): Promise<void> {
-    const body: UpdateDraftRequest = { content: toDraftContent(document) }
-    await apiRequest<HandoverDraftResponse>(`/api/v1/handovers/${id}/document`, {
+  async saveDocument(id: HandoverId, document: HandoverDocument, baseRevision?: number): Promise<number> {
+    const body: UpdateDraftRequest = {
+      content: toDraftContent(document),
+      ...(baseRevision === undefined ? {} : { baseRevision }),
+    }
+    const saved = await apiRequest<HandoverDraftResponse>(`/api/v1/handovers/${id}/document`, {
       body: JSON.stringify(body),
       method: 'PATCH',
     })
+    return saved.revision ?? 0
+  }
+
+  async getReadiness(id: HandoverId): Promise<HandoverReadiness | null> {
+    try {
+      return toHandoverReadiness(await apiRequest<ReadinessResponse>(`/api/v1/handovers/${id}/readiness`))
+    } catch (caught) {
+      // 초안이 없을 때(AI_DRAFT_NOT_FOUND)도 404라 코드로 구분한다.
+      if (caught instanceof ApiError && caught.serverCode === 'READINESS_NOT_EVALUATED') return null
+      throw caught
+    }
+  }
+
+  async evaluateReadiness(id: HandoverId): Promise<HandoverReadiness> {
+    return toHandoverReadiness(await apiRequest<ReadinessResponse>(`/api/v1/handovers/${id}/readiness/evaluate`, { method: 'POST' }))
+  }
+
+  async getReadinessRubric(id: HandoverId): Promise<ReadinessRubric> {
+    return toReadinessRubric(await apiRequest<ReadinessRubricResponse>(`/api/v1/handovers/${id}/readiness/rubric`))
+  }
+
+  async createReadinessFix(id: HandoverId, area: ReadinessArea): Promise<ReadinessFix> {
+    return toReadinessFix(await apiRequest<ReadinessFixResponse>(`/api/v1/handovers/${id}/readiness/items/${area}/fixes`, { method: 'POST' }))
+  }
+
+  async getReadinessFix(id: HandoverId, fixId: string): Promise<ReadinessFix> {
+    return toReadinessFix(await apiRequest<ReadinessFixResponse>(`/api/v1/handovers/${id}/readiness/fixes/${fixId}`))
+  }
+
+  async answerReadinessFix(id: HandoverId, fixId: string, answers: ReadinessFixAnswer[]): Promise<ReadinessFix> {
+    const body: FixAnswerRequest = { answers: answers.map(({ questionId, answer }) => ({ questionId, answer })) }
+    return toReadinessFix(await apiRequest<ReadinessFixResponse>(`/api/v1/handovers/${id}/readiness/fixes/${fixId}/answers`, {
+      body: JSON.stringify(body),
+      method: 'PUT',
+    }))
+  }
+
+  async applyReadinessFix(id: HandoverId, fixId: string, baseRevision: number): Promise<ReadinessFixApplied> {
+    const body: ApplyFixRequest = { baseRevision }
+    const applied = await apiRequest<ApplyFixResponse>(`/api/v1/handovers/${id}/readiness/fixes/${fixId}/apply`, {
+      body: JSON.stringify(body),
+      method: 'POST',
+    })
+    // 적용 응답에는 제목·인수자 같은 머리글 정보가 없어 인수인계 단건을 함께 읽는다.
+    const handover = await apiRequest<HandoverResponse>(`/api/v1/handovers/${id}`)
+    return {
+      fix: toReadinessFix(applied.fix),
+      draft: toHandoverDraft(applied.document, handover),
+      readiness: applied.readiness ? toHandoverReadiness(applied.readiness) : null,
+    }
+  }
+
+  async discardReadinessFix(id: HandoverId, fixId: string): Promise<ReadinessFix> {
+    return toReadinessFix(await apiRequest<ReadinessFixResponse>(`/api/v1/handovers/${id}/readiness/fixes/${fixId}/discard`, { method: 'POST' }))
   }
 
   async listReceivedHandovers(): Promise<HandoverSummary[]> {

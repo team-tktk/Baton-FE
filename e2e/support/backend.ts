@@ -79,6 +79,83 @@ export const test = base.extend<{ stubbedBackend: void }>({
       applied: candidates.filter((item) => item.applied).length,
     })
 
+    // 초안은 저장할 때마다 revision이 오른다. baseRevision이 다르면 서버처럼 409로 거절한다.
+    let draftContent: typeof DRAFT = structuredClone(DRAFT)
+    let revision = 1
+    const draftView = () => ({ content: draftContent, revision, updatedAt: '2026-09-11T00:00:00Z' })
+    const revisionConflict = () => ({ status: 409, detail: '그사이 문서가 바뀌었습니다', code: 'AI_DRAFT_REVISION_CONFLICT' })
+
+    // 준비도: 실행 절차·예외 대응·담당자가 부족한 75점 초안. 보완안을 적용한 영역은 충분이 된다.
+    const READINESS_AREAS = [
+      { area: 'SCOPE', label: '업무 범위', weight: 15, section: 'PURPOSE', sectionLabel: '업무 목적' },
+      { area: 'PROCEDURE', label: '실행 절차', weight: 20, section: 'RECURRING_TASKS', sectionLabel: '반복 업무', status: 'PARTIAL', anchorText: '주간 주문 현황 정리' },
+      { area: 'COMPLETION', label: '완료 기준', weight: 10, section: 'COMPLETION_CRITERIA', sectionLabel: '완료 기준' },
+      { area: 'EXCEPTION', label: '예외 대응', weight: 15, section: 'RULES_AND_EXCEPTIONS', sectionLabel: '업무 기준과 예외', status: 'PARTIAL', anchorText: '쿠폰 할인율이 10%를 넘으면' },
+      { area: 'SCHEDULE', label: '일정', weight: 10, section: 'SCHEDULE', sectionLabel: '업무 일정' },
+      { area: 'CONTACTS', label: '담당자', weight: 10, section: 'STAKEHOLDERS', sectionLabel: '주요 관계자', status: 'CONFLICT' },
+      { area: 'ACCESS', label: '접근 권한', weight: 10, section: 'ACCESS_ACCOUNTS', sectionLabel: '접근 권한과 계정' },
+      { area: 'EVIDENCE', label: '근거와 최신성', weight: 10, section: 'TOOLS', sectionLabel: '사용 도구와 자료' },
+    ]
+    const STATUS = { SUFFICIENT: ['충분', 100], PARTIAL: ['일부 부족', 50], CONFLICT: ['충돌', 25], MISSING: ['누락', 0] } as const
+    const SECTION_FIELDS: Record<string, keyof typeof DRAFT> = { PURPOSE: 'purpose', RECURRING_TASKS: 'recurringTasks', RULES_AND_EXCEPTIONS: 'rulesAndExceptions', STAKEHOLDERS: 'stakeholders' }
+    const resolvedAreas = new Set<string>()
+    let evaluatedRevision: number | null = null
+    type StubFix = { fixId: string; area: string; status: string; baseRevision: number; appliedRevision: number | null; field: keyof typeof DRAFT; before: unknown; after: unknown }
+    const fixes = new Map<string, StubFix>()
+    const readinessView = () => {
+      const areas = READINESS_AREAS.map((item) => {
+        const status = (resolvedAreas.has(item.area) ? undefined : item.status) as keyof typeof STATUS | undefined ?? 'SUFFICIENT'
+        const [statusLabel, percent] = STATUS[status]
+        const view = {
+          area: item.area, label: item.label, criteria: `${item.label}이 분명한가요?`, weight: item.weight, status, statusLabel, percent, keyIssue: false,
+          section: item.section, sectionLabel: item.sectionLabel, anchorText: status === 'SUFFICIENT' ? null : item.anchorText ?? null,
+          summary: status === 'SUFFICIENT' ? '' : `${item.label} 내용이 부족해요.`,
+          resolution: status === 'SUFFICIENT' ? '' : `${item.sectionLabel}을 보완해 주세요.`,
+          evidence: status === 'SUFFICIENT' ? [] : [{ sourceId: 'file-autumn-sale', fileName: '가을_할인전_준비_메모.docx', locator: '2쪽' }],
+        }
+        return { view, lost: item.weight * (100 - percent) / 100 }
+      }).sort((left, right) => right.lost - left.lost)
+      const keyIssues = areas.filter((item) => item.lost > 0).slice(0, 3)
+      keyIssues.forEach((item) => { item.view.keyIssue = true })
+      const score = Math.round(100 - areas.reduce((sum, item) => sum + item.lost, 0))
+      return {
+        evaluationId: `evaluation-${evaluatedRevision}`,
+        rubricVersion: 'e2e-v1',
+        score,
+        potentialScore: Math.min(100, Math.round(score + keyIssues.reduce((sum, item) => sum + item.lost, 0))),
+        grade: score >= 80 ? 'READY' : score >= 50 ? 'NEEDS_IMPROVEMENT' : 'NOT_READY',
+        gradeLabel: score >= 80 ? '인수인계 가능' : score >= 50 ? '보완 필요' : '준비 부족',
+        keyIssueCount: keyIssues.length,
+        stale: evaluatedRevision !== revision,
+        draftRevision: evaluatedRevision,
+        evaluatedAt: '2026-09-17T00:00:00Z',
+        areas: areas.map((item) => item.view),
+      }
+    }
+    // 수정안은 대상 섹션 끝에 한 줄을 보탠다. 표에 없는 섹션은 예외 규칙으로 보완한다.
+    const createFix = (area: string): StubFix => {
+      const item = READINESS_AREAS.find((entry) => entry.area === area)!
+      const field = SECTION_FIELDS[item.section] ?? 'rulesAndExceptions'
+      const before = structuredClone(draftContent[field])
+      const after = field === 'purpose' ? `${draftContent.purpose} 예외 상황도 함께 챙깁니다.`
+        : field === 'rulesAndExceptions' ? [...draftContent.rulesAndExceptions, '환불 오류는 고객지원팀 윤예린님에게 넘깁니다.']
+          : field === 'stakeholders' ? [...draftContent.stakeholders, { name: '윤예린', team: '고객지원팀', helpWith: '환불 오류' }]
+            : [...draftContent.recurringTasks, { title: '주간 현황 공유', status: '매주 반복', description: '정리한 현황을 팀 채널에 올립니다.', nextAction: '화요일 오전 공유', schedule: '매주 화요일' }]
+      return { fixId: `fix-${fixes.size + 1}`, area, status: 'PROPOSED', baseRevision: revision, appliedRevision: null, field, before, after }
+    }
+    const fixView = ({ field, ...fix }: StubFix) => {
+      const item = READINESS_AREAS.find((entry) => entry.area === fix.area)!
+      return {
+        ...fix,
+        areaLabel: item.label, section: item.section, sectionLabel: item.sectionLabel, sectionField: field,
+        stale: fix.status === 'PROPOSED' && fix.baseRevision !== revision,
+        changeSummary: `${item.sectionLabel}에 빠진 내용을 보탰어요.`,
+        questions: [],
+        evidence: [{ sourceId: 'file-autumn-sale', fileName: '가을_할인전_준비_메모.docx', locator: '2쪽' }],
+        createdAt: '2026-09-17T00:00:00Z', updatedAt: '2026-09-17T00:00:00Z',
+      }
+    }
+
     const questions: Array<{ id: string; type: string; questionText: string; reason: string; options: Array<{ label: string; description: string }>; status: string; answer: string | null }> = [
       {
         id: 'question-priority',
@@ -200,6 +277,58 @@ export const test = base.extend<{ stubbedBackend: void }>({
         }
         return json({ status: 400, detail: '지원하지 않는 요청', code: 'BAD_REQUEST' }, 400)
       }
+      // 준비도. 평가 전 조회는 404, 보완 적용은 baseRevision이 맞아야 한다.
+      const readiness = /\/readiness(\/.*)?$/.exec(pathname)
+      if (readiness) {
+        const rest = readiness[1] ?? ''
+        const notFound = (code: string) => json({ status: 404, detail: '찾을 수 없습니다', code }, 404)
+        if (method === 'GET' && !rest) return evaluatedRevision === null ? notFound('READINESS_NOT_EVALUATED') : json(readinessView())
+        if (method === 'POST' && rest === '/evaluate') {
+          evaluatedRevision = revision
+          return json(readinessView())
+        }
+        if (method === 'GET' && rest === '/rubric') {
+          return json({
+            version: 'e2e-v1',
+            areas: READINESS_AREAS.map(({ area, label, weight, section }) => ({ area, label, criteria: `${label}이 분명한가요?`, weight, sections: [section] })),
+            statusPercent: { SUFFICIENT: 100, PARTIAL: 50, CONFLICT: 25, MISSING: 0 },
+            readyScore: 80,
+            minimumScore: 50,
+            keyIssueCount: 3,
+          })
+        }
+        const created = /^\/items\/([^/]+)\/fixes$/.exec(rest)
+        if (method === 'POST' && created) {
+          if (evaluatedRevision === null) return notFound('READINESS_NOT_EVALUATED')
+          if (evaluatedRevision !== revision) return json({ status: 409, detail: '평가 이후 문서가 바뀌었습니다', code: 'READINESS_STALE' }, 409)
+          const area = readinessView().areas.find((item) => item.area === created[1])
+          if (!area || area.status === 'SUFFICIENT') return json({ status: 409, detail: '이미 충분한 항목입니다', code: 'READINESS_ITEM_SUFFICIENT' }, 409)
+          const fix = createFix(area.area)
+          fixes.set(fix.fixId, fix)
+          return json(fixView(fix), 201)
+        }
+        const action = /^\/fixes\/([^/]+)(\/answers|\/apply|\/discard)?$/.exec(rest)
+        const fix = action ? fixes.get(action[1]) : undefined
+        if (action && !fix) return notFound('READINESS_FIX_NOT_FOUND')
+        if (fix && method === 'GET' && !action?.[2]) return json(fixView(fix))
+        if (fix && fix.status !== 'PROPOSED') return json({ status: 409, detail: '이미 적용하거나 취소한 보완안입니다', code: 'READINESS_FIX_INVALID_STATE' }, 409)
+        if (fix && action?.[2] === '/answers') return json(fixView(fix))
+        if (fix && action?.[2] === '/discard') {
+          fix.status = 'DISCARDED'
+          return json(fixView(fix))
+        }
+        if (fix && action?.[2] === '/apply') {
+          const body = JSON.parse(route.request().postData() ?? '{}') as { baseRevision?: number }
+          if (body.baseRevision !== revision || fix.baseRevision !== revision) return json(revisionConflict(), 409)
+          draftContent = { ...draftContent, [fix.field]: fix.after }
+          revision += 1
+          Object.assign(fix, { status: 'APPLIED', appliedRevision: revision })
+          resolvedAreas.add(fix.area)
+          evaluatedRevision = revision
+          return json({ fix: fixView(fix), document: draftView(), readiness: readinessView() })
+        }
+        return json({ status: 400, detail: '지원하지 않는 요청', code: 'BAD_REQUEST' }, 400)
+      }
       if (method === 'DELETE' && /\/files\/[^/]+$/.test(pathname)) {
         files = files.filter((file) => !pathname.endsWith(file.id))
         return route.fulfill({ status: 204, body: '' })
@@ -286,7 +415,7 @@ export const test = base.extend<{ stubbedBackend: void }>({
         return json({
           handoverId: HANDOVER_ID,
           status: reviewApproved ? 'APPROVED' : 'PENDING_REVIEW',
-          document: { content: DRAFT, updatedAt: '2026-09-11T00:00:00Z' },
+          document: draftView(),
           attachments: files,
           checklist: [{ id: 'check-1', label: '업무 목적과 완료 기준이 분명해요', checked: true }],
           comments,
@@ -305,7 +434,15 @@ export const test = base.extend<{ stubbedBackend: void }>({
         })
       }
       if (pathname.endsWith('/questions/complete')) return json({ content: DRAFT, updatedAt: '2026-09-11T00:00:00Z' })
-      if (pathname.endsWith('/document')) return json({ content: DRAFT, updatedAt: '2026-09-11T00:00:00Z' })
+      if (pathname.endsWith('/document')) {
+        if (method === 'PATCH') {
+          const body = JSON.parse(route.request().postData() ?? '{}') as { content?: typeof DRAFT; baseRevision?: number }
+          if (body.baseRevision !== undefined && body.baseRevision !== revision) return json(revisionConflict(), 409)
+          draftContent = { ...draftContent, ...body.content }
+          revision += 1
+        }
+        return json(draftView())
+      }
       if (/\/questions\/[^/]+\/answer$/.test(pathname)) {
         const questionId = pathname.split('/').at(-2)
         const body = JSON.parse(route.request().postData() ?? '{}') as { answer?: string; skipped?: boolean }
