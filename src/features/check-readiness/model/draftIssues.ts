@@ -1,8 +1,9 @@
-import type { DocumentSection, HandoverDocument, HandoverReadiness, ReadinessItemStatus } from '@/entities/handover'
+import type { DocumentSection, HandoverDocument, HandoverReadiness, ReadinessArea, ReadinessItemStatus } from '@/entities/handover'
 import { readSectionValue } from '@/entities/handover'
 
 /** 편집기에서 준비도 문제를 표시할 때 쓰는 정보. 한 섹션에 여러 영역이 걸릴 수 있다. */
 export interface DraftIssue {
+  area: ReadinessArea
   label: string
   status: ReadinessItemStatus
   statusLabel: string
@@ -43,6 +44,7 @@ export function toDraftIssues(readiness: HandoverReadiness | null): DraftIssueMa
     if (area.status === 'sufficient') continue
     const evidence = area.evidence[0]
     issues[area.section] = [...(issues[area.section] ?? []), {
+      area: area.area,
       label: area.label,
       status: area.status,
       statusLabel: area.statusLabel,

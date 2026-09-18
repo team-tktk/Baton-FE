@@ -74,10 +74,19 @@ export function useDocumentReadiness({ handoverId, saveDraft }: UseDocumentReadi
   /** 저장하고 다시 평가한다. 내용이 같으면 서버가 같은 점수를 돌려준다. */
   const reevaluate = useCallback(() => evaluate(true), [evaluate])
 
+  /** 저장된 평가를 다시 읽는다(AI 호출 없음). 다른 곳에서 문서가 바뀐 뒤 stale 여부를 반영할 때 쓴다. */
+  const refresh = useCallback(async () => {
+    if (!handoverId) return
+    try {
+      const readiness = await repository.getReadiness(handoverId)
+      if (alive.current && readiness) setState((current) => ({ ...current, readiness }))
+    } catch { /* 표시 중인 평가를 유지한다 */ }
+  }, [handoverId, repository])
+
   /** 보완 적용처럼 다른 곳에서 새 평가를 받았을 때 바꿔 끼운다. */
   const replaceReadiness = useCallback((readiness: HandoverReadiness) => {
     setState({ readiness, phase: 'ready', error: null })
   }, [])
 
-  return { ...state, reevaluate, replaceReadiness }
+  return { ...state, reevaluate, refresh, replaceReadiness }
 }

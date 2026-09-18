@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import type { AnalysisJob, Handover, HandoverAttachment, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
+import type { AnalysisJob, Handover, HandoverAttachment, HandoverDraft, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, DraftFinalizing, FileUploader, HandoverProgress, InterviewWizard, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
@@ -271,6 +271,13 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   // 순번 기반 수정 기록을 반영한 결과가 서버 문서와 다를 때만 저장할 것이 있다.
   const dirty = Boolean(draft && visibleDocument) && JSON.stringify(visibleDocument?.document) !== JSON.stringify(draft?.document)
 
+  /** 보완 적용처럼 서버가 준 최신 문서로 바꾼다. 순번 기반 수정 기록은 새 문서에 맞지 않으므로 비운다. */
+  const replaceDraft = (next: HandoverDraft) => {
+    setDraft((current) => current ? { ...current, document: next.document } : current)
+    setRevision(next.revision)
+    dispatch({ type: 'document/reset' })
+  }
+
   const reloadDocument = async () => {
     if (!draftId) return
     try {
@@ -361,7 +368,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           onSubmit={(answer) => { void answerQuestion(question.id, currentStep, answer) }}
         />
       })()}
-      {step === 'document' && visibleDocument && <DocumentStep dirty={dirty} handover={visibleDocument} handoverId={draftId} pending={pending || saving} revision={revision} saveDraft={saveDraft} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
+      {step === 'document' && visibleDocument && <DocumentStep dirty={dirty} handover={visibleDocument} handoverId={draftId} pending={pending || saving} revision={revision} saveDraft={saveDraft} onDraftReplaced={replaceDraft} onReloadDocument={reloadDocument} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onHome={() => navigate('/')} />}
       {(step === 'setup' || step === 'upload') && (
       <main className={step === 'setup' ? styles.setupMain : styles.uploadMain}>

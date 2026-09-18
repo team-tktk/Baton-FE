@@ -37,7 +37,7 @@ describe('draft issues', () => {
   })
 
   it('matches an anchor sentence regardless of spacing', () => {
-    const issues = [{ label: '예외 대응', status: 'partial' as const, statusLabel: '일부 부족', anchorText: '할인율이  10%를\n넘으면', evidenceName: null }]
+    const issues = [{ area: 'EXCEPTION' as const, label: '예외 대응', status: 'partial' as const, statusLabel: '일부 부족', anchorText: '할인율이  10%를\n넘으면', evidenceName: null }]
     expect(containsAnchor('쿠폰 할인율이 10%를 넘으면 확인합니다.', issues)).toBe(true)
     expect(containsAnchor('배송업체 답변이 늦으면', issues)).toBe(false)
     expect(containsAnchor('아무 문장', undefined)).toBe(false)

@@ -19,6 +19,10 @@ interface ReadinessPanelProps {
   onReevaluate?: () => void
   onLocate?: (section: DocumentSection) => void
   onOpenEvidence?: (evidence: ReadinessEvidence) => void
+  /** 부족한 영역의 AI 보완을 시작한다. */
+  onFix?: (area: ReadinessAreaResult) => void
+  /** 평가가 지금 문서와 맞지 않으면 보완을 시작할 수 없다(서버가 거절한다). */
+  fixBlocked?: boolean
 }
 
 const GRADE_CLASS = { ready: styles.gradeReady, 'needs-improvement': styles.gradeImprove, 'not-ready': styles.gradeLow }
@@ -32,7 +36,7 @@ function StatusBar({ area }: { area: ReadinessAreaResult }) {
   return <span aria-hidden="true" className={styles.bar}><i className={styles[area.status]} style={{ width: `${area.percent}%` }} /></span>
 }
 
-function AreaDetail({ area, document, onLocate, onOpenEvidence }: { area: ReadinessAreaResult } & Pick<ReadinessPanelProps, 'document' | 'onLocate' | 'onOpenEvidence'>) {
+function AreaDetail({ area, document, fixBlocked, onFix, onLocate, onOpenEvidence }: { area: ReadinessAreaResult } & Pick<ReadinessPanelProps, 'document' | 'fixBlocked' | 'onFix' | 'onLocate' | 'onOpenEvidence'>) {
   const editable = canEditInDocument(document, area.section)
   return <div className={styles.detail}>
     {area.summary && <p>{area.summary}</p>}
@@ -45,9 +49,11 @@ function AreaDetail({ area, document, onLocate, onOpenEvidence }: { area: Readin
           : <span className={styles.evidenceText}><Icon name="file" /><span>{item.fileName}</span>{item.locator && <small>{item.locator}</small>}</span>}
       </li>)}</ul>
     </div>}
-    {onLocate && <div className={styles.actions}>
-      <button type="button" onClick={() => onLocate(area.section)}>{editable ? '문서에서 수정하기' : '문서에서 위치 보기'}</button>
+    {(onFix || onLocate) && <div className={styles.actions}>
+      {onFix && <button className={styles.fix} disabled={fixBlocked} type="button" onClick={() => onFix(area)}><Icon name="spark" />AI로 보완하기</button>}
+      {onLocate && <button type="button" onClick={() => onLocate(area.section)}>{editable ? '문서에서 수정하기' : '문서에서 위치 보기'}</button>}
     </div>}
+    {onFix && fixBlocked && <p className={styles.blockedNote}>문서가 평가 뒤에 바뀌었어요. 저장하고 다시 평가한 뒤 보완할 수 있어요.</p>}
   </div>
 }
 
@@ -115,7 +121,7 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
 
     {current && <article aria-label={`${current.label} 자세히`} className={styles.card}>
       <header><strong>{current.label}</strong><small>{current.sectionLabel}</small><StatusChip area={current} /></header>
-      <AreaDetail area={current} document={props.document} onLocate={props.onLocate} onOpenEvidence={props.onOpenEvidence} />
+      <AreaDetail area={current} document={props.document} fixBlocked={props.fixBlocked} onFix={props.onFix} onLocate={props.onLocate} onOpenEvidence={props.onOpenEvidence} />
     </article>}
 
     <details className={styles.all}>
