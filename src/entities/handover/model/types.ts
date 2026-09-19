@@ -217,6 +217,30 @@ export interface ReadinessEvidence {
   fileId: string
   fileName: string
   locator: string
+  /** PDF면 근거가 있는 쪽. 아니면 null */
+  page: number | null
+  /** 근거 문장. 없으면 빈 문자열 */
+  quote: string
+}
+
+/** 보완안이 고칠 섹션과 그 화면 이름 */
+export interface ReadinessTargetSection {
+  section: DocumentSection
+  label: string
+}
+
+/** 보완할 때 물을 질문. 충돌이면 자료별 값이 options로 온다. */
+export interface ReadinessItemQuestion {
+  question: string
+  reason: string
+  options: string[]
+}
+
+/** 확인 질문 단계에서 "나중에 답하기"로 미룬 질문. 점수에는 영향이 없다. */
+export interface ReadinessDeferredQuestion {
+  id: string
+  question: string
+  reason: string
 }
 
 export interface ReadinessAreaResult {
@@ -229,21 +253,26 @@ export interface ReadinessAreaResult {
   percent: number
   /** "중요한 확인"에 올릴 항목(최대 3개) */
   keyIssue: boolean
+  /** "문서에서 수정하기" 이동 위치(targetSections의 첫 번째) */
   section: DocumentSection
   sectionLabel: string
+  /** 보완안이 고칠 섹션들. 비어 있지 않다(없으면 section 하나로 채운다). */
+  targetSections: ReadinessTargetSection[]
   /** 문서에서 강조할 문장. 없으면 null */
   anchorText: string | null
   summary: string
   resolution: string
   evidence: ReadinessEvidence[]
+  /** 보완할 때 물을 질문(자료에 답이 없는 것만) */
+  questions: ReadinessItemQuestion[]
+  deferredQuestions: ReadinessDeferredQuestion[]
 }
 
 export interface HandoverReadiness {
   evaluationId: string
   rubricVersion: string
+  /** 서버가 계산한 총점. 화면에는 보여 주지 않고 확인할 항목과 등급으로 안내한다. */
   score: number
-  /** 중요한 확인을 모두 해결했을 때의 예상 점수 */
-  potentialScore: number
   grade: ReadinessGrade
   gradeLabel: string
   keyIssueCount: number
@@ -253,6 +282,8 @@ export interface HandoverReadiness {
   evaluatedAt: string
   /** 잃은 점수가 큰 영역부터 */
   areas: ReadinessAreaResult[]
+  /** "나중에 답하기"로 미룬 확인 질문 수(전 영역 합계) */
+  deferredQuestionCount: number
 }
 
 export interface ReadinessRubric {
@@ -268,8 +299,13 @@ export type ReadinessFixStatus = 'needs-input' | 'proposed' | 'applied' | 'disca
 
 export interface ReadinessFixQuestion {
   id: string
+  area: ReadinessArea | null
   question: string
   reason: string
+  /** 고를 수 있는 값. 충돌 질문이면 자료별 값이다. 비어 있으면 글로 답한다. */
+  options: string[]
+  /** 확인 질문 단계에서 "나중에 답하기"로 미룬 질문인지 */
+  deferred: boolean
   answer: string | null
 }
 
@@ -278,23 +314,42 @@ export interface ReadinessFixAnswer {
   answer: string
 }
 
+/** 보완안의 영역별 결과 */
+export interface ReadinessFixArea {
+  area: ReadinessArea
+  label: string
+  /** 보완을 시작할 때의 평가 상태. 충돌이면 질문에 답해야 수정안이 나온다. */
+  status: ReadinessItemStatus
+  statusLabel: string
+  sections: ReadinessTargetSection[]
+  /** 이 영역의 수정안이 있는지. 적용하면 이 영역의 섹션만 바뀐다. */
+  proposed: boolean
+  changeSummary: string
+  evidence: ReadinessEvidence[]
+  questions: ReadinessFixQuestion[]
+}
+
+/** 섹션 하나의 수정 전후. 수정안이 없으면 after는 null이다. */
+export interface ReadinessSectionChange {
+  section: DocumentSection
+  label: string
+  before: DocumentSectionValue
+  after: DocumentSectionValue | null
+  changed: boolean
+}
+
+/** 여러 영역을 한 번에 보완하는 보완안 */
 export interface ReadinessFix {
   id: string
-  area: ReadinessArea
-  areaLabel: string
-  section: DocumentSection
-  sectionLabel: string
   status: ReadinessFixStatus
   baseRevision: number
-  /** 보완안을 만든 뒤 문서가 바뀌어 적용할 수 없다. 새로 만들어야 한다. */
+  /** 보완을 시작한 뒤 문서가 바뀌어 적용할 수 없다. 다시 평가한 뒤 새로 시작해야 한다. */
   stale: boolean
   appliedRevision: number | null
-  before: DocumentSectionValue
-  /** 수정안이 아직 없으면(추가 질문 대기) null */
-  after: DocumentSectionValue | null
-  changeSummary: string
-  questions: ReadinessFixQuestion[]
-  evidence: ReadinessEvidence[]
+  areas: ReadinessFixArea[]
+  sections: ReadinessSectionChange[]
+  /** 아직 답하지 않은 질문 수. 0이 아니어도 수정안을 만들 수 있다. */
+  unansweredCount: number
 }
 
 export interface ReadinessFixApplied {

@@ -94,7 +94,7 @@ export class MockHandoverRepository implements HandoverRepository {
   readonly maskingReviews = new Map<string, MaskingReview>()
   private readonly revisions = new Map<HandoverId, number>()
   private readonly readinessResults = new Map<HandoverId, HandoverReadiness>()
-  private readonly readinessFixes = new Map<string, { handoverId: HandoverId; fix: ReadinessFix }>()
+  private readonly readinessFixes = new Map<string, { handoverId: HandoverId; fix: ReadinessFix; after: HandoverDocument | null }>()
   /** 보완을 적용해 충분해진 영역 */
   private readonly resolvedAreas = new Map<HandoverId, Set<ReadinessArea>>()
   private analysisProgress = 0
@@ -338,33 +338,52 @@ export class MockHandoverRepository implements HandoverRepository {
     return clone(readinessRubricFixture)
   }
 
-  async createReadinessFix(id: HandoverId, area: ReadinessArea): Promise<ReadinessFix> {
+  async startReadinessFix(id: HandoverId, areas: ReadinessArea[]): Promise<ReadinessFix> {
     const handover = await this.getMutable(id)
     const readiness = this.readinessResults.get(id)
     if (!readiness) throw serverError(404, 'READINESS_NOT_EVALUATED', '아직 준비도를 평가하지 않았어요.')
     if (readiness.draftRevision !== this.revisionOf(id)) throw serverError(409, 'READINESS_STALE', '평가 이후 문서가 바뀌었어요. 다시 평가해 주세요.')
-    const item = readiness.areas.find((entry) => entry.area === area)
-    if (!item || item.status === 'sufficient') throw serverError(409, 'READINESS_ITEM_SUFFICIENT', '이미 충분한 항목이에요.')
+    const items = [...new Set(areas)].map((area) => readiness.areas.find((entry) => entry.area === area))
+    if (items.some((item) => !item || item.status === 'sufficient')) throw serverError(409, 'READINESS_ITEM_SUFFICIENT', '이미 충분한 항목은 보완할 필요가 없어요.')
 
-    const before = readSectionValue(handover.document, item.section)
-    const needsInput = isEmptySection(before.value)
+    let questionCount = 0
+    const fixAreas = (items as ReadinessAreaResult[]).map((item) => ({
+      area: item.area,
+      label: item.label,
+      status: item.status,
+      statusLabel: item.statusLabel,
+      sections: clone(item.targetSections),
+      proposed: false,
+      changeSummary: '',
+      evidence: clone(item.evidence),
+      questions: item.questions.map((question) => ({
+        id: `q-${++questionCount}`,
+        area: item.area,
+        question: question.question,
+        reason: question.reason,
+        options: [...question.options],
+        deferred: false,
+        answer: null,
+      })),
+    }))
+    const sections = [...new Set(fixAreas.flatMap((area) => area.sections.map((target) => target.section)))]
     const fix: ReadinessFix = {
       id: `fix-${this.readinessFixes.size + 1}`,
-      area,
-      areaLabel: item.label,
-      section: item.section,
-      sectionLabel: item.sectionLabel,
-      status: needsInput ? 'needs-input' : 'proposed',
+      status: 'needs-input',
       baseRevision: this.revisionOf(id),
       stale: false,
       appliedRevision: null,
-      before,
-      after: needsInput ? null : this.proposeSection(handover.document, item.section, item.resolution),
-      changeSummary: needsInput ? '' : `${item.sectionLabel}에 빠진 내용을 보탰어요.`,
-      questions: needsInput ? [{ id: 'q-1', question: `${item.label}에 대해 알려 주세요.`, reason: item.summary, answer: null }] : [],
-      evidence: clone(item.evidence),
+      areas: fixAreas,
+      sections: sections.map((section) => ({
+        section,
+        label: SECTION_LABELS[section],
+        before: readSectionValue(handover.document, section),
+        after: null,
+        changed: false,
+      })),
+      unansweredCount: questionCount,
     }
-    this.readinessFixes.set(fix.id, { handoverId: id, fix })
+    this.readinessFixes.set(fix.id, { handoverId: id, fix, after: null })
     return clone(fix)
   }
 
@@ -374,35 +393,58 @@ export class MockHandoverRepository implements HandoverRepository {
   }
 
   async answerReadinessFix(id: HandoverId, fixId: string, answers: ReadinessFixAnswer[]): Promise<ReadinessFix> {
-    const handover = await this.getMutable(id)
+    await this.getMutable(id)
     const { fix } = this.getOpenFix(id, fixId)
     if (fix.baseRevision !== this.revisionOf(id)) throw serverError(409, 'AI_DRAFT_REVISION_CONFLICT', '그사이 문서가 바뀌었어요.')
+    const questions = fix.areas.flatMap((area) => area.questions)
     for (const { questionId, answer } of answers) {
-      const question = fix.questions.find((item) => item.id === questionId)
+      const question = questions.find((item) => item.id === questionId)
       if (!question) throw serverError(400, 'BAD_REQUEST', '없는 질문이에요.')
-      question.answer = answer
+      question.answer = answer.trim() || null
     }
-    const addition = fix.questions.map((item) => item.answer?.trim()).filter(Boolean).join(' ')
-    if (addition) {
-      fix.status = 'proposed'
-      fix.after = this.proposeSection(handover.document, fix.section, addition)
-      fix.changeSummary = `답변을 ${fix.sectionLabel}에 반영했어요.`
+    fix.unansweredCount = questions.filter((question) => !question.answer).length
+    return clone(fix)
+  }
+
+  // 서버처럼 AI 한 번으로 모든 영역의 수정안을 만든다. 충돌은 답해야, 비어 있는 섹션은 답이 있어야 채운다.
+  async generateReadinessFix(id: HandoverId, fixId: string): Promise<ReadinessFix> {
+    const handover = await this.getMutable(id)
+    const entry = this.getOpenFix(id, fixId)
+    const { fix } = entry
+    if (fix.baseRevision !== this.revisionOf(id)) throw serverError(409, 'AI_DRAFT_REVISION_CONFLICT', '그사이 문서가 바뀌었어요.')
+    let after = handover.document
+    for (const area of fix.areas) {
+      const answered = area.questions.map((question) => question.answer?.trim()).filter(Boolean).join(' ')
+      const section = area.sections[0]!.section
+      const empty = isEmptySection(readSectionValue(after, section).value)
+      area.proposed = area.status === 'conflict' || empty ? Boolean(answered) : true
+      if (!area.proposed) continue
+      after = applySectionValue(after, this.proposeSection(after, section, answered || this.readinessResults.get(id)?.areas.find((item) => item.area === area.area)?.resolution || `${area.label} 보완`))
+      area.changeSummary = `${SECTION_LABELS[section]}에 ${answered ? '답변을' : '빠진 내용을'} 반영했어요.`
     }
+    fix.sections = fix.sections.map((change) => {
+      const next = readSectionValue(after, change.section)
+      return { ...change, after: next, changed: JSON.stringify(next.value) !== JSON.stringify(change.before.value) }
+    })
+    fix.status = fix.areas.some((area) => area.proposed) ? 'proposed' : 'needs-input'
+    entry.after = after
     return clone(fix)
   }
 
   async applyReadinessFix(id: HandoverId, fixId: string, baseRevision: number): Promise<ReadinessFixApplied> {
     const handover = await this.getMutable(id)
-    const { fix } = this.getOpenFix(id, fixId)
-    if (fix.status !== 'proposed' || !fix.after) throw serverError(409, 'READINESS_FIX_INVALID_STATE', '적용할 수정안이 없어요.')
+    const entry = this.getOpenFix(id, fixId)
+    const { fix } = entry
+    if (fix.status !== 'proposed' || !entry.after) throw serverError(409, 'READINESS_FIX_INVALID_STATE', '적용할 수정안이 없어요.')
     this.assertRevision(id, baseRevision)
-    handover.document = applySectionValue(handover.document, fix.after)
+    handover.document = clone(entry.after)
     this.syncSummaries(handover)
     const revision = this.bumpRevision(id)
     fix.status = 'applied'
     fix.appliedRevision = revision
     const resolved = this.resolvedAreas.get(id) ?? new Set<ReadinessArea>()
-    this.resolvedAreas.set(id, resolved.add(fix.area))
+    fix.areas.filter((area) => area.proposed).forEach((area) => resolved.add(area.area))
+    this.resolvedAreas.set(id, resolved)
     return {
       fix: clone(fix),
       draft: { document: clone(handover.document), revision },
@@ -536,7 +578,7 @@ export class MockHandoverRepository implements HandoverRepository {
   private scoreReadiness(id: HandoverId, handover: Handover): HandoverReadiness {
     const { areas: rubricAreas, statusPercent, readyScore, minimumScore, keyIssueCount } = readinessRubricFixture
     const resolved = this.resolvedAreas.get(id)
-    const evidence = handover.attachments.slice(0, 1).map((file) => ({ fileId: file.id, fileName: file.name, locator: '1쪽' }))
+    const evidence = handover.attachments.slice(0, 1).map((file) => ({ fileId: file.id, fileName: file.name, locator: '1쪽', page: 1, quote: '' }))
     const evaluated = rubricAreas.map((rubric) => {
       const section = rubric.sections[0]!
       const weak = resolved?.has(rubric.area) ? undefined : weakReadinessAreas[rubric.area]
@@ -553,10 +595,16 @@ export class MockHandoverRepository implements HandoverRepository {
         keyIssue: false,
         section,
         sectionLabel: SECTION_LABELS[section],
+        targetSections: [{ section, label: SECTION_LABELS[section] }],
         anchorText: empty ? null : weak?.anchorText ?? null,
         summary: empty ? `${SECTION_LABELS[section]} 내용이 없어요.` : weak?.summary ?? '',
         resolution: empty ? `${SECTION_LABELS[section]}을(를) 채워 주세요.` : weak?.resolution ?? '',
         evidence: status === 'sufficient' ? [] : clone(evidence),
+        // 서버처럼 자료에 답이 없는 경우만 묻는다: 충돌은 어느 쪽이 맞는지, 빈 섹션은 채울 내용을.
+        questions: status === 'conflict' && weak?.options
+          ? [{ question: `자료마다 다르게 적힌 ${rubric.label} 기준 중 어느 쪽이 맞나요?`, reason: weak.summary, options: [...weak.options] }]
+          : empty ? [{ question: `${SECTION_LABELS[section]}에 들어갈 내용을 알려 주세요.`, reason: `${SECTION_LABELS[section]} 내용이 없어요.`, options: [] }] : [],
+        deferredQuestions: [],
       }
       return { result, lost: rubric.weight * (100 - result.percent) / 100 }
     }).sort((left, right) => right.lost - left.lost)
@@ -569,7 +617,6 @@ export class MockHandoverRepository implements HandoverRepository {
       evaluationId: `evaluation-${id}-${this.revisionOf(id)}`,
       rubricVersion: readinessRubricFixture.version,
       score,
-      potentialScore: Math.min(100, Math.round(score + keyIssues.reduce((sum, entry) => sum + entry.lost, 0))),
       grade,
       gradeLabel: grade === 'ready' ? '인수인계 가능' : grade === 'needs-improvement' ? '보완 필요' : '준비 부족',
       keyIssueCount: keyIssues.length,
@@ -577,6 +624,7 @@ export class MockHandoverRepository implements HandoverRepository {
       draftRevision: this.revisionOf(id),
       evaluatedAt: '2026-09-17T00:00:00Z',
       areas: evaluated.map((entry) => entry.result),
+      deferredQuestionCount: 0,
     }
   }
 

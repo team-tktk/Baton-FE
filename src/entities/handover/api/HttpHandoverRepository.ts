@@ -34,6 +34,7 @@ import type {
   ApplyFixResponse,
   CandidateDecisionRequest,
   ChatAnswerResponse,
+  CreateFixRequest,
   ChatMessagePageResponse,
   ChatQuestionRequest,
   FixAnswerRequest,
@@ -298,8 +299,12 @@ export class HttpHandoverRepository implements HandoverRepository {
     return toReadinessRubric(await apiRequest<ReadinessRubricResponse>(`/api/v1/handovers/${id}/readiness/rubric`))
   }
 
-  async createReadinessFix(id: HandoverId, area: ReadinessArea): Promise<ReadinessFix> {
-    return toReadinessFix(await apiRequest<ReadinessFixResponse>(`/api/v1/handovers/${id}/readiness/items/${area}/fixes`, { method: 'POST' }))
+  async startReadinessFix(id: HandoverId, areas: ReadinessArea[]): Promise<ReadinessFix> {
+    const body: CreateFixRequest = { areas }
+    return toReadinessFix(await apiRequest<ReadinessFixResponse>(`/api/v1/handovers/${id}/readiness/fixes`, {
+      body: JSON.stringify(body),
+      method: 'POST',
+    }))
   }
 
   async getReadinessFix(id: HandoverId, fixId: string): Promise<ReadinessFix> {
@@ -312,6 +317,10 @@ export class HttpHandoverRepository implements HandoverRepository {
       body: JSON.stringify(body),
       method: 'PUT',
     }))
+  }
+
+  async generateReadinessFix(id: HandoverId, fixId: string): Promise<ReadinessFix> {
+    return toReadinessFix(await apiRequest<ReadinessFixResponse>(`/api/v1/handovers/${id}/readiness/fixes/${fixId}/generate`, { method: 'POST' }))
   }
 
   async applyReadinessFix(id: HandoverId, fixId: string, baseRevision: number): Promise<ReadinessFixApplied> {
