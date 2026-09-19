@@ -239,7 +239,7 @@ export class HttpHandoverRepository implements HandoverRepository {
   }
 
   answerQuestion(id: HandoverId, questionId: string, answer: string): Promise<void> {
-    const body: QuestionAnswerRequest = { answer, skipped: false }
+    const body: QuestionAnswerRequest = { status: 'ANSWERED', answer }
     return apiRequest<void>(`/api/v1/handovers/${id}/questions/${questionId}/answer`, {
       body: JSON.stringify(body),
       method: 'PUT',
@@ -247,8 +247,9 @@ export class HttpHandoverRepository implements HandoverRepository {
   }
 
   skipQuestion(id: HandoverId, questionId: string): Promise<void> {
-    // 건너뛸 때 answer를 함께 보내면 서버 검증에 걸린다. 빈 문자열도 안 된다.
-    const body: QuestionAnswerRequest = { skipped: true }
+    // 건너뛰기는 이후 문서 보완 때 다시 답할 수 있는 DEFERRED로 저장한다.
+    // 이 상태에는 answer를 보내면 서버 검증에 걸린다.
+    const body: QuestionAnswerRequest = { status: 'DEFERRED' }
     return apiRequest<void>(`/api/v1/handovers/${id}/questions/${questionId}/answer`, {
       body: JSON.stringify(body),
       method: 'PUT',
