@@ -83,6 +83,21 @@ describe('HttpHandoverRepository masking', () => {
     expect(fetchSpy.mock.calls[0][1]?.method).toBe('DELETE')
   })
 
+  it('lists enabled web links and Slack messages as reviewable sources', async () => {
+    const fetchSpy = respond([
+      { sourceId: 'file-1', type: 'FILE', title: '업무협약서.docx', status: 'MASKING_REVIEW', enabled: true },
+      { sourceId: 'web-1', type: 'WEB_LINK', title: '정산 위키', accessPath: 'https://wiki.example.com', status: 'MASKING_REVIEW', enabled: true },
+      { sourceId: 'slack-1', type: 'SLACK_MESSAGE', title: '', conversationName: '#운영팀', status: 'EXTRACTING', enabled: true },
+      { sourceId: 'web-2', type: 'WEB_LINK', title: '끈 링크', status: 'MASKING_REVIEW', enabled: false },
+    ])
+
+    await expect(repository.listExternalSources('handover-1')).resolves.toEqual([
+      { id: 'web-1', name: '정산 위키', mimeType: '', size: 0, status: 'review', origin: 'web-link', detail: 'https://wiki.example.com' },
+      { id: 'slack-1', name: 'Slack 메시지', mimeType: '', size: 0, status: 'processing', origin: 'slack', detail: '#운영팀' },
+    ])
+    expect(fetchSpy.mock.calls[0][0]).toBe('/api/v1/handovers/handover-1/sources')
+  })
+
   it('follows a running analysis but does not mistake unconfirmed masking for it', async () => {
     const problem = (code: string) => new Response(JSON.stringify({ status: 409, detail: code, code }), { headers: { 'Content-Type': 'application/json' }, status: 409 })
     const job = new Response(JSON.stringify({ jobId: 'job-1', status: 'PARSING', progress: 20, currentStep: '자료 읽는 중', updatedAt: '2026-09-17T00:00:00Z' }), { headers: { 'Content-Type': 'application/json' }, status: 200 })

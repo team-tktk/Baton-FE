@@ -66,7 +66,9 @@ export const test = base.extend<{ stubbedBackend: void }>({
     // 새로 올린 파일은 마스킹 검수 대기로 멈춘다. 이메일은 자동으로 가리고, 계좌번호는 사람이 확인해야 한다.
     const MASKING_TEXT = '담당자 이메일: min@example.com\n지급 계좌: 110-123-456789'
     type StubCandidate = { id: string; type: string; typeLabel: string; origin: string; startOffset: number; endOffset: number; confidencePercent: number; applied: boolean; needsReview: boolean; pendingReview: boolean; preview: string }
-    const maskingReviews = new Map<string, { confirmed: boolean; candidates: StubCandidate[] }>()
+    const maskingReviews = new Map<string, { confirmed: boolean; candidates: StubCandidate[]; text?: string }>()
+    // 웹 링크·Slack 자료. 마스킹이 켜진 서버처럼 추가하면 검수 대기로 멈춘다.
+    const externals: Array<{ id: string; type: 'WEB_LINK' | 'SLACK_MESSAGE'; fileName: string; url: string; status: string; remainingReviewCount?: number }> = []
     const newCandidates = (): StubCandidate[] => [
       { id: 'candidate-email', type: 'EMAIL', typeLabel: '이메일', origin: 'DETECTED', startOffset: MASKING_TEXT.indexOf('min@'), endOffset: MASKING_TEXT.indexOf('min@') + 'min@example.com'.length, confidencePercent: 98, applied: true, needsReview: false, pendingReview: false, preview: 'min***@example.com' },
       { id: 'candidate-account', type: 'ACCOUNT', typeLabel: '계좌번호', origin: 'DETECTED', startOffset: MASKING_TEXT.indexOf('110-'), endOffset: MASKING_TEXT.length, confidencePercent: 78, applied: false, needsReview: true, pendingReview: true, preview: '110-***-***789' },
@@ -85,73 +87,86 @@ export const test = base.extend<{ stubbedBackend: void }>({
     const draftView = () => ({ content: draftContent, revision, updatedAt: '2026-09-11T00:00:00Z' })
     const revisionConflict = () => ({ status: 409, detail: '그사이 문서가 바뀌었습니다', code: 'AI_DRAFT_REVISION_CONFLICT' })
 
-    // 준비도: 실행 절차·예외 대응·담당자가 부족한 75점 초안. 보완안을 적용한 영역은 충분이 된다.
+    // 준비도: 실행 절차·예외 대응(일부 부족)과 담당자(충돌)가 확인할 항목인 초안. 보완을 적용한 영역은 충분이 된다.
+    // 담당자는 자료끼리 달라 "어느 쪽이 맞나요?"에 답해야 수정안이 나온다(서버 규칙).
     const READINESS_AREAS = [
-      { area: 'SCOPE', label: '업무 범위', weight: 15, section: 'PURPOSE', sectionLabel: '업무 목적' },
-      { area: 'PROCEDURE', label: '실행 절차', weight: 20, section: 'RECURRING_TASKS', sectionLabel: '반복 업무', status: 'PARTIAL', anchorText: '주간 주문 현황 정리' },
-      { area: 'COMPLETION', label: '완료 기준', weight: 10, section: 'COMPLETION_CRITERIA', sectionLabel: '완료 기준' },
-      { area: 'EXCEPTION', label: '예외 대응', weight: 15, section: 'RULES_AND_EXCEPTIONS', sectionLabel: '업무 기준과 예외', status: 'PARTIAL', anchorText: '쿠폰 할인율이 10%를 넘으면' },
-      { area: 'SCHEDULE', label: '일정', weight: 10, section: 'SCHEDULE', sectionLabel: '업무 일정' },
-      { area: 'CONTACTS', label: '담당자', weight: 10, section: 'STAKEHOLDERS', sectionLabel: '주요 관계자', status: 'CONFLICT' },
-      { area: 'ACCESS', label: '접근 권한', weight: 10, section: 'ACCESS_ACCOUNTS', sectionLabel: '접근 권한과 계정' },
-      { area: 'EVIDENCE', label: '근거와 최신성', weight: 10, section: 'TOOLS', sectionLabel: '사용 도구와 자료' },
+      { area: 'SCOPE', label: '업무 범위', weight: 15, section: 'PURPOSE', field: 'purpose', sectionLabel: '업무 개요' },
+      { area: 'PROCEDURE', label: '실행 절차', weight: 20, section: 'RECURRING_TASKS', field: 'recurringTasks', sectionLabel: '반복 업무', status: 'PARTIAL', anchorText: '주간 주문 현황 정리' },
+      { area: 'COMPLETION', label: '완료 기준', weight: 10, section: 'COMPLETION_CRITERIA', field: 'completionCriteria', sectionLabel: '완료 기준' },
+      { area: 'EXCEPTION', label: '예외 대응', weight: 15, section: 'RULES_AND_EXCEPTIONS', field: 'rulesAndExceptions', sectionLabel: '업무 기준과 예외', status: 'PARTIAL', anchorText: '쿠폰 할인율이 10%를 넘으면' },
+      { area: 'SCHEDULE', label: '일정', weight: 10, section: 'SCHEDULE', field: 'schedule', sectionLabel: '업무 일정' },
+      { area: 'CONTACTS', label: '담당자', weight: 10, section: 'STAKEHOLDERS', field: 'stakeholders', sectionLabel: '주요 관계자', status: 'CONFLICT', options: ['윤예린 · 마케팅팀', '오세진 · 물류팀'] },
+      { area: 'ACCESS', label: '접근 권한', weight: 10, section: 'ACCESS_ACCOUNTS', field: 'accessAccounts', sectionLabel: '접근 권한과 계정' },
+      { area: 'EVIDENCE', label: '근거와 최신성', weight: 10, section: 'TOOLS', field: 'tools', sectionLabel: '사용 도구와 자료' },
     ]
     const STATUS = { SUFFICIENT: ['충분', 100], PARTIAL: ['일부 부족', 50], CONFLICT: ['충돌', 25], MISSING: ['누락', 0] } as const
-    const SECTION_FIELDS: Record<string, keyof typeof DRAFT> = { PURPOSE: 'purpose', RECURRING_TASKS: 'recurringTasks', RULES_AND_EXCEPTIONS: 'rulesAndExceptions', STAKEHOLDERS: 'stakeholders' }
+    const EVIDENCE = [{ sourceId: 'file-autumn-sale', fileName: '가을_할인전_준비_메모.docx', locator: '2쪽', page: 2, quote: '주간 현황은 화요일에 공유한다' }]
     const resolvedAreas = new Set<string>()
     let evaluatedRevision: number | null = null
-    type StubFix = { fixId: string; area: string; status: string; baseRevision: number; appliedRevision: number | null; field: keyof typeof DRAFT; before: unknown; after: unknown }
-    const fixes = new Map<string, StubFix>()
+    const areaOf = (area: string) => READINESS_AREAS.find((entry) => entry.area === area)!
+    const statusOf = (area: string) => (resolvedAreas.has(area) ? undefined : areaOf(area).status) as keyof typeof STATUS | undefined ?? 'SUFFICIENT'
+    const targetOf = (area: string) => [{ section: areaOf(area).section, field: areaOf(area).field, label: areaOf(area).sectionLabel }]
+    const conflictQuestion = (area: string) => `자료마다 다르게 적힌 ${areaOf(area).label} 기준 중 어느 쪽이 맞나요?`
     const readinessView = () => {
       const areas = READINESS_AREAS.map((item) => {
-        const status = (resolvedAreas.has(item.area) ? undefined : item.status) as keyof typeof STATUS | undefined ?? 'SUFFICIENT'
+        const status = statusOf(item.area)
         const [statusLabel, percent] = STATUS[status]
         const view = {
           area: item.area, label: item.label, criteria: `${item.label}이 분명한가요?`, weight: item.weight, status, statusLabel, percent, keyIssue: false,
-          section: item.section, sectionLabel: item.sectionLabel, anchorText: status === 'SUFFICIENT' ? null : item.anchorText ?? null,
+          section: item.section, sectionLabel: item.sectionLabel, targetSections: targetOf(item.area), anchorText: status === 'SUFFICIENT' ? null : item.anchorText ?? null,
           summary: status === 'SUFFICIENT' ? '' : `${item.label} 내용이 부족해요.`,
           resolution: status === 'SUFFICIENT' ? '' : `${item.sectionLabel}을 보완해 주세요.`,
-          evidence: status === 'SUFFICIENT' ? [] : [{ sourceId: 'file-autumn-sale', fileName: '가을_할인전_준비_메모.docx', locator: '2쪽' }],
+          evidence: status === 'SUFFICIENT' ? [] : EVIDENCE,
+          questions: status === 'CONFLICT' ? [{ question: conflictQuestion(item.area), reason: '자료마다 담당자가 달라요', options: item.options }] : [],
+          deferredQuestions: [],
         }
         return { view, lost: item.weight * (100 - percent) / 100 }
       }).sort((left, right) => right.lost - left.lost)
-      const keyIssues = areas.filter((item) => item.lost > 0).slice(0, 3)
-      keyIssues.forEach((item) => { item.view.keyIssue = true })
+      areas.filter((item) => item.lost > 0).slice(0, 3).forEach((item) => { item.view.keyIssue = true })
       const score = Math.round(100 - areas.reduce((sum, item) => sum + item.lost, 0))
       return {
         evaluationId: `evaluation-${evaluatedRevision}`,
-        rubricVersion: 'e2e-v1',
+        rubricVersion: 'e2e-v2',
         score,
-        potentialScore: Math.min(100, Math.round(score + keyIssues.reduce((sum, item) => sum + item.lost, 0))),
         grade: score >= 80 ? 'READY' : score >= 50 ? 'NEEDS_IMPROVEMENT' : 'NOT_READY',
         gradeLabel: score >= 80 ? '인수인계 가능' : score >= 50 ? '보완 필요' : '준비 부족',
-        keyIssueCount: keyIssues.length,
+        keyIssueCount: Math.min(3, areas.filter((item) => item.lost > 0).length),
         stale: evaluatedRevision !== revision,
         draftRevision: evaluatedRevision,
         evaluatedAt: '2026-09-17T00:00:00Z',
         areas: areas.map((item) => item.view),
+        deferredQuestionCount: 0,
       }
     }
-    // 수정안은 대상 섹션 끝에 한 줄을 보탠다. 표에 없는 섹션은 예외 규칙으로 보완한다.
-    const createFix = (area: string): StubFix => {
-      const item = READINESS_AREAS.find((entry) => entry.area === area)!
-      const field = SECTION_FIELDS[item.section] ?? 'rulesAndExceptions'
-      const before = structuredClone(draftContent[field])
-      const after = field === 'purpose' ? `${draftContent.purpose} 예외 상황도 함께 챙깁니다.`
-        : field === 'rulesAndExceptions' ? [...draftContent.rulesAndExceptions, '환불 오류는 고객지원팀 윤예린님에게 넘깁니다.']
-          : field === 'stakeholders' ? [...draftContent.stakeholders, { name: '윤예린', team: '고객지원팀', helpWith: '환불 오류' }]
-            : [...draftContent.recurringTasks, { title: '주간 현황 공유', status: '매주 반복', description: '정리한 현황을 팀 채널에 올립니다.', nextAction: '화요일 오전 공유', schedule: '매주 화요일' }]
-      return { fixId: `fix-${fixes.size + 1}`, area, status: 'PROPOSED', baseRevision: revision, appliedRevision: null, field, before, after }
+
+    // 보완안: 시작하면 질문만 모으고, generate에서 영역마다 대상 섹션 끝에 한 줄을 보탠다.
+    type StubFix = { fixId: string; status: string; baseRevision: number; appliedRevision: number | null; areas: string[]; answers: Record<string, string>; patch: Partial<typeof DRAFT> | null; proposed: string[] }
+    const fixes = new Map<string, StubFix>()
+    const questionsOf = (fix: StubFix, area: string) => statusOf(area) === 'CONFLICT' || fix.answers[`${fix.fixId}-${area}`]
+      ? [{ id: `${fix.fixId}-${area}`, area, question: conflictQuestion(area), reason: '자료마다 담당자가 달라요', options: areaOf(area).options ?? [], clarificationQuestionId: null, answer: fix.answers[`${fix.fixId}-${area}`] ?? null }]
+      : []
+    const additionOf = (area: string, answer: string | undefined): unknown => {
+      if (area === 'PROCEDURE') return [...draftContent.recurringTasks, { title: '주간 현황 공유', status: '매주 반복', description: '정리한 현황을 팀 채널에 올립니다.', nextAction: '화요일 오전 공유', schedule: '매주 화요일' }]
+      if (area === 'EXCEPTION') return [...draftContent.rulesAndExceptions, '환불 오류는 고객지원팀 윤예린님에게 넘깁니다.']
+      if (area === 'CONTACTS') return [...draftContent.stakeholders, { name: answer?.split(' · ')[0] ?? '', team: answer?.split(' · ')[1] ?? '', helpWith: '쿠폰 예산 확정' }]
+      return draftContent[areaOf(area).field as keyof typeof DRAFT]
     }
-    const fixView = ({ field, ...fix }: StubFix) => {
-      const item = READINESS_AREAS.find((entry) => entry.area === fix.area)!
+    const fixView = (fix: StubFix) => {
+      const questions = fix.areas.flatMap((area) => questionsOf(fix, area))
       return {
-        ...fix,
-        areaLabel: item.label, section: item.section, sectionLabel: item.sectionLabel, sectionField: field,
-        stale: fix.status === 'PROPOSED' && fix.baseRevision !== revision,
-        changeSummary: `${item.sectionLabel}에 빠진 내용을 보탰어요.`,
-        questions: [],
-        evidence: [{ sourceId: 'file-autumn-sale', fileName: '가을_할인전_준비_메모.docx', locator: '2쪽' }],
+        fixId: fix.fixId, status: fix.status, baseRevision: fix.baseRevision, appliedRevision: fix.appliedRevision,
+        stale: (fix.status === 'PROPOSED' || fix.status === 'NEEDS_INPUT') && fix.baseRevision !== revision,
+        areas: fix.areas.map((area) => ({
+          area, areaLabel: areaOf(area).label, status: statusOf(area), statusLabel: STATUS[statusOf(area)][0], sections: targetOf(area),
+          proposed: fix.proposed.includes(area), changeSummary: fix.proposed.includes(area) ? `${areaOf(area).sectionLabel}에 빠진 내용을 보탰어요.` : null,
+          evidence: fix.proposed.includes(area) ? EVIDENCE : [], questions: questionsOf(fix, area),
+        })),
+        sections: fix.areas.map((area) => {
+          const field = areaOf(area).field as keyof typeof DRAFT
+          const after = fix.patch ? fix.patch[field] ?? draftContent[field] : null
+          return { section: areaOf(area).section, field, label: areaOf(area).sectionLabel, before: draftContent[field], after, changed: Boolean(fix.patch && field in fix.patch) }
+        }),
+        unansweredCount: questions.filter((question) => !question.answer).length,
         createdAt: '2026-09-17T00:00:00Z', updatedAt: '2026-09-17T00:00:00Z',
       }
     }
@@ -220,10 +235,24 @@ export const test = base.extend<{ stubbedBackend: void }>({
           return json({ sourceDocumentId: id, fileName, status: 'MASKING_REVIEW' }, 201)
         }
       }
-      // 마스킹 검수. 검수 기록이 없는 파일(처음부터 있던 파일)은 빈 결과를 준다.
+      if (method === 'POST' && pathname.endsWith('/sources/web-links')) {
+        const body = JSON.parse(route.request().postData() ?? '{}') as { url?: string; title?: string; description?: string }
+        const id = `web-${externals.length + 1}`
+        externals.push({ id, type: 'WEB_LINK', fileName: body.title || body.url || '웹 링크', url: body.url ?? '', status: 'MASKING_REVIEW' })
+        // 찾은 민감정보가 없는 자료로 둔다(확인 단계에서 묶여 보여야 한다).
+        maskingReviews.set(id, { confirmed: false, candidates: [], text: body.description || '링크 본문' })
+        return json({ sourceId: id, type: 'WEB_LINK', title: externals.at(-1)!.fileName, status: 'MASKING_REVIEW', enabled: true }, 201)
+      }
+      if (method === 'GET' && pathname.endsWith('/sources')) {
+        return json(externals.map((item) => ({
+          sourceId: item.id, type: item.type, title: item.fileName, locator: null, updatedAt: '2026-09-20T00:00:00Z', accessPath: item.url,
+          description: null, conversationName: null, occurredAt: null, enabled: true, status: item.status,
+        })))
+      }
+      // 마스킹 검수. 검수 기록이 없는 파일(처음부터 있던 파일)은 빈 결과를 준다. 외부 자료도 같은 경로를 쓴다.
       const masking = /\/files\/([^/]+)\/masking(\/.*)?$/.exec(pathname)
       if (masking) {
-        const file = files.find((item) => item.id === masking[1])
+        const file = files.find((item) => item.id === masking[1]) ?? externals.find((item) => item.id === masking[1])
         if (!file) return json({ title: '파일을 찾을 수 없습니다', status: 404, detail: '파일을 찾을 수 없습니다', code: 'AI_SOURCE_DOCUMENT_NOT_FOUND' }, 404)
         const record = maskingReviews.get(file.id)
         const inReview = file.status === 'MASKING_REVIEW' && record && !record.confirmed
@@ -232,7 +261,7 @@ export const test = base.extend<{ stubbedBackend: void }>({
           fileName: file.fileName,
           status: file.status,
           confirmed: record?.confirmed ?? false,
-          text: inReview ? MASKING_TEXT : null,
+          text: inReview ? record?.text ?? MASKING_TEXT : null,
           summary: summarize(record?.candidates ?? []),
           candidates: record?.candidates ?? [],
         })
@@ -277,6 +306,10 @@ export const test = base.extend<{ stubbedBackend: void }>({
         }
         return json({ status: 400, detail: '지원하지 않는 요청', code: 'BAD_REQUEST' }, 400)
       }
+      // 업로드 단계의 외부 자료 수집(#60)이 처음에 읽는 목록. 연동한 자료가 없는 상태로 둔다.
+      if (method === 'GET' && (pathname.endsWith('/integrations/slack/connections') || pathname.endsWith('/integrations/slack/subscriptions'))) {
+        return json([])
+      }
       // 준비도. 평가 전 조회는 404, 보완 적용은 baseRevision이 맞아야 한다.
       const readiness = /\/readiness(\/.*)?$/.exec(pathname)
       if (readiness) {
@@ -297,35 +330,47 @@ export const test = base.extend<{ stubbedBackend: void }>({
             keyIssueCount: 3,
           })
         }
-        const created = /^\/items\/([^/]+)\/fixes$/.exec(rest)
-        if (method === 'POST' && created) {
+        if (method === 'POST' && rest === '/fixes') {
           if (evaluatedRevision === null) return notFound('READINESS_NOT_EVALUATED')
           if (evaluatedRevision !== revision) return json({ status: 409, detail: '평가 이후 문서가 바뀌었습니다', code: 'READINESS_STALE' }, 409)
-          const area = readinessView().areas.find((item) => item.area === created[1])
-          if (!area || area.status === 'SUFFICIENT') return json({ status: 409, detail: '이미 충분한 항목입니다', code: 'READINESS_ITEM_SUFFICIENT' }, 409)
-          const fix = createFix(area.area)
+          const areas = [...new Set((JSON.parse(route.request().postData() ?? '{}') as { areas?: string[] }).areas ?? [])]
+          if (areas.length === 0 || areas.some((area) => statusOf(area) === 'SUFFICIENT')) return json({ status: 409, detail: '이미 충분한 항목은 보완할 필요가 없습니다', code: 'READINESS_ITEM_SUFFICIENT' }, 409)
+          const fix: StubFix = { fixId: `fix-${fixes.size + 1}`, status: 'NEEDS_INPUT', baseRevision: revision, appliedRevision: null, areas, answers: {}, patch: null, proposed: [] }
           fixes.set(fix.fixId, fix)
           return json(fixView(fix), 201)
         }
-        const action = /^\/fixes\/([^/]+)(\/answers|\/apply|\/discard)?$/.exec(rest)
+        const action = /^\/fixes\/([^/]+)(\/answers|\/generate|\/apply|\/discard)?$/.exec(rest)
         const fix = action ? fixes.get(action[1]) : undefined
         if (action && !fix) return notFound('READINESS_FIX_NOT_FOUND')
         if (fix && method === 'GET' && !action?.[2]) return json(fixView(fix))
-        if (fix && fix.status !== 'PROPOSED') return json({ status: 409, detail: '이미 적용하거나 취소한 보완안입니다', code: 'READINESS_FIX_INVALID_STATE' }, 409)
-        if (fix && action?.[2] === '/answers') return json(fixView(fix))
+        if (fix && fix.status !== 'PROPOSED' && fix.status !== 'NEEDS_INPUT') return json({ status: 409, detail: '이미 적용하거나 취소한 보완안입니다', code: 'READINESS_FIX_INVALID_STATE' }, 409)
+        if (fix && action?.[2] === '/answers') {
+          const body = JSON.parse(route.request().postData() ?? '{}') as { answers?: Array<{ questionId: string; answer: string }> }
+          for (const answer of body.answers ?? []) fix.answers[answer.questionId] = answer.answer.trim()
+          return json(fixView(fix))
+        }
+        if (fix && action?.[2] === '/generate') {
+          if (fix.baseRevision !== revision) return json(revisionConflict(), 409)
+          fix.proposed = fix.areas.filter((area) => statusOf(area) !== 'CONFLICT' || fix.answers[`${fix.fixId}-${area}`])
+          fix.patch = Object.fromEntries(fix.proposed.map((area) => [areaOf(area).field, additionOf(area, fix.answers[`${fix.fixId}-${area}`])]))
+          fix.status = fix.proposed.length > 0 ? 'PROPOSED' : 'NEEDS_INPUT'
+          return json(fixView(fix))
+        }
         if (fix && action?.[2] === '/discard') {
           fix.status = 'DISCARDED'
           return json(fixView(fix))
         }
         if (fix && action?.[2] === '/apply') {
           const body = JSON.parse(route.request().postData() ?? '{}') as { baseRevision?: number }
+          if (fix.status !== 'PROPOSED' || !fix.patch) return json({ status: 409, detail: '확인할 수정안이 있는 보완안만 적용할 수 있습니다', code: 'READINESS_FIX_INVALID_STATE' }, 409)
           if (body.baseRevision !== revision || fix.baseRevision !== revision) return json(revisionConflict(), 409)
-          draftContent = { ...draftContent, [fix.field]: fix.after }
+          const view = fixView(fix)
+          draftContent = { ...draftContent, ...fix.patch }
           revision += 1
           Object.assign(fix, { status: 'APPLIED', appliedRevision: revision })
-          resolvedAreas.add(fix.area)
+          fix.proposed.forEach((area) => resolvedAreas.add(area))
           evaluatedRevision = revision
-          return json({ fix: fixView(fix), document: draftView(), readiness: readinessView() })
+          return json({ fix: { ...view, status: 'APPLIED', appliedRevision: revision }, document: draftView(), readiness: readinessView() })
         }
         return json({ status: 400, detail: '지원하지 않는 요청', code: 'BAD_REQUEST' }, 400)
       }
@@ -461,7 +506,7 @@ export const test = base.extend<{ stubbedBackend: void }>({
       }
       if (pathname.endsWith('/analysis')) {
         if (method === 'POST') {
-          if (files.some((file) => file.status === 'MASKING_REVIEW')) {
+          if ([...files, ...externals].some((file) => file.status === 'MASKING_REVIEW')) {
             return json({ status: 409, detail: '마스킹 검수를 확정하지 않은 파일이 있습니다', code: 'MASKING_NOT_CONFIRMED' }, 409)
           }
           return json({ jobId: 'job-1', status: 'GENERATING_DRAFT', progress: 80, currentStep: '초안을 만드는 중', error: null, updatedAt: '2026-08-25T00:00:00Z' }, 202)

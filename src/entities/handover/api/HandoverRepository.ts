@@ -34,6 +34,8 @@ export interface HandoverRepository {
   getHandover(id: HandoverId): Promise<Handover>
   createDraft(input: CreateHandoverInput): Promise<Handover>
   listFiles(id: HandoverId): Promise<HandoverAttachment[]>
+  /** 켜 둔 웹 링크·Slack 메시지. 마스킹 검수가 켜진 서버에서는 파일처럼 검수 대기로 멈춘다. */
+  listExternalSources(id: HandoverId): Promise<HandoverAttachment[]>
   uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment>
   deleteFile(id: HandoverId, fileId: string): Promise<void>
   downloadFile(id: HandoverId, fileId: string): Promise<HandoverFileDownload>
@@ -61,12 +63,14 @@ export interface HandoverRepository {
   /** 동기 AI 호출이라 수십 초 걸린다. 내용이 같으면 이전 결과를 그대로 준다. */
   evaluateReadiness(id: HandoverId): Promise<HandoverReadiness>
   getReadinessRubric(id: HandoverId): Promise<ReadinessRubric>
-  /** 부족 항목의 보완안을 만든다(동기 AI). 문서는 바뀌지 않는다. */
-  createReadinessFix(id: HandoverId, area: ReadinessArea): Promise<ReadinessFix>
+  /** 부족한 영역들의 보완을 시작하고 물을 질문을 모은다. AI를 부르지 않고 문서도 바뀌지 않는다. */
+  startReadinessFix(id: HandoverId, areas: ReadinessArea[]): Promise<ReadinessFix>
   getReadinessFix(id: HandoverId, fixId: string): Promise<ReadinessFix>
-  /** 추가 질문에 답하면 수정안을 다시 만든다(동기 AI). 여전히 부족하면 다시 질문이 온다. */
+  /** 질문 답만 저장한다(AI 호출 없음). 여러 번 나눠 보내도 된다. */
   answerReadinessFix(id: HandoverId, fixId: string, answers: ReadinessFixAnswer[]): Promise<ReadinessFix>
-  /** 대상 섹션 하나만 바꾸고 최신 문서와 재평가 결과를 함께 돌려준다. */
+  /** 모든 영역의 수정안을 한 번에 만든다(동기 AI 1회). 아직 부족한 영역에는 새 질문이 붙는다. */
+  generateReadinessFix(id: HandoverId, fixId: string): Promise<ReadinessFix>
+  /** 수정안이 있는 영역의 섹션만 바꾸고 최신 문서와 재평가 결과를 함께 돌려준다. */
   applyReadinessFix(id: HandoverId, fixId: string, baseRevision: number): Promise<ReadinessFixApplied>
   discardReadinessFix(id: HandoverId, fixId: string): Promise<ReadinessFix>
   acknowledgeHandover(id: HandoverId): Promise<void>

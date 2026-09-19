@@ -19,7 +19,14 @@ export const readinessRubricFixture: ReadinessRubric = {
 }
 
 /** 목업 평가에서 내용이 있어도 부족하다고 볼 영역. 보완을 적용하면 충분으로 바뀐다. */
-export const weakReadinessAreas: Partial<Record<ReadinessArea, { status: ReadinessItemStatus; summary: string; resolution: string; anchorText?: string }>> = {
+export const weakReadinessAreas: Partial<Record<ReadinessArea, {
+  status: ReadinessItemStatus
+  summary: string
+  resolution: string
+  anchorText?: string
+  /** 충돌이면 서버처럼 "어느 쪽이 맞나요?"와 자료별 값을 묻는다. */
+  options?: string[]
+}>> = {
   PROCEDURE: {
     status: 'partial',
     summary: '주간 주문 현황을 어떤 순서로 정리하는지 빠져 있어요.',
@@ -36,6 +43,7 @@ export const weakReadinessAreas: Partial<Record<ReadinessArea, { status: Readine
     status: 'conflict',
     summary: '자료마다 쿠폰 예산 담당자가 달라요.',
     resolution: '현재 담당자를 확인해 한 명으로 정리해 주세요.',
+    options: ['윤예린 · 마케팅팀', '오세진 · 물류팀'],
   },
 }
 

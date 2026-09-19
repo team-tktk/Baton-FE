@@ -50,3 +50,17 @@
   .actions button { width: 100%; }
   .hint { text-align: center; }
 }
+
+/* 찾은 민감정보가 없는 웹 링크·Slack 자료 묶음 */
+.cleanList { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 6px; margin: 0; overflow-y: auto; padding: 14px 18px; list-style: none; }
+.cleanList details { border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.cleanList summary { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px 12px; list-style: none; }
+.cleanList summary::-webkit-details-marker { display: none; }
+.cleanList summary svg { flex: none; width: 16px; height: 16px; color: var(--muted); }
+.cleanList summary span { display: flex; min-width: 0; flex-direction: column; gap: 2px; }
+.cleanList summary strong { overflow: hidden; font-size: var(--fs-2xs); text-overflow: ellipsis; white-space: nowrap; }
+.cleanList summary small { overflow: hidden; color: var(--muted); font-size: var(--fs-3xs); text-overflow: ellipsis; white-space: nowrap; }
+.cleanList details p { margin: 0; border-top: 1px solid var(--line); padding: 10px 12px; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.6; white-space: pre-wrap; }
+.cleanSummary { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.cleanSummary h2 { margin: 0; font-size: var(--fs-lg); }
+.cleanSummary p { margin: 0; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.7; }

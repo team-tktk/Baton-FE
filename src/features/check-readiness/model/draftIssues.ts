@@ -43,7 +43,8 @@ export function toDraftIssues(readiness: HandoverReadiness | null): DraftIssueMa
   for (const area of readiness?.areas ?? []) {
     if (area.status === 'sufficient') continue
     const evidence = area.evidence[0]
-    issues[area.section] = [...(issues[area.section] ?? []), {
+    // 보완이 고칠 섹션마다 표시한다. 해결 방법이 여러 섹션에 걸칠 수 있다.
+    for (const { section } of area.targetSections) issues[section] = [...(issues[section] ?? []), {
       area: area.area,
       label: area.label,
       status: area.status,

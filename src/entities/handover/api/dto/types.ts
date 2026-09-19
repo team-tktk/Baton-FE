@@ -132,6 +132,18 @@ export interface ManualCandidateRequest {
   type?: MaskingTypeDto
 }
 
+/** GET /sources 항목. 업로드 파일(FILE)과 웹 링크·Slack 메시지가 함께 온다. */
+export interface SourceEvidenceDto {
+  sourceId: string
+  type: 'FILE' | 'WEB_LINK' | 'SLACK_MESSAGE'
+  title?: string | null
+  accessPath?: string | null
+  conversationName?: string | null
+  /** 끈 자료는 분석에서 빠지고 검수도 분석을 막지 않는다. */
+  enabled?: boolean
+  status: FileStatusDto
+}
+
 export interface FileUploadResponse {
   sourceDocumentId: string
   fileName: string
@@ -236,6 +248,34 @@ export interface ReadinessEvidenceDto {
   sourceId?: string | null
   fileName?: string | null
   locator?: string | null
+  /** PDF면 근거가 있는 쪽(1부터). 아니면 null */
+  page?: number | null
+  /** 근거 문장 */
+  quote?: string | null
+}
+
+/** 보완안이 고칠 문서 섹션. field는 content 키, label은 화면 이름이다. */
+export interface TargetSectionDto {
+  section: DraftSectionDto
+  field?: string
+  label?: string | null
+}
+
+/** 보완할 때 물을 질문. 충돌이면 자료별 값이 options로 온다. */
+export interface ItemQuestionDto {
+  question: string
+  reason?: string | null
+  options?: string[] | null
+}
+
+/** 확인 질문 단계에서 "나중에 답하기"로 미룬 질문. 표시만 하고 점수에는 영향이 없다. */
+export interface DeferredQuestionDto {
+  id: string
+  type?: 'INTERVIEW' | 'CONFLICT'
+  questionText: string
+  reason?: string | null
+  area?: ReadinessAreaDto
+  targetSections?: TargetSectionDto[]
 }
 
 export interface ReadinessAreaResponse {
@@ -253,13 +293,16 @@ export interface ReadinessAreaResponse {
   summary?: string | null
   resolution?: string | null
   evidence?: ReadinessEvidenceDto[]
+  /** 보완안이 고칠 섹션(해결 방법이 가리키는 곳). section은 이 중 첫 번째다. */
+  targetSections?: TargetSectionDto[]
+  questions?: ItemQuestionDto[]
+  deferredQuestions?: DeferredQuestionDto[]
 }
 
 export interface ReadinessResponse {
   evaluationId: string
   rubricVersion: string
   score: number
-  potentialScore: number
   grade: ReadinessGradeDto
   gradeLabel: string
   keyIssueCount: number
@@ -268,6 +311,8 @@ export interface ReadinessResponse {
   evaluatedAt: string
   /** 잃은 점수가 큰 영역부터 온다. */
   areas?: ReadinessAreaResponse[]
+  /** "나중에 답하기"로 미룬 확인 질문 수(전 영역 합계) */
+  deferredQuestionCount?: number
 }
 
 export interface ReadinessRubricResponse {
@@ -283,30 +328,56 @@ export type ReadinessFixStatusDto = 'NEEDS_INPUT' | 'PROPOSED' | 'APPLIED' | 'DI
 
 export interface FixQuestionDto {
   id: string
+  area?: ReadinessAreaDto
   question: string
   reason?: string | null
+  options?: string[] | null
+  /** 있으면 확인 질문 단계에서 "나중에 답하기"로 미룬 질문이다. */
+  clarificationQuestionId?: string | null
   answer?: string | null
 }
 
-/** before/after는 content.{sectionField}와 같은 형식이라 섹션마다 모양이 다르다. */
-export interface ReadinessFixResponse {
-  fixId: string
+/** 보완안의 영역별 결과. status는 보완을 시작할 때의 평가 상태다. */
+export interface AreaFixDto {
   area: ReadinessAreaDto
   areaLabel: string
+  status?: ReadinessStatusDto | null
+  statusLabel?: string | null
+  sections?: TargetSectionDto[]
+  /** 이 영역의 수정안이 있는가 */
+  proposed: boolean
+  changeSummary?: string | null
+  evidence?: ReadinessEvidenceDto[]
+  questions?: FixQuestionDto[]
+}
+
+/** before/after는 content.{field}와 같은 형식이라 섹션마다 모양이 다르다. 수정안이 없으면 after는 null. */
+export interface SectionChangeDto {
   section: DraftSectionDto
-  sectionLabel: string
-  sectionField?: string
+  field?: string
+  label?: string | null
+  before?: unknown
+  after?: unknown
+  changed: boolean
+}
+
+/** 여러 영역을 한 번에 보완하는 보완안 */
+export interface ReadinessFixResponse {
+  fixId: string
   status: ReadinessFixStatusDto
   baseRevision: number
   stale: boolean
   appliedRevision?: number | null
-  before?: unknown
-  after?: unknown
-  changeSummary?: string | null
-  questions?: FixQuestionDto[]
-  evidence?: ReadinessEvidenceDto[]
+  areas?: AreaFixDto[]
+  sections?: SectionChangeDto[]
+  /** 아직 답하지 않은 질문 수. 0이 아니어도 수정안을 만들 수 있다. */
+  unansweredCount?: number
   createdAt?: string
   updatedAt?: string
+}
+
+export interface CreateFixRequest {
+  areas: ReadinessAreaDto[]
 }
 
 export interface FixAnswerRequest {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -99,7 +99,7 @@ describe('MaskingStep', () => {
     await user.click(confirmButton())
 
     const dialog = screen.getByRole('dialog', { name: '민감정보 검수를 확정할까요?' })
-    expect(dialog).toHaveTextContent('파일 1개, 가려질 항목 2개')
+    expect(dialog).toHaveTextContent('자료 1개, 가려질 항목 2개')
     expect(dialog).toHaveTextContent('되돌릴 수 없어요')
     expect(confirmMasking).not.toHaveBeenCalled()
 
@@ -190,10 +190,62 @@ describe('MaskingStep', () => {
     expect(onProceed).toHaveBeenCalledTimes(1)
   })
 
+  it('reviews a web link like a file and bundles Slack messages with nothing found', async () => {
+    const repository = new MockHandoverRepository()
+    const web: HandoverAttachment = { id: 'web-1', name: '정산 위키', mimeType: '', size: 0, status: 'review', origin: 'web-link', detail: 'https://wiki.example.com' }
+    const slack = (id: string, text: string): HandoverAttachment => ({ id, name: text, mimeType: '', size: 0, status: 'review', origin: 'slack', detail: '#운영팀' })
+    repository.externalSources.push(web, slack('slack-1', '넵 확인했습니다'), slack('slack-2', '내일 오전에 공유할게요'))
+    repository.maskingReviews.set('web-1', { ...makeReview(true), fileId: 'web-1', fileName: '정산 위키' })
+    for (const [id, text] of [['slack-1', '넵 확인했습니다'], ['slack-2', '내일 오전에 공유할게요']]) {
+      repository.maskingReviews.set(id!, { fileId: id!, fileName: text!, status: 'review', confirmed: false, text: text!, summary: summarizeMasking([]), candidates: [] })
+    }
+    const confirmMasking = vi.spyOn(repository, 'confirmMasking')
+    const onProceed = vi.fn()
+    const user = userEvent.setup()
+    function Harness() {
+      const [files, setFiles] = useState<HandoverAttachment[]>([])
+      return <MaskingStep attachments={files} handoverId={HANDOVER_ID} onAttachmentsChange={setFiles} onBack={vi.fn()} onFeedback={vi.fn()} onProceed={onProceed} />
+    }
+    render(<HandoverRepositoryProvider repository={repository}><Harness /></HandoverRepositoryProvider>)
+
+    const group = within(await screen.findByRole('group', { name: '검수할 자료' }))
+    expect(group.getByRole('button', { name: /정산 위키/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByRole('region', { name: '정산 위키 추출 텍스트' })).toHaveTextContent('min***@example.com')
+
+    await user.click(group.getByRole('button', { name: /민감정보를 찾지 못한 자료/ }))
+    const bundle = within(screen.getByRole('region', { name: '민감정보를 찾지 못한 자료' }))
+    expect(bundle.getAllByRole('listitem')).toHaveLength(2)
+    expect(bundle.getByText('내일 오전에 공유할게요', { selector: 'strong' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: '찾은 민감정보 요약' })).toHaveTextContent('Slack 메시지 2개에서')
+
+    // 묶음에는 확인할 것이 없고, 웹 링크의 확인 필요 항목만 남아 있다.
+    expect(confirmButton()).toBeDisabled()
+    await user.click(group.getByRole('button', { name: /정산 위키/ }))
+    await user.click(accountCheckbox())
+    await waitFor(() => expect(confirmButton()).toBeEnabled())
+    await user.click(confirmButton())
+    expect(screen.getByRole('dialog', { name: '민감정보 검수를 확정할까요?' })).toHaveTextContent('자료 3개, 가려질 항목 2개')
+    await user.click(screen.getByRole('button', { name: '확정하고 분석 시작' }))
+
+    await waitFor(() => expect(onProceed).toHaveBeenCalledTimes(1))
+    expect(confirmMasking.mock.calls.map((call) => call[1])).toEqual(['web-1', 'slack-1', 'slack-2'])
+  })
+
+  it('shows the bundle directly when only clean web or Slack sources wait', async () => {
+    const repository = new MockHandoverRepository()
+    repository.externalSources.push({ id: 'slack-1', name: '넵', mimeType: '', size: 0, status: 'review', origin: 'slack', detail: '#운영팀' })
+    repository.maskingReviews.set('slack-1', { fileId: 'slack-1', fileName: '넵', status: 'review', confirmed: false, text: '넵', summary: summarizeMasking([]), candidates: [] })
+    render(<HandoverRepositoryProvider repository={repository}><MaskingStep attachments={[]} handoverId={HANDOVER_ID} onAttachmentsChange={vi.fn()} onBack={vi.fn()} onFeedback={vi.fn()} onProceed={vi.fn()} /></HandoverRepositoryProvider>)
+
+    expect(await screen.findByRole('region', { name: '민감정보를 찾지 못한 자료' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: '검수할 자료' })).not.toBeInTheDocument()
+    await waitFor(() => expect(confirmButton()).toBeEnabled())
+  })
+
   it('waits for files that are still being read', () => {
     setup({ attachments: [file('processing')] })
 
-    expect(screen.getByText('아직 파일을 읽고 있어요')).toBeInTheDocument()
+    expect(screen.getByText('아직 자료를 읽고 있어요')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /AI 분석 시작/ })).toBeDisabled()
   })
 })

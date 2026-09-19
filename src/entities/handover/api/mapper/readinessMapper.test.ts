@@ -6,20 +6,22 @@ import { applySectionValue, readSectionValue, toDocumentSectionValue, toHandover
 
 const fix: ReadinessFixResponse = {
   fixId: 'fix-1',
-  area: 'EXCEPTION',
-  areaLabel: '예외 대응',
-  section: 'RULES_AND_EXCEPTIONS',
-  sectionLabel: '업무 기준과 예외',
-  sectionField: 'rulesAndExceptions',
   status: 'NEEDS_INPUT',
   baseRevision: 3,
   stale: false,
   appliedRevision: null,
-  before: ['쿠폰 할인율이 10%를 넘으면 승인을 받습니다.'],
-  after: null,
-  changeSummary: null,
-  questions: [{ id: 'q-1', question: '환불 오류는 누가 맡나요?', reason: null, answer: null }],
-  evidence: [{ sourceId: 'file-1', fileName: '운영 매뉴얼.pdf', locator: '3쪽' }, { sourceId: null, fileName: '이름만 있는 자료', locator: '' }],
+  areas: [{
+    area: 'EXCEPTION',
+    areaLabel: '예외 대응',
+    status: 'PARTIAL',
+    statusLabel: '일부 부족',
+    sections: [],
+    proposed: false,
+    changeSummary: null,
+    evidence: [{ sourceId: 'file-1', fileName: '운영 매뉴얼.pdf', locator: '3쪽' }, { sourceId: null, fileName: '이름만 있는 자료', locator: '' }],
+    questions: [{ id: 'q-1', question: '환불 오류는 누가 맡나요?', reason: null, answer: '  ' }],
+  }],
+  sections: [{ section: 'RULES_AND_EXCEPTIONS', label: null, before: ['쿠폰 할인율이 10%를 넘으면 승인을 받습니다.'], after: null, changed: false }],
 }
 
 describe('readinessMapper', () => {
@@ -49,13 +51,22 @@ describe('readinessMapper', () => {
     expect(toReadinessFix(fix)).toMatchObject({
       id: 'fix-1',
       status: 'needs-input',
-      before: { section: 'RULES_AND_EXCEPTIONS', value: [{ defaultText: '쿠폰 할인율이 10%를 넘으면 승인을 받습니다.' }] },
-      after: null,
-      changeSummary: '',
-      questions: [{ id: 'q-1', reason: '', answer: null }],
-      evidence: [{ fileId: 'file-1', fileName: '운영 매뉴얼.pdf', locator: '3쪽' }],
+      unansweredCount: 0,
+      areas: [{
+        status: 'partial',
+        sections: [],
+        changeSummary: '',
+        questions: [{ id: 'q-1', area: null, reason: '', options: [], deferred: false, answer: null }],
+        evidence: [{ fileId: 'file-1', fileName: '운영 매뉴얼.pdf', locator: '3쪽', page: null, quote: '' }],
+      }],
+      sections: [{
+        label: '업무 기준과 예외',
+        before: { section: 'RULES_AND_EXCEPTIONS', value: [{ defaultText: '쿠폰 할인율이 10%를 넘으면 승인을 받습니다.' }] },
+        after: null,
+      }],
     })
-    expect(toReadinessFix({ ...fix, status: 'PROPOSED', after: [] }).after).toEqual({ section: 'RULES_AND_EXCEPTIONS', value: [] })
+    expect(toReadinessFix({ ...fix, sections: [{ ...fix.sections![0]!, after: [], changed: true }] }).sections[0]!.after)
+      .toEqual({ section: 'RULES_AND_EXCEPTIONS', value: [] })
   })
 
   it('maps grade and item status to screen values', () => {
@@ -63,7 +74,6 @@ describe('readinessMapper', () => {
       evaluationId: 'evaluation-1',
       rubricVersion: 'v1',
       score: 58,
-      potentialScore: 86,
       grade: 'NEEDS_IMPROVEMENT',
       gradeLabel: '보완 필요',
       keyIssueCount: 1,
@@ -78,7 +88,11 @@ describe('readinessMapper', () => {
     expect(toHandoverReadiness(response)).toMatchObject({
       grade: 'needs-improvement',
       stale: true,
-      areas: [{ status: 'conflict', anchorText: null, resolution: '', criteria: '', evidence: [] }],
+      deferredQuestionCount: 0,
+      areas: [{
+        status: 'conflict', anchorText: null, resolution: '', criteria: '', evidence: [],
+        targetSections: [{ section: 'ACCESS_ACCOUNTS', label: '접근 권한과 계정' }], questions: [], deferredQuestions: [],
+      }],
     })
   })
 
