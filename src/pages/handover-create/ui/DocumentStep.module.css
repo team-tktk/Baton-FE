@@ -1,2 +1,14 @@
-.main { width: min(1040px, calc(100% - 48px)); margin: 0 auto; padding: 44px 0 88px; }
-@media (max-width: 560px) { .main { width: calc(100% - 28px); } }
+.main { width: min(1320px, calc(100% - 48px)); margin: 0 auto; padding: 44px 0 88px; }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 390px; align-items: start; gap: 24px; }
+.document { min-width: 0; }
+.aside { position: sticky; top: 24px; max-height: calc(100vh - 48px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #d8e6f7; border-radius: 22px; background: #fff; padding: 22px 20px; box-shadow: 0 16px 42px rgb(31 50 80 / 7%); }
+
+/* 좁은 화면에서는 한 줄로 쌓고, 점수를 먼저 보도록 패널을 문서 위에 둔다. */
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .aside { position: static; order: -1; max-height: none; overflow: visible; }
+}
+@media (max-width: 560px) {
+  .main { width: calc(100% - 28px); padding-top: 28px; }
+  .aside { border-radius: 18px; padding: 18px 16px; }
+}

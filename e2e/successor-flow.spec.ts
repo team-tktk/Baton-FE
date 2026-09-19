@@ -11,7 +11,8 @@ test('opens a received handover and asks the sourced AI', async ({ page }) => {
   await page.getByRole('button', { name: /전체 문서 보기/ }).click()
   await expect(page.getByRole('heading', { name: '프로모션 운영' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'AI에게 질문' }).click()
+  // AI 패널은 문서 옆에 늘 열려 있어 따로 여는 단계가 없다.
+  await expect(page.getByRole('heading', { name: '문서에 대해 물어보세요' })).toBeVisible()
   await page.getByRole('button', { name: '배송 답변이 늦으면 누구에게 물어봐요?' }).click()
   await expect(page.getByText('문제 상황 대응 방법 · 할 일 목록')).toBeVisible()
 })

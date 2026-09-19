@@ -19,6 +19,12 @@ function readErrorMessage(payload: unknown) {
   return typeof detail === 'string' && detail.trim() ? detail : SAFE_HTTP_ERROR_MESSAGE
 }
 
+function readServerCode(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return null
+  const code = Reflect.get(payload, 'code')
+  return typeof code === 'string' && code ? code : null
+}
+
 async function readJson(response: Response) {
   try {
     return await response.json() as unknown
@@ -56,7 +62,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
 
   const payload = await readJson(response)
   if (!response.ok) {
-    throw new ApiError(readErrorMessage(payload), { code: 'http', status: response.status })
+    throw new ApiError(readErrorMessage(payload), { code: 'http', status: response.status, serverCode: readServerCode(payload) })
   }
 
   return payload as T

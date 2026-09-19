@@ -34,8 +34,12 @@ export function toHandoverStatus(status: HandoverStatusDto): HandoverStatus {
   return STATUS_BY_DTO[status] ?? 'draft'
 }
 
+// 검수 대기(MASKING_REVIEW)를 처리 중으로 두면 업로드 화면 폴링이 끝나지 않는다. 별도 상태로 둔다.
+// INDEXING은 확정 뒤 임베딩하는 짧은 구간이라 처리 중과 같다.
 const ATTACHMENT_STATUS_BY_DTO: Record<FileStatusDto, AttachmentStatus> = {
   EXTRACTING: 'processing',
+  MASKING_REVIEW: 'review',
+  INDEXING: 'processing',
   INDEXED: 'ready',
   FAILED: 'failed',
 }
@@ -51,6 +55,7 @@ export function toHandoverAttachment(file: FileMetadataResponse): HandoverAttach
     mimeType: file.mimeType,
     size: file.size,
     status: toAttachmentStatus(file.status),
+    pendingReviewCount: file.remainingReviewCount ?? 0,
   }
 }
 
@@ -66,7 +71,10 @@ export function toAnalysisJob(job: AnalysisJobResponse): AnalysisJob {
 const QUESTION_STATUS_BY_DTO: Record<ClarificationQuestionResponse['status'], QuestionStatus> = {
   PENDING: 'pending',
   ANSWERED: 'answered',
-  SKIPPED: 'skipped',
+  // 화면의 "건너뛰기"는 나중에 다시 답할 수 있는 DEFERRED와 같다.
+  UNKNOWN: 'skipped',
+  NOT_APPLICABLE: 'skipped',
+  DEFERRED: 'skipped',
 }
 
 export function toInterviewQuestion(question: ClarificationQuestionResponse): InterviewQuestion {

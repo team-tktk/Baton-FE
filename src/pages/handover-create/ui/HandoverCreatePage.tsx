@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import type { AnalysisJob, Handover, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
+import type { AnalysisJob, Handover, HandoverAttachment, HandoverDraft, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, DraftFinalizing, FileUploader, HandoverProgress, InterviewWizard, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
+import { SourceCollector } from '@/features/collect-sources'
 import { ApiError } from '@/shared/api'
 import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
@@ -15,11 +16,26 @@ import { AppHeader } from '@/widgets/app-header'
 import styles from './HandoverCreatePage.module.css'
 import { CompletionStep } from './CompletionStep'
 import { DocumentStep } from './DocumentStep'
+import { MaskingStep } from './MaskingStep'
 
 /** 폴링이 연속으로 이만큼 실패하면 서버 장애로 보고 실패 화면으로 전환한다(약 12초). */
 const ANALYSIS_POLL_FAILURE_LIMIT = 5
 
-interface HandoverCreatePageProps { step: 'setup' | 'upload' | 'analyzing' | 'interview' | 'document' | 'complete' }
+type CreateStep = 'setup' | 'upload' | 'masking' | 'analyzing' | 'interview' | 'document' | 'complete'
+interface HandoverCreatePageProps { step: CreateStep }
+
+/** 스테퍼에 보여 줄 단계 번호. 완료 화면은 스테퍼를 숨긴다. */
+const STEP_NUMBER: Record<Exclude<CreateStep, 'complete'>, number> = {
+  setup: 1,
+  upload: 2,
+  masking: 3,
+  analyzing: 4,
+  interview: 5,
+  document: 6,
+}
+
+/** 홈으로 버튼을 띄우는 단계. 나머지는 앱 헤더를 쓴다. */
+const HOME_BUTTON_STEPS: CreateStep[] = ['setup', 'upload', 'masking', 'document']
 
 export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const navigate = useNavigate()
@@ -33,8 +49,14 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [pending, setPending] = useState(false)
   const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null)
   const [draft, setDraft] = useState<Handover | null>(null)
+  /** 서버 문서 버전. 저장할 때 돌려보내 그사이 바뀐 문서를 덮어쓰지 않게 한다. */
+  const [revision, setRevision] = useState<number | null>(null)
+  const savingRef = useRef<Promise<boolean> | null>(null)
+  /** 저장 중에는 제출을 막는다. 제출이 저장 전 화면 내용으로 나가지 않게 하기 위해서다. */
+  const [saving, setSaving] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisJob | null>(null)
   const [finalizing, setFinalizing] = useState(false)
+  const [externalSources, setExternalSources] = useState({ readyCount: 0, processing: false })
   const params = useParams()
 
   useEffect(() => {
@@ -56,19 +78,29 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     }
   }, [dispatch, draftId, repository, showToast])
 
+  // 검수 단계에서도 최신 파일 상태가 필요하다. 업로드 직후 바로 넘어오면 아직 읽는 중일 수 있다.
+  const tracksFiles = step === 'upload' || step === 'masking'
   useEffect(() => {
-    if (step !== 'upload') return
+    if (!tracksFiles) return
     void refreshFiles()
-  }, [refreshFiles, step])
+  }, [refreshFiles, tracksFiles])
 
   // 업로드 직후에는 서버가 텍스트를 추출하는 중이라, 완료될 때까지만 목록을 다시 읽는다.
   // 목록 자체가 아니라 처리 중 여부만 의존해야 갱신할 때마다 주기가 리셋되지 않는다.
   const hasProcessingFile = state.attachments.some((file) => file.status === 'processing')
   useEffect(() => {
-    if (step !== 'upload' || !hasProcessingFile) return
+    if (!tracksFiles || !hasProcessingFile) return
     const timer = setInterval(() => { void refreshFiles() }, 2000)
     return () => clearInterval(timer)
-  }, [hasProcessingFile, refreshFiles, step])
+  }, [hasProcessingFile, refreshFiles, tracksFiles])
+
+  const replaceAttachments = useCallback((attachments: HandoverAttachment[]) => {
+    dispatch({ type: 'attachments/loaded', attachments })
+  }, [dispatch])
+
+  const updateExternalSources = useCallback((next: { readyCount: number; processing: boolean }) => {
+    setExternalSources(next)
+  }, [])
 
   useEffect(() => {
     if (step !== 'interview' || !draftId) return
@@ -90,7 +122,11 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     if (step !== 'document' || !draftId) return
     let ignore = false
     Promise.all([repository.getHandover(draftId), repository.getDocument(draftId)])
-      .then(([handover, document]) => { if (!ignore) setDraft({ ...handover, document }) })
+      .then(([handover, loaded]) => {
+        if (ignore) return
+        setDraft({ ...handover, document: loaded.document })
+        setRevision(loaded.revision)
+      })
       .catch(() => { if (!ignore) showToast('인수인계 초안을 불러오지 못했어요') })
     return () => { ignore = true }
   }, [draftId, repository, showToast, step])
@@ -128,9 +164,11 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   }
 
   // 서버가 사유를 주면 그대로 보여 준다. 파일이 없을 때와 서버 장애를 구분해야 한다.
+  // 검수를 확정하지 않은 파일이 남아 있으면 업로드가 아니라 검수 단계로 돌려보낸다.
   const failAnalysis = useCallback((reason: unknown) => {
     showToast(reason instanceof ApiError ? reason.message : '분석을 시작하지 못했어요. 잠시 후 다시 시도해 주세요')
-    navigate('/handovers/new/upload')
+    const maskingPending = reason instanceof ApiError && reason.serverCode === 'MASKING_NOT_CONFIRMED'
+    navigate(maskingPending ? '/handovers/new/masking' : '/handovers/new/upload')
   }, [navigate, showToast])
 
   useEffect(() => {
@@ -236,11 +274,70 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     ? mergeDocumentChanges({ ...draft, attachments: state.attachments }, state.documentEdits)
     : null
 
+  // 순번 기반 수정 기록을 반영한 결과가 서버 문서와 다를 때만 저장할 것이 있다.
+  const dirty = Boolean(draft && visibleDocument) && JSON.stringify(visibleDocument?.document) !== JSON.stringify(draft?.document)
+
+  /** 보완 적용처럼 서버가 준 최신 문서로 바꾼다. 순번 기반 수정 기록은 새 문서에 맞지 않으므로 비운다. */
+  const replaceDraft = (next: HandoverDraft) => {
+    setDraft((current) => current ? { ...current, document: next.document } : current)
+    setRevision(next.revision)
+    dispatch({ type: 'document/reset' })
+  }
+
+  const reloadDocument = async () => {
+    if (!draftId) return
+    try {
+      const latest = await repository.getDocument(draftId)
+      setDraft((current) => current ? { ...current, document: latest.document } : current)
+      setRevision(latest.revision)
+      dispatch({ type: 'document/reset' })
+    } catch {
+      showToast('최신 문서를 불러오지 못했어요. 새로고침해 주세요')
+    }
+  }
+
+  /**
+   * 화면에서 고친 내용을 서버에 저장하고 수정 기록을 비운다. 준비도는 서버 문서를 채점하므로 평가 전에 부른다.
+   * 그사이 다른 곳에서 문서가 바뀌었으면 덮어쓰지 않고 최신 문서를 다시 불러온다.
+   */
+  const saveDraft = (): Promise<boolean> => {
+    // 저장이 진행 중이면 같은 결과를 기다린다. 같은 revision으로 두 번 보내면 뒤의 것이 충돌로 거절된다.
+    if (savingRef.current) return savingRef.current
+    if (!draftId || !draft || !visibleDocument) return Promise.resolve(false)
+    if (!dirty) return Promise.resolve(true)
+    const savedDocument = visibleDocument.document
+    const savedEdits = state.documentEdits
+    const request = (async () => {
+      try {
+        const saved = await repository.saveDocument(draftId, savedDocument, revision ?? undefined)
+        setDraft((current) => current ? { ...current, document: savedDocument } : current)
+        setRevision(saved)
+        // 저장하는 사이 새로 고친 칸은 남긴다. 저장한 문서 위에 그대로 다시 얹힌다.
+        dispatch({ type: 'document/saved', edits: savedEdits })
+        return true
+      } catch (caught) {
+        if (caught instanceof ApiError && caught.serverCode === 'AI_DRAFT_REVISION_CONFLICT') {
+          showToast('다른 곳에서 문서가 바뀌어 최신 문서를 다시 불러왔어요. 방금 고친 내용은 다시 입력해 주세요')
+          await reloadDocument()
+        } else {
+          showToast(caught instanceof ApiError ? caught.message : '문서를 저장하지 못했어요. 잠시 후 다시 시도해 주세요')
+        }
+        return false
+      } finally {
+        savingRef.current = null
+        setSaving(false)
+      }
+    })()
+    savingRef.current = request
+    setSaving(true)
+    return request
+  }
+
   const submitDocument = async () => {
     if (!visibleDocument || !state.draftId) return
     setPending(true)
     try {
-      await repository.saveDocument(state.draftId, visibleDocument.document)
+      if (!(await saveDraft())) return
       const completed = await repository.submitHandover(state.draftId)
       setDraft(completed)
       dispatch({ type: 'submission/completed', handover: completed })
@@ -255,8 +352,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
 
   return (
     <>
-      {(step === 'setup' || step === 'upload' || step === 'document') ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
-      {step !== 'analyzing' && step !== 'complete' && <HandoverProgress compact={step === 'setup' || step === 'upload' || step === 'document'} current={step === 'setup' ? 1 : step === 'upload' ? 2 : step === 'interview' ? 3 : 4} />}
+      {HOME_BUTTON_STEPS.includes(step) ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
+      {step !== 'complete' && <HandoverProgress besideHomeButton={HOME_BUTTON_STEPS.includes(step)} current={STEP_NUMBER[step]} />}
+      {step === 'masking' && <MaskingStep attachments={state.attachments} handoverId={draftId} onAttachmentsChange={replaceAttachments} onBack={() => navigate('/handovers/new/upload')} onFeedback={showToast} onProceed={() => navigate('/handovers/new/analyzing')} />}
       {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} job={analysis} onRetry={retryAnalysis} /></main>}
       {step === 'interview' && finalizing && <main className={styles.analysisMain}><DraftFinalizing answered={answeredCount} /></main>}
       {step === 'interview' && !finalizing && questions !== null && questions.length > 0 && (() => {
@@ -276,7 +374,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           onSubmit={(answer) => { void answerQuestion(question.id, currentStep, answer) }}
         />
       })()}
-      {step === 'document' && visibleDocument && <DocumentStep handover={visibleDocument} pending={pending} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
+      {step === 'document' && visibleDocument && <DocumentStep dirty={dirty} handover={visibleDocument} handoverId={draftId} pending={pending || saving} revision={revision} saveDraft={saveDraft} onDraftReplaced={replaceDraft} onReloadDocument={reloadDocument} returningFromComplete={Boolean(state.submittedHandover)} onFeedback={showToast} onFieldChange={(field, value) => dispatch({ type: 'document/changed', field, value })} onSubmit={submitDocument} />}
       {step === 'complete' && state.submittedHandover && <CompletionStep handover={state.submittedHandover} onEdit={() => navigate('/handovers/new/document')} onHome={() => navigate('/')} />}
       {(step === 'setup' || step === 'upload') && (
       <main className={step === 'setup' ? styles.setupMain : styles.uploadMain}>
@@ -292,9 +390,13 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           </section>
         ) : (
           <section>
-            <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 파일 모으기</div><h1>{user?.name ?? '내'}님의 업무 파일을 올려주세요</h1><p>업무에 사용하던 자료를 올리면 AI가 인수인계 초안을 만들어드려요.</p></header>
+            <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 자료 모으기</div><h1>{user?.name ?? '내'}님의 업무 파일을 올려주세요</h1><p>파일뿐 아니라 웹 링크와 Slack 대화도 연결하면 AI가 함께 읽고 인수인계 초안을 만들어드려요.</p></header>
             <FileUploader attachments={state.attachments} uploading={pending} onReject={showToast} onRemove={(attachmentId) => void removeFile(attachmentId)} onSelect={(files) => void uploadFiles(files)} />
-            <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button disabled={state.attachments.length === 0} onClick={() => navigate('/handovers/new/analyzing')}>인수인계 초안 만들기</Button></footer>
+            {draftId && <SourceCollector handoverId={draftId} onChange={updateExternalSources} onFeedback={showToast} />}
+            <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button
+              disabled={(state.attachments.length === 0 && externalSources.readyCount === 0) || hasProcessingFile || externalSources.processing}
+              onClick={() => navigate(state.attachments.length > 0 ? '/handovers/new/masking' : '/handovers/new/analyzing')}
+            >{hasProcessingFile ? '파일을 읽는 중…' : externalSources.processing ? '연동 자료를 읽는 중…' : state.attachments.length > 0 ? '민감정보 확인하기' : 'AI 분석 시작하기'} <Icon name="arrow" /></Button></footer>
           </section>
         )}
       </main>

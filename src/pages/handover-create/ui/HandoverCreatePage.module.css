@@ -1,5 +1,5 @@
 .main { width: min(var(--content-narrow), calc(100% - 40px)); margin: 0 auto; padding: 50px 0 88px; }
-.analysisMain { display: block; width: min(1120px, calc(100% - 80px)); min-height: calc(100vh - 82px); margin: 0 auto; padding: 128px 0 84px; }
+.analysisMain { display: block; width: min(1120px, calc(100% - 80px)); min-height: calc(100vh - 82px); margin: 0 auto; padding: 64px 0 84px; }
 .setupMain { width: min(1120px, calc(100% - 80px)); margin: 0 auto; padding: 34px 0 92px; }
 .uploadMain { width: min(900px, calc(100% - 64px)); margin: 0 auto; padding: 68px 0 84px; }
 .heading { margin-bottom: 28px; }

@@ -1,0 +1,45 @@
+.section { margin: -10px 0 18px; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.6; }
+.lead { margin: 0 0 14px; color: var(--text); font-size: var(--fs-sm); line-height: 1.6; }
+.hint { margin: 14px 0 0; color: var(--muted); font-size: var(--fs-2xs); line-height: 1.6; }
+.error { margin: 12px 0 0; border-radius: 12px; background: #fff6f6; color: #b42318; padding: 10px 12px; font-size: var(--fs-2xs); line-height: 1.55; }
+.actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+.working { display: flex; align-items: flex-start; gap: 14px; border-radius: 16px; background: var(--blue-faint); padding: 22px; }
+.working p { display: flex; flex-direction: column; gap: 6px; margin: 0; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.6; }
+.working strong { color: var(--text); font-size: var(--fs-base); }
+.spinner { flex: none; width: 20px; height: 20px; margin-top: 2px; border: 2px solid #cfe2fb; border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.compare section { min-width: 0; border: 1px solid var(--line); border-radius: 16px; background: #f9fafb; padding: 14px 16px; }
+.compare section.after { border-color: #bcd7fb; background: #fff; }
+.compare h3 { margin: 0 0 10px; color: var(--sub); font-size: var(--fs-2xs); font-weight: 800; }
+.after h3 { color: var(--blue-dark); }
+.lines { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.lines li { display: flex; flex-direction: column; gap: 3px; border-radius: 10px; padding: 8px 10px; background: #fff; font-size: var(--fs-2xs); line-height: 1.55; }
+.after .lines li { background: #f7f9fc; }
+.lines li span { color: var(--text); font-weight: 650; white-space: pre-wrap; }
+.lines li small { color: var(--sub); font-size: var(--fs-2xs); }
+.lines li.added { background: #eaf8f1; box-shadow: inset 3px 0 0 var(--green); }
+.lines li em { align-self: flex-start; border-radius: 6px; background: var(--green-soft); color: var(--green); padding: 2px 6px; font-size: var(--fs-3xs); font-style: normal; font-weight: 800; }
+.blank { margin: 0; color: var(--muted); font-size: var(--fs-2xs); }
+
+.evidence { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.evidence > strong { font-size: var(--fs-3xs); font-weight: 800; }
+.evidence ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.evidence button, .evidence li > span { display: flex; max-width: 100%; align-items: center; gap: 6px; border: 0; border-radius: 9px; background: var(--blue-faint); color: var(--blue-dark); padding: 6px 10px; font-size: var(--fs-2xs); font-weight: 700; }
+.evidence button { cursor: pointer; }
+.evidence svg { flex: none; width: 14px; height: 14px; }
+.evidence span span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.evidence small { color: var(--muted); font-size: var(--fs-3xs); }
+
+.questions { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.questions li { display: flex; flex-direction: column; gap: 6px; }
+.questions label { display: flex; flex-direction: column; gap: 3px; color: var(--text); font-size: var(--fs-sm); font-weight: 750; line-height: 1.5; }
+.questions label span { color: var(--blue-dark); font-size: var(--fs-3xs); font-weight: 800; }
+.questions p { margin: 0; color: var(--muted); font-size: var(--fs-2xs); line-height: 1.5; }
+.questions textarea { min-height: 76px; resize: vertical; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; color: var(--text); font: inherit; font-size: var(--fs-sm); line-height: 1.5; }
+.questions textarea:focus { border-color: var(--blue); outline: 2px solid var(--blue-soft); }
+
+@media (max-width: 760px) { .compare { grid-template-columns: 1fr; } .actions { flex-direction: column-reverse; } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }

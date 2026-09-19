@@ -8,9 +8,11 @@ interface ModalProps extends PropsWithChildren {
   title: string
   onClose: () => void
   returnFocusRef?: RefObject<HTMLElement | null>
+  /** wide는 내용을 나란히 비교하는 넓은 창이다. 화면보다 길면 창 안에서 스크롤한다. */
+  size?: 'default' | 'wide'
 }
 
-export function Modal({ children, onClose, open, returnFocusRef, title }: ModalProps) {
+export function Modal({ children, onClose, open, returnFocusRef, size = 'default', title }: ModalProps) {
   const titleId = useId()
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export function Modal({ children, onClose, open, returnFocusRef, title }: ModalP
 
   return createPortal(
     <div className={styles.backdrop} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section aria-labelledby={titleId} aria-modal="true" className={styles.modal} role="dialog">
+      <section aria-labelledby={titleId} aria-modal="true" className={`${styles.modal} ${size === 'wide' ? styles.wide : ''}`.trim()} role="dialog">
         <h2 id={titleId}>{title}</h2>
         {children}
       </section>
