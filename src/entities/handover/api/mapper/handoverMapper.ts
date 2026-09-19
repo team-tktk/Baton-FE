@@ -71,7 +71,10 @@ export function toAnalysisJob(job: AnalysisJobResponse): AnalysisJob {
 const QUESTION_STATUS_BY_DTO: Record<ClarificationQuestionResponse['status'], QuestionStatus> = {
   PENDING: 'pending',
   ANSWERED: 'answered',
-  SKIPPED: 'skipped',
+  // 화면의 "건너뛰기"는 나중에 다시 답할 수 있는 DEFERRED와 같다.
+  UNKNOWN: 'skipped',
+  NOT_APPLICABLE: 'skipped',
+  DEFERRED: 'skipped',
 }
 
 export function toInterviewQuestion(question: ClarificationQuestionResponse): InterviewQuestion {

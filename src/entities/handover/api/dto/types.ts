@@ -168,13 +168,13 @@ export interface ClarificationQuestionResponse {
   reason?: string
   evidence?: string
   options?: QuestionOptionDto[]
-  status: 'PENDING' | 'ANSWERED' | 'SKIPPED'
+  status: 'PENDING' | 'ANSWERED' | 'UNKNOWN' | 'NOT_APPLICABLE' | 'DEFERRED'
   answer?: string | null
 }
 
 export interface QuestionAnswerRequest {
+  status: 'ANSWERED' | 'UNKNOWN' | 'NOT_APPLICABLE' | 'DEFERRED'
   answer?: string
-  skipped: boolean
 }
 
 export interface TaskItemDto {

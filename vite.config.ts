@@ -4,6 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
+const insecureLocalSession = process.env.VITE_INSECURE_LOCAL_SESSION === 'true'
+
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -18,6 +20,14 @@ export default defineConfig({
       '/api': {
         changeOrigin: true,
         target: process.env.VITE_API_PROXY_TARGET ?? 'https://3-37-128-127.nip.io',
+        // 운영 서버의 Secure 세션 쿠키는 HTTP localhost에 저장되지 않는다.
+        // 서버 설정을 바꾸지 않고 로컬에서 운영 백엔드를 점검할 때만 명시적으로 켠다.
+        configure: insecureLocalSession
+          ? (proxy) => proxy.on('proxyRes', (proxyResponse) => {
+            const cookies = proxyResponse.headers['set-cookie']
+            if (cookies) proxyResponse.headers['set-cookie'] = cookies.map((cookie) => cookie.replace(/;\s*Secure/gi, ''))
+          })
+          : undefined,
       },
     },
   },
