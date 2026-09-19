@@ -9,12 +9,14 @@ import { SentHandoverPage, SentHandoverDetailPage } from '@/pages/handover-sent'
 import { NotFoundPage } from '@/pages/not-found'
 import { ReviewDetailPage } from '@/pages/review-detail'
 import { ReviewInboxPage } from '@/pages/review-inbox'
+import { SlackOAuthCallbackPage } from '@/pages/slack-oauth-callback'
 
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <HomePage />,
   },
+  { path: '/integrations/slack/callback', element: <SlackOAuthCallbackPage /> },
   { path: '/handovers/new/setup', element: <RequireAuth><HandoverCreatePage step="setup" /></RequireAuth> },
   { path: '/handovers/new/upload', element: <RequireAuth><HandoverCreatePage step="upload" /></RequireAuth> },
   { path: '/handovers/new/masking', element: <RequireAuth><HandoverCreatePage step="masking" /></RequireAuth> },

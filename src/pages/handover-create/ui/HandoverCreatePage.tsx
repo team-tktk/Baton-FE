@@ -5,6 +5,7 @@ import type { AnalysisJob, Handover, HandoverAttachment, HandoverDraft, Handover
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, DraftFinalizing, FileUploader, HandoverProgress, InterviewWizard, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
+import { SourceCollector } from '@/features/collect-sources'
 import { ApiError } from '@/shared/api'
 import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
@@ -55,6 +56,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [saving, setSaving] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisJob | null>(null)
   const [finalizing, setFinalizing] = useState(false)
+  const [externalSources, setExternalSources] = useState({ readyCount: 0, processing: false })
   const params = useParams()
 
   useEffect(() => {
@@ -95,6 +97,10 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const replaceAttachments = useCallback((attachments: HandoverAttachment[]) => {
     dispatch({ type: 'attachments/loaded', attachments })
   }, [dispatch])
+
+  const updateExternalSources = useCallback((next: { readyCount: number; processing: boolean }) => {
+    setExternalSources(next)
+  }, [])
 
   useEffect(() => {
     if (step !== 'interview' || !draftId) return
@@ -384,9 +390,13 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           </section>
         ) : (
           <section>
-            <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 파일 모으기</div><h1>{user?.name ?? '내'}님의 업무 파일을 올려주세요</h1><p>업무에 사용하던 자료를 올리면 AI가 인수인계 초안을 만들어드려요.</p></header>
+            <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 자료 모으기</div><h1>{user?.name ?? '내'}님의 업무 파일을 올려주세요</h1><p>파일뿐 아니라 웹 링크와 Slack 대화도 연결하면 AI가 함께 읽고 인수인계 초안을 만들어드려요.</p></header>
             <FileUploader attachments={state.attachments} uploading={pending} onReject={showToast} onRemove={(attachmentId) => void removeFile(attachmentId)} onSelect={(files) => void uploadFiles(files)} />
-            <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button disabled={state.attachments.length === 0 || hasProcessingFile} onClick={() => navigate('/handovers/new/masking')}>{hasProcessingFile ? '파일을 읽는 중…' : '민감정보 확인하기'} <Icon name="arrow" /></Button></footer>
+            {draftId && <SourceCollector handoverId={draftId} onChange={updateExternalSources} onFeedback={showToast} />}
+            <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button
+              disabled={(state.attachments.length === 0 && externalSources.readyCount === 0) || hasProcessingFile || externalSources.processing}
+              onClick={() => navigate(state.attachments.length > 0 ? '/handovers/new/masking' : '/handovers/new/analyzing')}
+            >{hasProcessingFile ? '파일을 읽는 중…' : externalSources.processing ? '연동 자료를 읽는 중…' : state.attachments.length > 0 ? '민감정보 확인하기' : 'AI 분석 시작하기'} <Icon name="arrow" /></Button></footer>
           </section>
         )}
       </main>
