@@ -1,5 +1,5 @@
 import type { AnalysisJob, AttachmentStatus, HandoverAttachment, HandoverParticipant, HandoverStatus, InterviewQuestion, QuestionStatus } from '../../model/types'
-import type { AnalysisJobResponse, ClarificationQuestionResponse, FileMetadataResponse, FileStatusDto, HandoverStatusDto, MemberResponse, ParticipantDto } from '../dto/types'
+import type { AnalysisJobResponse, ClarificationQuestionResponse, FileMetadataResponse, FileStatusDto, HandoverStatusDto, MemberResponse, ParticipantDto, SourceEvidenceDto } from '../dto/types'
 
 const STATUS_BY_DTO: Record<HandoverStatusDto, HandoverStatus> = {
   DRAFT: 'draft',
@@ -46,6 +46,20 @@ const ATTACHMENT_STATUS_BY_DTO: Record<FileStatusDto, AttachmentStatus> = {
 
 export function toAttachmentStatus(status: FileStatusDto): AttachmentStatus {
   return ATTACHMENT_STATUS_BY_DTO[status] ?? 'processing'
+}
+
+/** 웹 링크·Slack 메시지를 파일과 같은 모양으로 바꾼다. 검수 화면이 파일과 함께 다룰 수 있게 하기 위해서다. */
+export function toExternalAttachment(source: SourceEvidenceDto): HandoverAttachment {
+  const slack = source.type === 'SLACK_MESSAGE'
+  return {
+    id: source.sourceId,
+    name: source.title?.trim() || (slack ? 'Slack 메시지' : '웹 링크'),
+    mimeType: '',
+    size: 0,
+    status: toAttachmentStatus(source.status),
+    origin: slack ? 'slack' : 'web-link',
+    detail: (slack ? source.conversationName : source.accessPath)?.trim() || '',
+  }
 }
 
 export function toHandoverAttachment(file: FileMetadataResponse): HandoverAttachment {

@@ -34,6 +34,8 @@ export interface HandoverRepository {
   getHandover(id: HandoverId): Promise<Handover>
   createDraft(input: CreateHandoverInput): Promise<Handover>
   listFiles(id: HandoverId): Promise<HandoverAttachment[]>
+  /** 켜 둔 웹 링크·Slack 메시지. 마스킹 검수가 켜진 서버에서는 파일처럼 검수 대기로 멈춘다. */
+  listExternalSources(id: HandoverId): Promise<HandoverAttachment[]>
   uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment>
   deleteFile(id: HandoverId, fileId: string): Promise<void>
   downloadFile(id: HandoverId, fileId: string): Promise<HandoverFileDownload>

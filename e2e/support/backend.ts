@@ -66,7 +66,9 @@ export const test = base.extend<{ stubbedBackend: void }>({
     // 새로 올린 파일은 마스킹 검수 대기로 멈춘다. 이메일은 자동으로 가리고, 계좌번호는 사람이 확인해야 한다.
     const MASKING_TEXT = '담당자 이메일: min@example.com\n지급 계좌: 110-123-456789'
     type StubCandidate = { id: string; type: string; typeLabel: string; origin: string; startOffset: number; endOffset: number; confidencePercent: number; applied: boolean; needsReview: boolean; pendingReview: boolean; preview: string }
-    const maskingReviews = new Map<string, { confirmed: boolean; candidates: StubCandidate[] }>()
+    const maskingReviews = new Map<string, { confirmed: boolean; candidates: StubCandidate[]; text?: string }>()
+    // 웹 링크·Slack 자료. 마스킹이 켜진 서버처럼 추가하면 검수 대기로 멈춘다.
+    const externals: Array<{ id: string; type: 'WEB_LINK' | 'SLACK_MESSAGE'; fileName: string; url: string; status: string; remainingReviewCount?: number }> = []
     const newCandidates = (): StubCandidate[] => [
       { id: 'candidate-email', type: 'EMAIL', typeLabel: '이메일', origin: 'DETECTED', startOffset: MASKING_TEXT.indexOf('min@'), endOffset: MASKING_TEXT.indexOf('min@') + 'min@example.com'.length, confidencePercent: 98, applied: true, needsReview: false, pendingReview: false, preview: 'min***@example.com' },
       { id: 'candidate-account', type: 'ACCOUNT', typeLabel: '계좌번호', origin: 'DETECTED', startOffset: MASKING_TEXT.indexOf('110-'), endOffset: MASKING_TEXT.length, confidencePercent: 78, applied: false, needsReview: true, pendingReview: true, preview: '110-***-***789' },
@@ -233,10 +235,24 @@ export const test = base.extend<{ stubbedBackend: void }>({
           return json({ sourceDocumentId: id, fileName, status: 'MASKING_REVIEW' }, 201)
         }
       }
-      // 마스킹 검수. 검수 기록이 없는 파일(처음부터 있던 파일)은 빈 결과를 준다.
+      if (method === 'POST' && pathname.endsWith('/sources/web-links')) {
+        const body = JSON.parse(route.request().postData() ?? '{}') as { url?: string; title?: string; description?: string }
+        const id = `web-${externals.length + 1}`
+        externals.push({ id, type: 'WEB_LINK', fileName: body.title || body.url || '웹 링크', url: body.url ?? '', status: 'MASKING_REVIEW' })
+        // 찾은 민감정보가 없는 자료로 둔다(확인 단계에서 묶여 보여야 한다).
+        maskingReviews.set(id, { confirmed: false, candidates: [], text: body.description || '링크 본문' })
+        return json({ sourceId: id, type: 'WEB_LINK', title: externals.at(-1)!.fileName, status: 'MASKING_REVIEW', enabled: true }, 201)
+      }
+      if (method === 'GET' && pathname.endsWith('/sources')) {
+        return json(externals.map((item) => ({
+          sourceId: item.id, type: item.type, title: item.fileName, locator: null, updatedAt: '2026-09-20T00:00:00Z', accessPath: item.url,
+          description: null, conversationName: null, occurredAt: null, enabled: true, status: item.status,
+        })))
+      }
+      // 마스킹 검수. 검수 기록이 없는 파일(처음부터 있던 파일)은 빈 결과를 준다. 외부 자료도 같은 경로를 쓴다.
       const masking = /\/files\/([^/]+)\/masking(\/.*)?$/.exec(pathname)
       if (masking) {
-        const file = files.find((item) => item.id === masking[1])
+        const file = files.find((item) => item.id === masking[1]) ?? externals.find((item) => item.id === masking[1])
         if (!file) return json({ title: '파일을 찾을 수 없습니다', status: 404, detail: '파일을 찾을 수 없습니다', code: 'AI_SOURCE_DOCUMENT_NOT_FOUND' }, 404)
         const record = maskingReviews.get(file.id)
         const inReview = file.status === 'MASKING_REVIEW' && record && !record.confirmed
@@ -245,7 +261,7 @@ export const test = base.extend<{ stubbedBackend: void }>({
           fileName: file.fileName,
           status: file.status,
           confirmed: record?.confirmed ?? false,
-          text: inReview ? MASKING_TEXT : null,
+          text: inReview ? record?.text ?? MASKING_TEXT : null,
           summary: summarize(record?.candidates ?? []),
           candidates: record?.candidates ?? [],
         })
@@ -291,7 +307,7 @@ export const test = base.extend<{ stubbedBackend: void }>({
         return json({ status: 400, detail: '지원하지 않는 요청', code: 'BAD_REQUEST' }, 400)
       }
       // 업로드 단계의 외부 자료 수집(#60)이 처음에 읽는 목록. 연동한 자료가 없는 상태로 둔다.
-      if (method === 'GET' && (pathname.endsWith('/sources') || pathname.endsWith('/integrations/slack/connections') || pathname.endsWith('/integrations/slack/subscriptions'))) {
+      if (method === 'GET' && (pathname.endsWith('/integrations/slack/connections') || pathname.endsWith('/integrations/slack/subscriptions'))) {
         return json([])
       }
       // 준비도. 평가 전 조회는 404, 보완 적용은 baseRevision이 맞아야 한다.
@@ -490,7 +506,7 @@ export const test = base.extend<{ stubbedBackend: void }>({
       }
       if (pathname.endsWith('/analysis')) {
         if (method === 'POST') {
-          if (files.some((file) => file.status === 'MASKING_REVIEW')) {
+          if ([...files, ...externals].some((file) => file.status === 'MASKING_REVIEW')) {
             return json({ status: 409, detail: '마스킹 검수를 확정하지 않은 파일이 있습니다', code: 'MASKING_NOT_CONFIRMED' }, 409)
           }
           return json({ jobId: 'job-1', status: 'GENERATING_DRAFT', progress: 80, currentStep: '초안을 만드는 중', error: null, updatedAt: '2026-08-25T00:00:00Z' }, 202)
