@@ -64,12 +64,12 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
   }, [revision])
 
   const applied = (result: ReadinessFixApplied) => {
-    const previousScore = readiness.readiness?.score ?? null
-    appliedSection.current = result.fix.section
+    const previous = readiness.readiness
+    appliedSection.current = result.fix.sections.find((change) => change.changed)?.section ?? null
     onDraftReplaced(result.draft)
     if (result.readiness) readiness.replaceReadiness(result.readiness)
     else void readiness.reevaluate()
-    editorProps.onFeedback(appliedMessage(result, previousScore))
+    editorProps.onFeedback(appliedMessage(result, previous))
   }
   const fix = useReadinessFix({
     handoverId,
@@ -77,9 +77,9 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
     onApplied: applied,
     onConflict: () => { void onReloadDocument().then(() => readiness.refresh()) },
   })
-  const startFix = (area: ReadinessArea) => {
-    const target = readiness.readiness?.areas.find((item) => item.area === area)
-    if (target && !fixBlocked) void fix.start(target)
+  const startFix = (areas: ReadinessArea[]) => {
+    const targets = readiness.readiness?.areas.filter((item) => areas.includes(item.area) && item.status !== 'sufficient') ?? []
+    if (targets.length > 0 && !fixBlocked) void fix.start(targets)
   }
 
   const submit = () => {
@@ -103,7 +103,7 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
   return <main className={styles.main}>
     <div className={styles.layout}>
       <div className={styles.document}>
-        <HandoverDraftEditor key={revision ?? 'draft'} {...editorProps} fillBlocked={fixBlocked} handover={handover} issues={issues} onFillSection={startFix} onSubmit={submit} />
+        <HandoverDraftEditor key={revision ?? 'draft'} {...editorProps} fillBlocked={fixBlocked} handover={handover} issues={issues} onFillSection={(area) => startFix([area])} onSubmit={submit} />
       </div>
       <aside className={styles.aside}>
         <ReadinessPanel
@@ -113,7 +113,7 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
           phase={readiness.phase}
           fixBlocked={fixBlocked}
           readiness={readiness.readiness}
-          onFix={(area) => startFix(area.area)}
+          onFix={(areas) => startFix(areas.map((area) => area.area))}
           onLocate={(section) => { locateSection(section) }}
           onOpenEvidence={openEvidence}
           onReevaluate={() => { void readiness.reevaluate() }}
@@ -122,7 +122,7 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
     </div>
     <ReadinessFixDialog
       session={fix.session}
-      onAnswer={(answers) => { void fix.answer(answers) }}
+      onGenerate={(answers) => { void fix.generate(answers) }}
       onApply={() => { void fix.apply() }}
       onClose={fix.close}
       onOpenEvidence={openEvidence}

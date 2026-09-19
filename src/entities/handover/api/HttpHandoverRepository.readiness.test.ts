@@ -27,7 +27,6 @@ const readiness = {
   evaluationId: 'evaluation-1',
   rubricVersion: 'v1',
   score: 58,
-  potentialScore: 86,
   grade: 'NEEDS_IMPROVEMENT',
   gradeLabel: '보완 필요',
   keyIssueCount: 1,
@@ -38,26 +37,31 @@ const readiness = {
     area: 'EXCEPTION', label: '예외 대응', criteria: '예외 기준이 있나요?', weight: 15, status: 'MISSING', statusLabel: '누락', percent: 0,
     keyIssue: true, section: 'RULES_AND_EXCEPTIONS', sectionLabel: '업무 기준과 예외', anchorText: null,
     summary: '환불 오류 담당자가 없어요', resolution: '담당자를 적어 주세요',
-    evidence: [{ sourceId: 'file-1', fileName: '운영 매뉴얼.pdf', locator: '3쪽' }],
+    evidence: [{ sourceId: 'file-1', fileName: '운영 매뉴얼.pdf', locator: '3쪽', page: 3, quote: '환불 오류는 담당자에게 넘긴다' }],
+    targetSections: [{ section: 'RULES_AND_EXCEPTIONS', field: 'rulesAndExceptions', label: '업무 기준과 예외' }, { section: 'CONFIRMED_CRITERIA', field: 'confirmedCriteria', label: '확인된 업무 기준' }],
+    questions: [{ question: '환불 오류는 누가 맡나요?', reason: '자료에 담당자가 없어요', options: null }],
+    deferredQuestions: [{ id: 'cq-1', type: 'INTERVIEW', questionText: '환불 기한은 며칠인가요?', reason: null, area: 'EXCEPTION', targetSections: [] }],
   }],
+  deferredQuestionCount: 1,
 }
 
 const fix = {
   fixId: 'fix-1',
-  area: 'EXCEPTION',
-  areaLabel: '예외 대응',
-  section: 'PURPOSE',
-  sectionLabel: '업무 목적',
-  sectionField: 'purpose',
   status: 'PROPOSED',
   baseRevision: 3,
   stale: false,
   appliedRevision: null,
-  before: '운영이 멈추지 않게 합니다.',
-  after: '운영과 환불 예외가 멈추지 않게 합니다.',
-  changeSummary: '환불 예외를 보탰어요',
-  questions: [],
-  evidence: [],
+  areas: [{
+    area: 'EXCEPTION', areaLabel: '예외 대응', status: 'CONFLICT', statusLabel: '충돌',
+    sections: [{ section: 'PURPOSE', field: 'purpose', label: '업무 개요' }], proposed: true, changeSummary: 'RULES_AND_EXCEPTIONS에 환불 예외를 보탰어요',
+    evidence: [{ sourceId: 'file-1', fileName: '운영 매뉴얼.pdf', locator: '3쪽' }],
+    questions: [{ id: 'q-1', area: 'EXCEPTION', question: '어느 쪽이 맞나요?', reason: null, options: ['7일', '7일', '14일'], clarificationQuestionId: 'cq-1', answer: '7일' }],
+  }],
+  sections: [
+    { section: 'PURPOSE', field: 'purpose', label: '업무 개요', before: '운영이 멈추지 않게 합니다.', after: '운영과 환불 예외가 멈추지 않게 합니다.', changed: true },
+    { section: 'UNKNOWN_SECTION', field: 'x', label: 'x', before: null, after: null, changed: false },
+  ],
+  unansweredCount: 0,
 }
 
 const jsonResponse = (body: unknown, status = 200) =>
@@ -114,7 +118,15 @@ describe('HttpHandoverRepository readiness', () => {
     await expect(repository.getReadiness('handover-1')).resolves.toMatchObject({
       score: 58,
       grade: 'needs-improvement',
-      areas: [{ area: 'EXCEPTION', status: 'missing', evidence: [{ fileId: 'file-1', locator: '3쪽' }] }],
+      deferredQuestionCount: 1,
+      areas: [{
+        area: 'EXCEPTION',
+        status: 'missing',
+        evidence: [{ fileId: 'file-1', locator: '3쪽', page: 3, quote: '환불 오류는 담당자에게 넘긴다' }],
+        targetSections: [{ section: 'RULES_AND_EXCEPTIONS', label: '업무 기준과 예외' }, { section: 'CONFIRMED_CRITERIA', label: '확인된 업무 기준' }],
+        questions: [{ question: '환불 오류는 누가 맡나요?', options: [] }],
+        deferredQuestions: [{ id: 'cq-1', question: '환불 기한은 며칠인가요?', reason: '' }],
+      }],
     })
     expect(loaded.mock.calls[0]![0]).toBe(BASE)
   })
@@ -140,16 +152,30 @@ describe('HttpHandoverRepository readiness', () => {
     expect(rubric.mock.calls[0]![0]).toBe(`${BASE}/rubric`)
   })
 
-  it('creates, reads, answers and discards a fix', async () => {
-    const created = stubFetch(jsonResponse(fix, 201))
-    await expect(repository.createReadinessFix('handover-1', 'EXCEPTION')).resolves.toMatchObject({
+  it('starts a fix for several areas, saves answers, generates once and discards', async () => {
+    const started = stubFetch(jsonResponse({ ...fix, status: 'NEEDS_INPUT', unansweredCount: 1 }, 201))
+    await expect(repository.startReadinessFix('handover-1', ['EXCEPTION', 'ACCESS'])).resolves.toMatchObject({
       id: 'fix-1',
-      status: 'proposed',
-      before: { section: 'PURPOSE', value: '운영이 멈추지 않게 합니다.' },
-      after: { section: 'PURPOSE', value: '운영과 환불 예외가 멈추지 않게 합니다.' },
+      status: 'needs-input',
+      unansweredCount: 1,
+      areas: [{
+        area: 'EXCEPTION',
+        status: 'conflict',
+        proposed: true,
+        changeSummary: '‘업무 기준과 예외’에 환불 예외를 보탰어요',
+        sections: [{ section: 'PURPOSE', label: '업무 개요' }],
+        questions: [{ id: 'q-1', area: 'EXCEPTION', options: ['7일', '14일'], deferred: true, answer: '7일' }],
+      }],
+      sections: [{
+        section: 'PURPOSE',
+        changed: true,
+        before: { section: 'PURPOSE', value: '운영이 멈추지 않게 합니다.' },
+        after: { section: 'PURPOSE', value: '운영과 환불 예외가 멈추지 않게 합니다.' },
+      }],
     })
-    expect(created.mock.calls[0]![0]).toBe(`${BASE}/items/EXCEPTION/fixes`)
-    expect(created.mock.calls[0]![1]?.method).toBe('POST')
+    expect(started.mock.calls[0]![0]).toBe(`${BASE}/fixes`)
+    expect(started.mock.calls[0]![1]?.method).toBe('POST')
+    expect(bodyOf(started)).toEqual({ areas: ['EXCEPTION', 'ACCESS'] })
 
     const read = stubFetch(jsonResponse({ ...fix, stale: true }))
     await expect(repository.getReadinessFix('handover-1', 'fix-1')).resolves.toMatchObject({ stale: true })
@@ -161,12 +187,17 @@ describe('HttpHandoverRepository readiness', () => {
     expect(answered.mock.calls[0]![1]?.method).toBe('PUT')
     expect(bodyOf(answered)).toEqual({ answers: [{ questionId: 'q-1', answer: '고객지원팀이 맡아요' }] })
 
+    const generated = stubFetch(jsonResponse({ ...fix, sections: [{ ...fix.sections[0], after: null, changed: false }] }))
+    await expect(repository.generateReadinessFix('handover-1', 'fix-1')).resolves.toMatchObject({ sections: [{ after: null, changed: false }] })
+    expect(generated.mock.calls[0]![0]).toBe(`${BASE}/fixes/fix-1/generate`)
+    expect(generated.mock.calls[0]![1]?.method).toBe('POST')
+
     const discarded = stubFetch(jsonResponse({ ...fix, status: 'DISCARDED' }))
     await expect(repository.discardReadinessFix('handover-1', 'fix-1')).resolves.toMatchObject({ status: 'discarded' })
     expect(discarded.mock.calls[0]![0]).toBe(`${BASE}/fixes/fix-1/discard`)
 
     stubFetch(problem(409, 'READINESS_STALE'))
-    await expect(repository.createReadinessFix('handover-1', 'EXCEPTION')).rejects.toMatchObject({ serverCode: 'READINESS_STALE' })
+    await expect(repository.startReadinessFix('handover-1', ['EXCEPTION'])).rejects.toMatchObject({ serverCode: 'READINESS_STALE' })
   })
 
   it('applies a fix with the base revision and returns the new document and score', async () => {

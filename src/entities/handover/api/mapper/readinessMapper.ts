@@ -7,12 +7,18 @@ import type {
   ReadinessAreaResult,
   ReadinessEvidence,
   ReadinessFix,
+  ReadinessFixArea,
+  ReadinessFixQuestion,
   ReadinessFixStatus,
   ReadinessGrade,
   ReadinessItemStatus,
   ReadinessRubric,
+  ReadinessSectionChange,
+  ReadinessTargetSection,
 } from '../../model/types'
 import type {
+  AreaFixDto,
+  FixQuestionDto,
   HandoverDraftContent,
   ReadinessAreaResponse,
   ReadinessEvidenceDto,
@@ -22,6 +28,8 @@ import type {
   ReadinessResponse,
   ReadinessRubricResponse,
   ReadinessStatusDto,
+  SectionChangeDto,
+  TargetSectionDto,
 } from '../dto/types'
 import { toDraftContent, toHandoverDocument } from './documentMapper'
 
@@ -155,9 +163,28 @@ export function toReadableText(text: string | null | undefined) {
 function toEvidence(items: ReadinessEvidenceDto[] | undefined): ReadinessEvidence[] {
   // 파일 id가 없으면 열 수 없으므로 뺀다(이름이 매칭되지 않은 근거).
   return (items ?? []).flatMap((item) => item.sourceId
-    ? [{ fileId: item.sourceId, fileName: item.fileName?.trim() || '첨부 파일', locator: item.locator?.trim() || '' }]
+    ? [{
+        fileId: item.sourceId,
+        fileName: item.fileName?.trim() || '첨부 파일',
+        locator: item.locator?.trim() || '',
+        page: typeof item.page === 'number' ? item.page : null,
+        quote: item.quote?.trim() || '',
+      }]
     : [])
 }
+
+/** 섹션 화면 이름. 서버 라벨이 비어 있으면 알고 있는 이름을 쓴다. */
+export const sectionLabelOf = (section: DocumentSection, label?: string | null) => label?.trim() || SECTION_LABELS[section] || section
+
+function toTargetSections(sections: TargetSectionDto[] | undefined, fallback?: DocumentSection): ReadinessTargetSection[] {
+  const mapped = (sections ?? [])
+    .filter((item) => item.section in SECTION_LABELS)
+    .map((item) => ({ section: item.section, label: sectionLabelOf(item.section, item.label) }))
+  return mapped.length > 0 || !fallback ? mapped : [{ section: fallback, label: sectionLabelOf(fallback) }]
+}
+
+const toOptions = (options: string[] | null | undefined) =>
+  [...new Set((options ?? []).map((option) => toReadableText(option)).filter(Boolean))]
 
 function toAreaResult(area: ReadinessAreaResponse): ReadinessAreaResult {
   return {
@@ -171,10 +198,21 @@ function toAreaResult(area: ReadinessAreaResponse): ReadinessAreaResult {
     keyIssue: area.keyIssue,
     section: area.section,
     sectionLabel: area.sectionLabel,
+    targetSections: toTargetSections(area.targetSections, area.section),
     anchorText: area.anchorText?.trim() || null,
     summary: toReadableText(area.summary),
     resolution: toReadableText(area.resolution),
     evidence: toEvidence(area.evidence),
+    questions: (area.questions ?? []).filter((item) => item.question?.trim()).map((item) => ({
+      question: toReadableText(item.question),
+      reason: toReadableText(item.reason),
+      options: toOptions(item.options),
+    })),
+    deferredQuestions: (area.deferredQuestions ?? []).filter((item) => item.questionText?.trim()).map((item) => ({
+      id: item.id,
+      question: toReadableText(item.questionText),
+      reason: toReadableText(item.reason),
+    })),
   }
 }
 
@@ -183,7 +221,6 @@ export function toHandoverReadiness(readiness: ReadinessResponse): HandoverReadi
     evaluationId: readiness.evaluationId,
     rubricVersion: readiness.rubricVersion,
     score: readiness.score,
-    potentialScore: readiness.potentialScore,
     grade: GRADES[readiness.grade] ?? 'not-ready',
     gradeLabel: readiness.gradeLabel,
     keyIssueCount: readiness.keyIssueCount,
@@ -191,6 +228,7 @@ export function toHandoverReadiness(readiness: ReadinessResponse): HandoverReadi
     draftRevision: readiness.draftRevision,
     evaluatedAt: readiness.evaluatedAt,
     areas: (readiness.areas ?? []).map(toAreaResult),
+    deferredQuestionCount: readiness.deferredQuestionCount ?? 0,
   }
 }
 
@@ -217,27 +255,54 @@ export function toReadinessRubric(rubric: ReadinessRubricResponse): ReadinessRub
   }
 }
 
+function toFixQuestion(question: FixQuestionDto): ReadinessFixQuestion {
+  return {
+    id: question.id,
+    area: question.area ?? null,
+    question: toReadableText(question.question),
+    reason: toReadableText(question.reason),
+    options: toOptions(question.options),
+    deferred: Boolean(question.clarificationQuestionId),
+    answer: question.answer?.trim() || null,
+  }
+}
+
+function toFixArea(area: AreaFixDto): ReadinessFixArea {
+  const status = area.status ? ITEM_STATUSES[area.status] ?? 'missing' : 'missing'
+  return {
+    area: area.area,
+    label: area.areaLabel,
+    status,
+    statusLabel: area.statusLabel?.trim() || '',
+    sections: toTargetSections(area.sections),
+    proposed: area.proposed,
+    changeSummary: toReadableText(area.changeSummary),
+    evidence: toEvidence(area.evidence),
+    questions: (area.questions ?? []).map(toFixQuestion),
+  }
+}
+
+function toSectionChange(change: SectionChangeDto): ReadinessSectionChange {
+  const hasProposal = change.after !== undefined && change.after !== null
+  return {
+    section: change.section,
+    label: sectionLabelOf(change.section, change.label),
+    before: toDocumentSectionValue(change.section, change.before),
+    after: hasProposal ? toDocumentSectionValue(change.section, change.after) : null,
+    changed: change.changed,
+  }
+}
+
 export function toReadinessFix(fix: ReadinessFixResponse): ReadinessFix {
-  const hasProposal = fix.after !== undefined && fix.after !== null
   return {
     id: fix.fixId,
-    area: fix.area,
-    areaLabel: fix.areaLabel,
-    section: fix.section,
-    sectionLabel: fix.sectionLabel,
     status: FIX_STATUSES[fix.status] ?? 'discarded',
     baseRevision: fix.baseRevision,
     stale: fix.stale,
     appliedRevision: fix.appliedRevision ?? null,
-    before: toDocumentSectionValue(fix.section, fix.before),
-    after: hasProposal ? toDocumentSectionValue(fix.section, fix.after) : null,
-    changeSummary: toReadableText(fix.changeSummary),
-    questions: (fix.questions ?? []).map((question) => ({
-      id: question.id,
-      question: toReadableText(question.question),
-      reason: toReadableText(question.reason),
-      answer: question.answer ?? null,
-    })),
-    evidence: toEvidence(fix.evidence),
+    areas: (fix.areas ?? []).map(toFixArea),
+    // 모르는 섹션이 섞여 오면 보여 줄 수 없으므로 뺀다.
+    sections: (fix.sections ?? []).filter((change) => change.section in SECTION_LABELS).map(toSectionChange),
+    unansweredCount: fix.unansweredCount ?? 0,
   }
 }
