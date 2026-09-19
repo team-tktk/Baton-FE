@@ -43,6 +43,7 @@ import type {
   ReadinessFixResponse,
   ReadinessResponse,
   ReadinessRubricResponse,
+  SourceEvidenceDto,
 } from './dto/types'
 import type { AnalysisJobResponse, ClarificationQuestionResponse, CreateHandoverRequest, FileMetadataResponse, FileUploadResponse, HandoverResponse, HandoverDraftResponse, ChecklistItemInput, CommentRequest, CommentResponse, HandoverListResponse, MemberPageResponse, QuestionAnswerRequest, ReviewChecklistRequest, ReviewDetailResponse, UpdateDraftRequest } from './dto/types'
 import type { HandoverRepository } from './HandoverRepository'
@@ -51,7 +52,7 @@ import { toChatExchange, toHandoverAnswer } from './mapper/chatMapper'
 import { toManualCandidateRequest, toMaskingCandidate, toMaskingReview } from './mapper/maskingMapper'
 import { toHandoverReadiness, toReadinessFix, toReadinessRubric } from './mapper/readinessMapper'
 import { formatListDate, toReceivedSummary, toReviewComment, toReviewSummary, toSentSummary } from './mapper/receivedMapper'
-import { toAnalysisJob, toHandoverStatus, toInterviewQuestion, toAttachmentStatus, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
+import { toAnalysisJob, toHandoverStatus, toInterviewQuestion, toAttachmentStatus, toExternalAttachment, toHandoverAttachment, toHandoverParticipant, toParticipantFromDto } from './mapper/handoverMapper'
 import { MockHandoverRepository } from './mock/MockHandoverRepository'
 
 function formatUpdatedAt(value: string | undefined) {
@@ -150,6 +151,12 @@ export class HttpHandoverRepository implements HandoverRepository {
   async listFiles(id: HandoverId): Promise<HandoverAttachment[]> {
     const files = await apiRequest<FileMetadataResponse[]>(`/api/v1/handovers/${id}/files`)
     return files.map(toHandoverAttachment)
+  }
+
+  async listExternalSources(id: HandoverId): Promise<HandoverAttachment[]> {
+    const sources = await apiRequest<SourceEvidenceDto[]>(`/api/v1/handovers/${id}/sources`)
+    // 업로드 파일은 GET /files로 따로 읽는다. 끈 자료는 서버도 분석에서 빼므로 검수 대상이 아니다.
+    return (sources ?? []).filter((source) => source.type !== 'FILE' && source.enabled !== false).map(toExternalAttachment)
   }
 
   async uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment> {

@@ -34,7 +34,13 @@ export interface HandoverAttachment {
   status: AttachmentStatus
   /** 검수에서 아직 확인하지 않은 항목 수. 없으면 0으로 본다. */
   pendingReviewCount?: number
+  /** 자료 출처. 없으면 업로드 파일이다. 웹 링크·Slack 메시지도 같은 검수 API를 쓴다. */
+  origin?: AttachmentOrigin
+  /** 외부 자료의 부가 정보(링크 주소나 Slack 채널). 파일은 비어 있다. */
+  detail?: string
 }
+
+export type AttachmentOrigin = 'file' | 'web-link' | 'slack'
 
 export type MaskingType = 'EMAIL' | 'PHONE' | 'ACCOUNT' | 'RRN' | 'CARD' | 'BUSINESS_NO' | 'CUSTOM'
 

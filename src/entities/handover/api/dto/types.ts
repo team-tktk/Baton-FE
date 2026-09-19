@@ -132,6 +132,18 @@ export interface ManualCandidateRequest {
   type?: MaskingTypeDto
 }
 
+/** GET /sources 항목. 업로드 파일(FILE)과 웹 링크·Slack 메시지가 함께 온다. */
+export interface SourceEvidenceDto {
+  sourceId: string
+  type: 'FILE' | 'WEB_LINK' | 'SLACK_MESSAGE'
+  title?: string | null
+  accessPath?: string | null
+  conversationName?: string | null
+  /** 끈 자료는 분석에서 빠지고 검수도 분석을 막지 않는다. */
+  enabled?: boolean
+  status: FileStatusDto
+}
+
 export interface FileUploadResponse {
   sourceDocumentId: string
   fileName: string

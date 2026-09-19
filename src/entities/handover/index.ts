@@ -14,6 +14,7 @@ export { TaskSummary } from './ui/TaskSummary'
 export type {
   AnalysisJob,
   AnalysisStatus,
+  AttachmentOrigin,
   AttachmentStatus,
   CreateHandoverInput,
   DocumentSection,

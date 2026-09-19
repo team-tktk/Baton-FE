@@ -92,6 +92,8 @@ export class MockHandoverRepository implements HandoverRepository {
   private readonly sent = clone(sentSummaryFixtures)
   /** 검수 대기 파일을 흉내 내려면 테스트에서 직접 넣는다. 없으면 검수할 것이 없는 파일로 본다. */
   readonly maskingReviews = new Map<string, MaskingReview>()
+  /** 켜 둔 웹 링크·Slack 메시지를 흉내 내려면 테스트에서 직접 넣는다. */
+  readonly externalSources: HandoverAttachment[] = []
   private readonly revisions = new Map<HandoverId, number>()
   private readonly readinessResults = new Map<HandoverId, HandoverReadiness>()
   private readonly readinessFixes = new Map<string, { handoverId: HandoverId; fix: ReadinessFix; after: HandoverDocument | null }>()
@@ -163,6 +165,11 @@ export class MockHandoverRepository implements HandoverRepository {
     return clone(handover.attachments)
   }
 
+  async listExternalSources(id: HandoverId): Promise<HandoverAttachment[]> {
+    await this.getMutable(id)
+    return clone(this.externalSources)
+  }
+
   async uploadFile(id: HandoverId, file: File): Promise<HandoverAttachment> {
     const handover = await this.getMutable(id)
     const attachment: HandoverAttachment = {
@@ -188,7 +195,7 @@ export class MockHandoverRepository implements HandoverRepository {
     const handover = await this.getMutable(id)
     const stored = this.maskingReviews.get(fileId)
     if (stored) return clone(stored)
-    const file = handover.attachments.find((item) => item.id === fileId)
+    const file = [...handover.attachments, ...this.externalSources].find((item) => item.id === fileId)
     if (!file) throw new RepositoryError('NOT_FOUND', '파일을 찾을 수 없어요.')
     return { fileId, fileName: file.name, status: file.status, confirmed: false, text: null, summary: summarizeMasking([]), candidates: [] }
   }
@@ -238,6 +245,7 @@ export class MockHandoverRepository implements HandoverRepository {
     if (review.summary.remaining > 0) throw new RepositoryError('VALIDATION', `확인하지 않은 항목이 ${review.summary.remaining}개 남아 있어요.`)
     Object.assign(review, { confirmed: true, status: 'ready', text: null })
     handover.attachments = handover.attachments.map((file) => file.id === fileId ? { ...file, status: 'ready', pendingReviewCount: 0 } : file)
+    this.externalSources.forEach((source) => { if (source.id === fileId) source.status = 'ready' })
     return clone(review)
   }
 

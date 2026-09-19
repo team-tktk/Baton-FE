@@ -40,6 +40,8 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null)
   const [savingIds, setSavingIds] = useState<string[]>([])
   const [progress, setProgress] = useState<ConfirmProgress | null>(null)
+  // 웹 링크·Slack 메시지. 마스킹이 켜진 서버에서는 파일처럼 검수 대기로 멈추고, 남아 있으면 분석이 막힌다.
+  const [external, setExternal] = useState<HandoverAttachment[]>([])
   const alive = useRef(true)
 
   useEffect(() => {
@@ -47,9 +49,37 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
     return () => { alive.current = false }
   }, [])
 
-  // 이 화면에서 확정한 파일은 상태가 바뀌어도 목록에 남겨 "확정됨"을 보여 준다.
-  const reviewFiles = attachments.filter((file) => file.status === 'review' || reviews[file.id])
-  const unloadedKey = attachments.filter((file) => file.status === 'review' && !reviews[file.id]).map((file) => file.id).join(',')
+  const refreshExternal = useCallback(async () => {
+    if (!handoverId) return
+    const sources = await repository.listExternalSources(handoverId)
+    if (alive.current) setExternal(sources)
+  }, [handoverId, repository])
+
+  useEffect(() => {
+    if (!handoverId) return
+    let ignore = false
+    repository.listExternalSources(handoverId)
+      .then((sources) => { if (!ignore) setExternal(sources) })
+      .catch((caught: unknown) => { if (!ignore) setLoadError(messageOf(caught, '웹 링크·Slack 자료를 불러오지 못했어요')) })
+    return () => { ignore = true }
+  }, [handoverId, reloadToken, repository])
+
+  // 외부 자료는 업로드 목록과 따로 읽는다. 아직 읽는 중이면 끝날 때까지 다시 확인한다.
+  const externalReading = external.some((source) => source.status === 'processing')
+  useEffect(() => {
+    if (!externalReading) return
+    const timer = setInterval(() => { refreshExternal().catch(() => { /* 다음 주기에 다시 읽는다 */ }) }, WAIT_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [externalReading, refreshExternal])
+
+  const sources = [...attachments, ...external]
+  // 이 화면에서 확정한 자료는 상태가 바뀌어도 목록에 남겨 "확정됨"을 보여 준다.
+  const allReviewSources = sources.filter((file) => file.status === 'review' || reviews[file.id])
+  // 찾은 민감정보가 없는 웹 링크·Slack 메시지는 한 건씩 보여 주지 않고 묶는다. Slack은 메시지마다 자료라 수백 건이 될 수 있다.
+  const isClean = (file: HandoverAttachment) => Boolean(file.origin && file.origin !== 'file' && reviews[file.id] && !reviews[file.id]!.confirmed && reviews[file.id]!.candidates.length === 0)
+  const cleanSources = allReviewSources.filter(isClean)
+  const reviewFiles = allReviewSources.filter((file) => !isClean(file))
+  const unloadedKey = sources.filter((file) => file.status === 'review' && !reviews[file.id]).map((file) => file.id).join(',')
 
   useEffect(() => {
     if (!handoverId || !unloadedKey) return
@@ -73,7 +103,7 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
     ? selectedFileId
     : reviewFiles[0]?.id ?? null
 
-  const openReviews = reviewFiles.map((file) => reviews[file.id]).filter((review): review is MaskingReview => Boolean(review && !review.confirmed))
+  const openReviews = allReviewSources.map((file) => reviews[file.id]).filter((review): review is MaskingReview => Boolean(review && !review.confirmed))
   const remaining = openReviews.reduce((sum, review) => sum + review.summary.remaining, 0)
   const applied = openReviews.reduce((sum, review) => sum + review.summary.applied, 0)
   const loading = Boolean(unloadedKey) && !loadError
@@ -81,10 +111,10 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
   const refreshFiles = useCallback(async () => {
     if (!handoverId) return
     try {
-      const files = await repository.listFiles(handoverId)
+      const [files] = await Promise.all([repository.listFiles(handoverId), refreshExternal()])
       if (alive.current) onAttachmentsChange(files)
     } catch { /* 목록 갱신 실패는 다음 조회에서 다시 맞춘다 */ }
-  }, [handoverId, onAttachmentsChange, repository])
+  }, [handoverId, onAttachmentsChange, refreshExternal, repository])
 
   const toggle = useCallback(async (fileId: string, candidateId: string, nextApplied: boolean) => {
     if (!handoverId) return
@@ -158,14 +188,16 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
     let failures = 0
     for (let round = 0; round < WAIT_MAX_ROUNDS; round += 1) {
       try {
-        const files = await repository.listFiles(handoverId)
+        const [files, sources] = await Promise.all([repository.listFiles(handoverId), repository.listExternalSources(handoverId)])
         if (!alive.current) return false
         failures = 0
         onAttachmentsChange(files)
-        if (!files.some((file) => file.status === 'processing' || file.status === 'review')) {
-          const failed = files.filter((file) => file.status === 'failed').length
-          // 실패한 파일은 서버도 분석을 막지 않는다. 멈추지 않고 빠진다는 사실만 알린다.
-          if (failed > 0) onFeedback(`처리하지 못한 파일 ${failed}개는 분석에서 빠져요`)
+        setExternal(sources)
+        const all = [...files, ...sources]
+        if (!all.some((file) => file.status === 'processing' || file.status === 'review')) {
+          const failed = all.filter((file) => file.status === 'failed').length
+          // 실패한 자료는 서버도 분석을 막지 않는다. 멈추지 않고 빠진다는 사실만 알린다.
+          if (failed > 0) onFeedback(`처리하지 못한 자료 ${failed}개는 분석에서 빠져요`)
           return true
         }
       } catch {
@@ -185,7 +217,7 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
   /** 검수 대기 파일을 모두 확정하고 임베딩까지 기다린다. 분석으로 넘어가도 되면 true. */
   const confirmAll = useCallback(async () => {
     if (!handoverId) return false
-    const targets = attachments.filter((file) => file.status === 'review').map((file) => file.id)
+    const targets = [...attachments, ...external].filter((file) => file.status === 'review').map((file) => file.id)
     setProgress({ phase: 'confirming', done: 0, total: targets.length })
     try {
       for (const [index, fileId] of targets.entries()) {
@@ -217,18 +249,22 @@ export function useMaskingReview({ attachments, handoverId, onAttachmentsChange,
     } finally {
       if (alive.current) setProgress(null)
     }
-  }, [attachments, handoverId, onFeedback, refreshFiles, reloadReview, repository, waitUntilIndexed])
+  }, [attachments, external, handoverId, onFeedback, refreshFiles, reloadReview, repository, waitUntilIndexed])
 
   return {
     activeFileId,
     addRange,
     applied,
+    /** 찾은 민감정보가 없어 묶어 보여 주는 웹 링크·Slack 자료. 확정할 때 함께 확정된다. */
+    cleanSources,
     canConfirm: !loading && !loadError && openReviews.length > 0 && remaining === 0 && !progress && savingIds.length === 0,
     confirmAll,
     loadError,
     loading,
     openFileCount: openReviews.length,
     progress,
+    /** 아직 내용을 읽는 파일이나 외부 자료가 있다. */
+    reading: sources.some((file) => file.status === 'processing'),
     reload,
     remaining,
     removeCandidate,
