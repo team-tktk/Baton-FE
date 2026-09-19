@@ -1,0 +1,6 @@
+.main { display: grid; min-height: 100vh; place-items: center; background: #f4f7fb; padding: 24px; }
+.main section { width: min(440px, 100%); border: 1px solid var(--line); border-radius: 28px; background: #fff; padding: 42px; text-align: center; box-shadow: 0 24px 70px rgb(31 50 80 / 12%); }
+.main span { display: grid; width: 56px; height: 56px; margin: 0 auto 22px; place-items: center; border-radius: 18px; background: var(--blue); color: #fff; font-size: 28px; font-weight: 800; }
+.main h1 { margin: 0 0 12px; font-size: var(--fs-2xl); }
+.main p { margin: 0 0 26px; color: var(--muted); line-height: 1.7; }
+.main button { border: 0; border-radius: 12px; background: var(--blue); color: #fff; cursor: pointer; padding: 12px 20px; font-weight: 800; }

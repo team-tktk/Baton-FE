@@ -1,0 +1,48 @@
+.collector { display: grid; gap: 22px; margin-top: 34px; }
+.panel { border: 1px solid var(--line); border-radius: 24px; background: #fff; padding: 26px; box-shadow: 0 12px 34px rgb(31 50 80 / 5%); }
+.panel > header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 22px; }
+.panel h2 { margin: 0 0 5px; font-size: var(--fs-lg); }
+.panel header p { margin: 0; color: var(--muted); font-size: var(--fs-3xs); line-height: 1.55; }
+.icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 13px; background: #eaf3ff; color: var(--blue-dark); }
+.slackIcon { background: #4a154b; color: #fff; font-size: 20px; font-weight: 900; }
+.webForm { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) auto; align-items: end; gap: 12px; }
+.webForm label, .workspaceRow label { display: grid; gap: 7px; color: var(--sub); font-size: var(--fs-3xs); font-weight: 800; }
+.webForm label > span small { color: var(--muted); font-weight: 600; }
+.webForm input, .webForm textarea, .workspaceRow select { width: 100%; border: 1px solid #dce4ee; border-radius: 12px; background: #f9fbfd; color: var(--text); padding: 12px 14px; font: inherit; outline: none; }
+.webForm input:focus, .webForm textarea:focus, .workspaceRow select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb(49 130 246 / 10%); }
+.webForm .description { grid-column: 1 / 4; }
+.webForm textarea { min-height: 74px; resize: vertical; }
+.webForm button { min-height: 44px; white-space: nowrap; }
+.sourceList { overflow: hidden; margin-top: 18px; border: 1px solid var(--line); border-radius: 15px; }
+.sourceList article { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding: 13px 15px; }
+.sourceList article:first-child { border-top: 0; }
+.sourceList p { min-width: 0; margin: 0; }
+.sourceList strong, .sourceList small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sourceList strong { font-size: var(--fs-2xs); }
+.sourceList small { margin-top: 3px; color: var(--muted); font-size: var(--fs-3xs); }
+.sourceList button, .workspaceRow > button { border: 0; background: transparent; color: var(--blue-dark); cursor: pointer; font-weight: 750; }
+.connect { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-radius: 16px; background: #faf5fb; padding: 18px 20px; }
+.connect p { margin: 0; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.55; }
+.connect button { white-space: nowrap; }
+.workspaceRow { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 15px; }
+.workspaceRow label { min-width: 260px; }
+.workspaceRow > button { padding: 12px 0; }
+.channels { max-height: 310px; overflow: auto; border: 1px solid var(--line); border-radius: 16px; }
+.channels label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; border-top: 1px solid var(--line); cursor: pointer; padding: 14px 16px; }
+.channels label:first-child { border-top: 0; }
+.channels input { width: 18px; height: 18px; accent-color: var(--blue); }
+.channels strong, .channels small { display: block; }
+.channels strong { font-size: var(--fs-2xs); }
+.channels small { margin-top: 3px; color: var(--muted); font-size: var(--fs-3xs); }
+.empty { margin: 0; color: var(--muted); padding: 24px; text-align: center; }
+
+@media (max-width: 720px) {
+  .panel { padding: 21px 18px; }
+  .webForm { grid-template-columns: 1fr; }
+  .webForm .description { grid-column: auto; }
+  .connect, .workspaceRow { align-items: stretch; flex-direction: column; }
+  .workspaceRow label { min-width: 0; }
+  .connect button { width: 100%; }
+  .sourceList article { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .sourceList article > span { display: none; }
+}

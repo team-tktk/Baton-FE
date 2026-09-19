@@ -17,7 +17,7 @@ export default defineConfig({
       // 예) VITE_API_PROXY_TARGET=http://localhost:8080 npm run dev
       '/api': {
         changeOrigin: true,
-        target: process.env.VITE_API_PROXY_TARGET ?? 'http://3.37.128.127:8080',
+        target: process.env.VITE_API_PROXY_TARGET ?? 'https://3-37-128-127.nip.io',
       },
     },
   },
