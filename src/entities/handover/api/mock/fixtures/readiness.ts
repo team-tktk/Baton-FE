@@ -1,16 +1,16 @@
 import type { ReadinessArea, ReadinessItemStatus, ReadinessRubric } from '../../../model/types'
 
 export const readinessRubricFixture: ReadinessRubric = {
-  version: 'mock-v1',
+  version: 'v4',
   areas: [
-    { area: 'SCOPE', label: '업무 범위', criteria: '맡을 업무와 맡지 않을 업무가 구분되어 있나요?', weight: 15, sections: ['PURPOSE', 'ONGOING_TASKS', 'RECURRING_TASKS'] },
+    { area: 'SCOPE', label: '업무 범위', criteria: '맡을 업무와 맡지 않을 업무가 구분되어 있나요?', weight: 10, sections: ['PURPOSE', 'ONGOING_TASKS', 'RECURRING_TASKS'] },
     { area: 'PROCEDURE', label: '실행 절차', criteria: '반복 업무를 순서대로 따라 할 수 있나요?', weight: 20, sections: ['RECURRING_TASKS', 'ONGOING_TASKS', 'FIRST_WEEK_CHECKLIST'] },
+    { area: 'PROGRESS', label: '진행 현황', criteria: '업무별 현재 상태와 다음 할 일, 기다리는 승인·회신을 알 수 있나요?', weight: 15, sections: ['ONGOING_TASKS', 'RECURRING_TASKS'] },
+    { area: 'PRIORITY', label: '우선순위', criteria: '가장 중요하거나 밀리면 안 되는 업무와 먼저 할 일을 알 수 있나요?', weight: 10, sections: ['ONGOING_TASKS', 'RECURRING_TASKS', 'FIRST_WEEK_CHECKLIST'] },
     { area: 'COMPLETION', label: '완료 기준', criteria: '언제 인수인계가 끝났다고 볼 수 있나요?', weight: 10, sections: ['COMPLETION_CRITERIA'] },
     { area: 'EXCEPTION', label: '예외 대응', criteria: '문제가 생겼을 때 판단 기준과 연락처가 있나요?', weight: 15, sections: ['RULES_AND_EXCEPTIONS', 'CONFIRMED_CRITERIA'] },
     { area: 'SCHEDULE', label: '일정', criteria: '주기와 마감일이 적혀 있나요?', weight: 10, sections: ['SCHEDULE', 'RECURRING_TASKS'] },
-    { area: 'CONTACTS', label: '담당자', criteria: '누구에게 무엇을 물어야 하는지 알 수 있나요?', weight: 10, sections: ['STAKEHOLDERS', 'RULES_AND_EXCEPTIONS'] },
-    { area: 'ACCESS', label: '접근 권한', criteria: '필요한 계정과 권한을 받을 방법이 있나요?', weight: 10, sections: ['ACCESS_ACCOUNTS'] },
-    { area: 'EVIDENCE', label: '근거와 최신성', criteria: '내용이 최신 자료에 근거하나요?', weight: 10, sections: ['TOOLS', 'CONFIRMED_CRITERIA'] },
+    { area: 'CONTACTS', label: '담당자', criteria: '문의·승인·보고 대상과 전임자에게 물을 수 있는 기간·방법을 알 수 있나요?', weight: 10, sections: ['STAKEHOLDERS', 'RULES_AND_EXCEPTIONS'] },
   ],
   statusPercent: { sufficient: 100, partial: 50, conflict: 25, missing: 0 },
   readyScore: 80,

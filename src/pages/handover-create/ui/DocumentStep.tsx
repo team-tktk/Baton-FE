@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DocumentSection, Handover, HandoverDraft, ReadinessArea, ReadinessEvidence, ReadinessFixApplied } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import type { SubmitCheck } from '@/features/check-readiness'
-import { ReadinessFixDialog, ReadinessPanel, ReadinessSubmitDialog, appliedMessage, checkBeforeSubmit, sectionElementId, toDraftIssues, useDocumentReadiness, useReadinessFix } from '@/features/check-readiness'
+import { ReadinessFixDialog, ReadinessFixReviewPanel, ReadinessPanel, ReadinessSubmitDialog, appliedMessage, buildSelectedFixDocument, checkBeforeSubmit, getFixPreviewItems, hasGenerated, sectionElementId, toDraftIssues, useDocumentReadiness, useReadinessFix } from '@/features/check-readiness'
 import { ApiError } from '@/shared/api'
 import { saveBlob } from '@/shared/lib/download'
 import { HandoverDraftEditor } from '@/widgets/handover-document'
@@ -77,6 +77,30 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
     onApplied: applied,
     onConflict: () => { void onReloadDocument().then(() => readiness.refresh()) },
   })
+  const reviewFix = fix.session?.fix && hasGenerated(fix.session.fix) && fix.session.fix.areas.every((area) => area.proposed)
+    ? fix.session.fix
+    : null
+  const previewItems = useMemo(() => reviewFix ? getFixPreviewItems(reviewFix) : [], [reviewFix])
+  const [excluded, setExcluded] = useState<{ fixId: string | null; ids: Set<string> }>({ fixId: null, ids: new Set() })
+  const selectedIds = useMemo(() => {
+    const excludedIds = excluded.fixId === reviewFix?.id ? excluded.ids : new Set<string>()
+    return new Set(previewItems.filter((item) => !excludedIds.has(item.id)).map((item) => item.id))
+  }, [excluded, previewItems, reviewFix?.id])
+  const previewDocument = useMemo(
+    () => reviewFix ? buildSelectedFixDocument(handover.document, reviewFix, selectedIds) : handover.document,
+    [handover.document, reviewFix, selectedIds],
+  )
+  const excludeProposal = (id: string) => setExcluded((current) => {
+    const ids = current.fixId === reviewFix?.id ? new Set(current.ids) : new Set<string>()
+    ids.add(id)
+    return { fixId: reviewFix?.id ?? null, ids }
+  })
+  const restoreProposals = () => setExcluded({ fixId: reviewFix?.id ?? null, ids: new Set() })
+  const applyProposals = () => {
+    if (!reviewFix || selectedIds.size === 0) return
+    if (selectedIds.size === previewItems.length) void fix.apply()
+    else void fix.apply(buildSelectedFixDocument(handover.document, reviewFix, selectedIds))
+  }
   const startFix = (areas: ReadinessArea[]) => {
     const targets = readiness.readiness?.areas.filter((item) => areas.includes(item.area) && item.status !== 'sufficient') ?? []
     if (targets.length > 0 && !fixBlocked) void fix.start(targets)
@@ -103,10 +127,29 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
   return <main className={styles.main}>
     <div className={styles.layout}>
       <div className={styles.document}>
-        <HandoverDraftEditor key={revision ?? 'draft'} {...editorProps} fillBlocked={fixBlocked} handover={handover} issues={issues} onFillSection={(area) => startFix([area])} onSubmit={submit} />
+        <HandoverDraftEditor
+          key={revision ?? 'draft'}
+          {...editorProps}
+          fillBlocked={fixBlocked}
+          fixPreview={reviewFix ? { document: previewDocument, items: previewItems, selectedIds, onExclude: excludeProposal } : undefined}
+          handover={handover}
+          issues={issues}
+          onFillSection={(area) => startFix([area])}
+          onSubmit={submit}
+        />
       </div>
       <aside className={styles.aside}>
-        <ReadinessPanel
+        {reviewFix && fix.session ? <ReadinessFixReviewPanel
+          error={fix.session.error}
+          fix={reviewFix}
+          items={previewItems}
+          phase={fix.session.phase}
+          selectedIds={selectedIds}
+          onApply={applyProposals}
+          onCancel={fix.close}
+          onLocate={(section) => { locateSection(section, false) }}
+          onRestoreAll={restoreProposals}
+        /> : <ReadinessPanel
           dirty={dirty}
           document={handover.document}
           error={readiness.error}
@@ -117,11 +160,11 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
           onLocate={(section) => { locateSection(section) }}
           onOpenEvidence={openEvidence}
           onReevaluate={() => { void readiness.reevaluate() }}
-        />
+        />}
       </aside>
     </div>
     <ReadinessFixDialog
-      session={fix.session}
+      session={reviewFix ? null : fix.session}
       onGenerate={(answers) => { void fix.generate(answers) }}
       onApply={() => { void fix.apply() }}
       onClose={fix.close}

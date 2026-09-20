@@ -38,4 +38,20 @@ describe('authApi.signup', () => {
     expect(init?.method).toBe('POST')
     expect(JSON.parse(String(init?.body))).toEqual(signupInput)
   })
+
+  it('refreshes the CSRF cookie once and retries when signup is rejected before authentication', async () => {
+    const fetchSpy = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ detail: 'CSRF token is invalid' }), { headers: { 'Content-Type': 'application/problem+json' }, status: 403 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ detail: '로그인이 필요합니다' }), { headers: { 'Content-Type': 'application/problem+json' }, status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(signupUser), { headers: { 'Content-Type': 'application/json' }, status: 201 }))
+    vi.stubGlobal('fetch', fetchSpy)
+
+    await expect(authApi.signup(signupInput)).resolves.toEqual(signupUser)
+
+    expect(fetchSpy.mock.calls.map(([path]) => path)).toEqual([
+      '/api/v1/auth/signup',
+      '/api/v1/auth/me',
+      '/api/v1/auth/signup',
+    ])
+  })
 })

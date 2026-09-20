@@ -57,6 +57,8 @@ export function SignupModal({ onClose, onLogin, onSuccess, open, returnFocusRef 
     } catch (caught) {
       setError(caught instanceof ApiError && caught.status === 409
         ? '이미 가입된 이메일이에요.'
+        : caught instanceof ApiError && caught.status === 403
+          ? '회원가입 보안 정보를 갱신하지 못했어요. 페이지를 새로고침한 뒤 다시 시도해 주세요.'
         : '회원가입에 실패했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setPassword('')

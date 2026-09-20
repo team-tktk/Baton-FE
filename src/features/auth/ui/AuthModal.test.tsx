@@ -79,6 +79,29 @@ describe('AuthModal', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
+  it('refreshes CSRF once before retrying a rejected login', async () => {
+    const user = userEvent.setup()
+    const fetchSpy = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(jsonResponse({ message: 'Unauthorized' }, 401))
+      .mockResolvedValueOnce(jsonResponse({ detail: 'CSRF token is invalid' }, 403))
+      .mockResolvedValueOnce(jsonResponse({ message: 'Unauthorized' }, 401))
+      .mockResolvedValueOnce(jsonResponse(authenticatedUser))
+    vi.stubGlobal('fetch', fetchSpy)
+    const { onClose } = renderModal()
+
+    await user.type(screen.getByRole('textbox', { name: '회사 이메일' }), authenticatedUser.email)
+    await user.type(screen.getByLabelText('비밀번호'), 'secret')
+    await user.click(screen.getByRole('button', { name: '로그인' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+    expect(fetchSpy.mock.calls.map(([path]) => path)).toEqual([
+      '/api/v1/auth/me',
+      '/api/v1/auth/login',
+      '/api/v1/auth/me',
+      '/api/v1/auth/login',
+    ])
+  })
+
   it('shows a pending state while the login request is running', async () => {
     const user = userEvent.setup()
     let resolveLogin!: (response: Response) => void

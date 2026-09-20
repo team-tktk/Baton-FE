@@ -19,9 +19,20 @@ interface SourceCollectorState {
 
 interface SourceCollectorProps {
   handoverId: string
+  demo?: boolean
   onChange: (state: SourceCollectorState) => void
   onFeedback: (message: string) => void
 }
+
+const DEMO_CONNECTION: SlackConnection = {
+  connectionId: 'demo-workspace', teamId: 'demo-team', teamName: 'BATON 데모 운영팀',
+  slackUserId: 'demo-user', scopes: [], connectedAt: '2026-09-20T00:00:00Z',
+}
+const DEMO_CHANNELS: SlackChannel[] = [
+  { id: 'demo-operations', name: '운영-공유', privateChannel: false, member: true },
+  { id: 'demo-campaign', name: '가을-할인전', privateChannel: true, member: true },
+  { id: 'demo-logistics', name: '배송-이슈', privateChannel: false, member: true },
+]
 
 const STATUS_LABEL = {
   EXTRACTING: '내용 읽는 중',
@@ -35,12 +46,12 @@ function message(caught: unknown, fallback: string) {
   return caught instanceof ApiError ? caught.message : fallback
 }
 
-export function SourceCollector({ handoverId, onChange, onFeedback }: SourceCollectorProps) {
+export function SourceCollector({ handoverId, demo = false, onChange, onFeedback }: SourceCollectorProps) {
   const [activePanel, setActivePanel] = useState<'web' | 'slack' | null>(null)
   const [sources, setSources] = useState<SourceEvidence[]>([])
-  const [connections, setConnections] = useState<SlackConnection[]>([])
-  const [connectionId, setConnectionId] = useState('')
-  const [channels, setChannels] = useState<SlackChannel[]>([])
+  const [connections, setConnections] = useState<SlackConnection[]>(demo ? [DEMO_CONNECTION] : [])
+  const [connectionId, setConnectionId] = useState(demo ? DEMO_CONNECTION.connectionId : '')
+  const [channels, setChannels] = useState<SlackChannel[]>(demo ? DEMO_CHANNELS : [])
   const [subscriptions, setSubscriptions] = useState<SlackSubscription[]>([])
   const [url, setUrl] = useState('')
   const [title, setTitle] = useState('')
@@ -58,18 +69,19 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
   }, [])
 
   useEffect(() => {
+    if (demo) return
     const load = async () => Promise.all([refreshSources(), refreshConnections(), refreshSubscriptions()])
     void load().catch((caught) => onFeedback(message(caught, '연동 자료를 불러오지 못했어요')))
-  }, [onFeedback, refreshConnections, refreshSources, refreshSubscriptions])
+  }, [demo, onFeedback, refreshConnections, refreshSources, refreshSubscriptions])
 
   useEffect(() => {
-    if (!connectionId) return
+    if (demo || !connectionId) return
     let ignore = false
     sourceApi.listSlackChannels(connectionId)
       .then((items) => { if (!ignore) setChannels(items) })
       .catch((caught) => { if (!ignore) onFeedback(message(caught, 'Slack 채널을 불러오지 못했어요')) })
     return () => { ignore = true }
-  }, [connectionId, onFeedback])
+  }, [connectionId, demo, onFeedback])
 
   const externalSources = useMemo(() => sources.filter((source) => source.type !== 'FILE'), [sources])
   const processing = externalSources.some((source) => source.status === 'EXTRACTING' || source.status === 'INDEXING')
@@ -79,10 +91,10 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
   useEffect(() => { onChange({ readyCount, reviewCount, processing }) }, [onChange, processing, readyCount, reviewCount])
 
   useEffect(() => {
-    if (!processing) return
+    if (demo || !processing) return
     const timer = window.setInterval(() => { void refreshSources() }, 2000)
     return () => window.clearInterval(timer)
-  }, [processing, refreshSources])
+  }, [demo, processing, refreshSources])
 
   useEffect(() => {
     const receive = (event: MessageEvent) => {
@@ -95,6 +107,11 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
   }, [onFeedback, refreshConnections, refreshSubscriptions])
 
   const connectSlack = async () => {
+    if (demo) {
+      setActivePanel('slack')
+      onFeedback('데모용 Slack 워크스페이스가 연결되어 있어요')
+      return
+    }
     setBusy('connect')
     try {
       const { url: installUrl } = await sourceApi.getSlackInstallUrl()
@@ -110,6 +127,21 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
     if (!url.trim()) return
     setBusy('web')
     try {
+      if (demo) {
+        const value = url.trim()
+        setSources((current) => [...current, {
+          sourceId: `demo-web-${current.length + 1}`,
+          type: 'WEB_LINK', title: title.trim() || '추가한 웹 링크', locator: value,
+          updatedAt: '2026-09-20T00:00:00Z', accessPath: value,
+          description: description.trim() || null, conversationName: null, occurredAt: null,
+          enabled: true, status: 'INDEXED',
+        }])
+        setUrl('')
+        setTitle('')
+        setDescription('')
+        onFeedback('웹 링크를 AI 자료에 추가했어요')
+        return
+      }
       await sourceApi.createWebLink(handoverId, {
         url: url.trim(),
         title: title.trim() || undefined,
@@ -128,6 +160,10 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
   const removeSource = async (source: SourceEvidence) => {
     setBusy(source.sourceId)
     try {
+      if (demo) {
+        setSources((current) => current.filter((item) => item.sourceId !== source.sourceId))
+        return
+      }
       await sourceApi.deleteSource(handoverId, source.sourceId)
       await refreshSources()
     } catch (caught) {
@@ -138,6 +174,10 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
   const retrySource = async (source: SourceEvidence) => {
     setBusy(source.sourceId)
     try {
+      if (demo) {
+        setSources((current) => current.map((item) => item.sourceId === source.sourceId ? { ...item, status: 'INDEXED' } : item))
+        return
+      }
       await sourceApi.retrySource(handoverId, source.sourceId)
       await refreshSources()
     } catch (caught) {
@@ -151,6 +191,26 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
     const existing = activeSubscriptions.find((item) => item.connectionId === connectionId && item.channelId === channel.id)
     setBusy(`channel-${channel.id}`)
     try {
+      if (demo) {
+        if (existing) {
+          setSubscriptions((current) => current.filter((item) => item.subscriptionId !== existing.subscriptionId))
+          setSources((current) => current.filter((item) => item.locator !== channel.id))
+        } else {
+          setSubscriptions((current) => [...current, {
+            subscriptionId: `demo-sub-${channel.id}`, handoverId, connectionId,
+            channelId: channel.id, channelName: channel.name, enabled: true,
+            backfillComplete: true, importedMessageCount: 18, lastSyncedAt: '2026-09-20T00:00:00Z',
+          }])
+          setSources((current) => [...current, {
+            sourceId: `demo-slack-${channel.id}`, type: 'SLACK_MESSAGE', title: `#${channel.name} 대화`,
+            locator: channel.id, updatedAt: '2026-09-20T00:00:00Z', accessPath: `#${channel.name}`,
+            description: null, conversationName: channel.name, occurredAt: '2026-09-19T09:00:00Z',
+            enabled: true, status: 'INDEXED',
+          }])
+        }
+        onFeedback(existing ? `#${channel.name} 자동 수집을 중지했어요` : `#${channel.name}의 이전 대화와 새 메시지를 수집해요`)
+        return
+      }
       if (existing) await sourceApi.unsubscribeSlackChannel(existing)
       else await sourceApi.subscribeSlackChannel(connectionId, handoverId, channel)
       await Promise.all([refreshSubscriptions(), refreshSources()])
