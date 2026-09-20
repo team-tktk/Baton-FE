@@ -224,7 +224,17 @@ export interface UpdateDraftRequest {
   baseRevision?: number
 }
 
-export type ReadinessAreaDto = 'SCOPE' | 'PROCEDURE' | 'COMPLETION' | 'EXCEPTION' | 'SCHEDULE' | 'CONTACTS' | 'ACCESS' | 'EVIDENCE'
+export type ReadinessAreaDto =
+  | 'SCOPE'
+  | 'PROCEDURE'
+  | 'PROGRESS'
+  | 'PRIORITY'
+  | 'COMPLETION'
+  | 'EXCEPTION'
+  | 'SCHEDULE'
+  | 'CONTACTS'
+  | 'ACCESS'
+  | 'EVIDENCE'
 
 export type DraftSectionDto =
   | 'PURPOSE'

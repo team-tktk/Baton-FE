@@ -102,10 +102,12 @@ describe('ReadinessFixDialog', () => {
     const user = userEvent.setup()
     const { onApply, onGenerate, onOpenEvidence } = renderDialog(session({ fix: generated }))
 
-    expect(screen.getByText('항목 3개 중 1개의 수정안을 만들었어요. 확인하고 문서에 적용해 주세요.')).toBeInTheDocument()
+    expect(screen.getByText('1개 항목의 수정안이 준비됐어요')).toBeInTheDocument()
+    expect(screen.getByText('기존 내용은 제외하고 새로 추가되거나 바뀌는 내용만 보여드려요.')).toBeInTheDocument()
     const changes = within(screen.getByRole('region', { name: '접근 권한과 계정 수정 후' }))
-    expect(changes.getByText('새로 추가').closest('li')).toHaveTextContent('정산 시스템')
-    // 수정 전은 더 이상 그리지 않는다. 달라진 곳은 줄마다 붙는 딱지로만 알린다.
+    expect(changes.getByText('추가').closest('li')).toHaveTextContent('정산 시스템')
+    expect(changes.queryByText('운영 어드민')).not.toBeInTheDocument()
+    // 수정 전과 기존 항목은 반복하지 않고 새로 추가된 내용만 보여 준다.
     expect(screen.queryByRole('region', { name: '수정 전' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /운영 매뉴얼\.pdf/ }))
     expect(onOpenEvidence).toHaveBeenCalled()

@@ -1,4 +1,4 @@
-import { MockHandoverRepository, type CreateHandoverInput, type HandoverChatExchange } from '@/entities/handover'
+import { MockHandoverRepository, summarizeMasking, type CreateHandoverInput, type HandoverChatExchange } from '@/entities/handover'
 import { demoSamples } from '@/shared/lib/demoSamples'
 
 export const DEMO_ID = 'handover-moastore-operations'
@@ -26,6 +26,28 @@ export class DemoRepository extends MockHandoverRepository {
     return { blob: new Blob([sample.text], { type: 'text/plain;charset=utf-8' }), filename: sample.name }
   }
 
+  override async uploadFile(id: string, file: File) {
+    const attachment = await super.uploadFile(id, file)
+    const sample = demoSamples.find((item) => item.name === file.name)
+    const email = 'seoyun.demo@example.com'
+    const start = sample?.text.indexOf(email) ?? -1
+    if (start < 0) return attachment
+    const candidate = {
+      id: 'demo-email', type: 'EMAIL' as const, typeLabel: '이메일', origin: 'detected' as const,
+      start, end: start + email.length, confidence: 97, applied: false,
+      needsReview: true, pendingReview: true, preview: 'se***@example.com',
+    }
+    this.maskingReviews.set(attachment.id, {
+      fileId: attachment.id, fileName: attachment.name, status: 'review', confirmed: false,
+      text: sample!.text, candidates: [candidate], summary: summarizeMasking([candidate]),
+    })
+    const files = (await this.listFiles(id)).map((item) => item.id === attachment.id
+      ? { ...item, status: 'review' as const, pendingReviewCount: 1 }
+      : item)
+    await this.updateDraft(id, { attachments: files })
+    return files.find((item) => item.id === attachment.id)!
+  }
+
   override async submitHandover(id: string) {
     const result = await super.submitHandover(id)
     this.submitted = true
@@ -35,6 +57,10 @@ export class DemoRepository extends MockHandoverRepository {
 
   override async listReceivedHandovers() {
     return this.submitted ? (await super.listReceivedHandovers()).filter(item => item.id === DEMO_ID) : []
+  }
+
+  override async listSentHandovers() {
+    return this.submitted ? (await super.listSentHandovers()).filter(item => item.id === DEMO_ID) : []
   }
 
   override async listReviews() {

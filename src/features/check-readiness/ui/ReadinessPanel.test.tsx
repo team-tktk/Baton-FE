@@ -70,7 +70,18 @@ describe('ReadinessPanel', () => {
   it('offers locating instead of editing for a section the editor cannot change', async () => {
     const user = userEvent.setup()
     const { document, readiness } = await evaluated()
-    const access = { ...readiness.areas.find((area) => area.area === 'ACCESS')!, status: 'missing' as const, statusLabel: '누락', percent: 0, keyIssue: true }
+    const access = {
+      ...readiness.areas[0]!,
+      area: 'ACCESS' as const,
+      label: '접근 권한',
+      section: 'ACCESS_ACCOUNTS' as const,
+      sectionLabel: '접근 권한과 계정',
+      targetSections: [{ section: 'ACCESS_ACCOUNTS' as const, label: '접근 권한과 계정' }],
+      status: 'missing' as const,
+      statusLabel: '누락',
+      percent: 0,
+      keyIssue: true,
+    }
     render(<ReadinessPanel document={document} error={null} phase="ready" readiness={{ ...readiness, areas: [access] }} onLocate={vi.fn()} />)
 
     await user.click(screen.getByRole('button', { name: new RegExp(access.label) }))

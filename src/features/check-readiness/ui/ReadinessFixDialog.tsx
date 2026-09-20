@@ -24,14 +24,23 @@ interface ReadinessFixDialogProps {
 type Answers = Record<string, string>
 
 function SectionValue({ compareTo, value }: { value: DocumentSectionValue; compareTo?: DocumentSectionValue | null }) {
-  const lines = describeSection(value, compareTo)
-  if (lines.length === 0) return <p className={styles.blank}>비어 있어요</p>
+  const described = describeSection(value, compareTo)
+  const lines = compareTo ? described.filter((line) => line.added) : described
+  if (lines.length === 0) return <p className={styles.blank}>새로 추가된 내용이 없어요</p>
   const text = value.section === 'PURPOSE' || value.section === 'COMPLETION_CRITERIA'
   return <ul className={styles.lines}>{lines.map((line, index) => (
     <li className={line.added ? styles.added : undefined} key={`${line.primary}-${index}`}>
-      {line.added && <em>{text ? '바뀐 내용' : '새로 추가'}</em>}
-      <span>{line.primary}</span>
-      {line.secondary && <small>{line.secondary}</small>}
+      {line.secondary ? <details>
+        <summary>
+          {line.added && <em>{text ? '변경' : '추가'}</em>}
+          <span>{line.primary}</span>
+          <small>자세히</small>
+        </summary>
+        <p>{line.secondary}</p>
+      </details> : <div className={styles.lineHeading}>
+        {line.added && <em>{text ? '변경' : '추가'}</em>}
+        <span>{line.primary}</span>
+      </div>}
     </li>
   ))}</ul>
 }
@@ -135,29 +144,43 @@ function FixBody({ applying, busy, fix, onApply, onClose, onGenerate, onOpenEvid
   const unresolved = fix.areas.filter((area) => !area.proposed)
   const changes = fix.sections.filter((change) => change.changed && change.after)
   return <>
-    <p className={styles.lead}>{proposed.length > 0
-      ? `항목 ${fix.areas.length}개 중 ${proposed.length}개의 수정안을 만들었어요. 확인하고 문서에 적용해 주세요.`
-      : '아직 수정안을 만들지 못했어요. 아래 질문에 답하면 다시 만들어 볼게요.'}</p>
+    {proposed.length > 0 ? <div className={styles.proposalSummary}>
+      <span className={styles.proposalIcon}><Icon name="check" /></span>
+      <div>
+        <strong>{proposed.length}개 항목의 수정안이 준비됐어요</strong>
+        <p>기존 내용은 제외하고 새로 추가되거나 바뀌는 내용만 보여드려요.</p>
+      </div>
+      <span className={styles.proposalCount}>{proposed.length}/{fix.areas.length}</span>
+    </div> : <p className={styles.lead}>아직 수정안을 만들지 못했어요. 아래 질문에 답하면 다시 만들어 볼게요.</p>}
     <ul className={styles.results}>{fix.areas.map((area) => (
       <li className={area.proposed ? styles.resolved : styles.unresolved} key={area.area}>
         <header>
           <Icon name={area.proposed ? 'check' : 'alert'} />
           <strong>{area.label}</strong>
-          <span>{area.proposed ? '수정안 있음' : '답이 더 필요해요'}</span>
+          <span>{area.proposed ? '준비됨' : '답이 더 필요해요'}</span>
         </header>
-        {area.proposed && area.changeSummary && <p>{area.changeSummary}</p>}
         {area.proposed && <EvidenceList items={area.evidence} onOpenEvidence={onOpenEvidence} />}
         {!area.proposed && <AreaQuestions answers={answers} area={area} busy={busy} onAnswer={setAnswer} />}
       </li>
     ))}</ul>
 
-    {/* 수정 후만 보여 준다. 무엇이 달라졌는지는 줄마다 붙는 "새로 추가"·"바뀐 내용" 딱지가 알려 준다. */}
-    {changes.length > 0 && <div className={styles.changes}>{changes.map((change) => (
-      <section aria-label={`${change.label} 수정 후`} key={change.section}>
-        <h3>{change.label}</h3>
+    {/* 기존 내용은 반복하지 않고 이번 수정안에서 새로 추가되거나 바뀐 내용만 보여 준다. */}
+    {changes.length > 0 && <div className={styles.changes}>
+      <header className={styles.changesHeader}>
+        <strong>문서에 반영될 내용</strong>
+        <p>제목을 먼저 확인하고, 필요한 항목만 펼쳐서 자세히 볼 수 있어요.</p>
+      </header>
+      {changes.map((change) => {
+        const addedCount = describeSection(change.after!, change.before).filter((line) => line.added).length
+        return <section aria-label={`${change.label} 수정 후`} key={change.section}>
+        <header className={styles.sectionHeader}>
+          <h3>{change.label}</h3>
+          <span>{addedCount}개 {change.before ? '추가·변경' : '추가'}</span>
+        </header>
         <div className={styles.after}><SectionValue compareTo={change.before} value={change.after!} /></div>
       </section>
-    ))}</div>}
+      })}
+    </div>}
 
     {fix.stale && <p className={styles.error} role="alert">보완을 시작한 뒤 문서가 바뀌어 적용할 수 없어요. 다시 점검한 뒤 새로 보완해 주세요.</p>}
     {proposed.length > 0 && <p className={styles.hint}>적용하면 수정안이 있는 항목의 섹션만 바뀌고, 그 항목을 다시 점검해요. 적용한 뒤에도 문서에서 직접 고칠 수 있어요.</p>}

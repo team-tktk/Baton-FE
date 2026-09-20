@@ -421,7 +421,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
               <div className={styles.sectionHeading}><div><span>먼저 해주세요</span><h2 id="file-source-title">업무 파일 추가</h2><p>AI가 초안을 만들 때 참고할 문서를 올려주세요.</p></div><strong>PDF · DOCX · XLSX · PPTX</strong></div>
               <FileUploader attachments={state.attachments} uploading={pending} onReject={showToast} onRemove={(attachmentId) => void removeFile(attachmentId)} onSelect={(files) => void uploadFiles(files)} onSampleSelect={demo ? () => void uploadFiles(demoSamples.filter(sample => !state.attachments.some(file => file.name === sample.name)).map(sample => new File([sample.text], sample.name, { type: 'text/plain' }))) : undefined} />
             </section>
-            {draftId && !demo && <SourceCollector handoverId={draftId} onChange={updateExternalSources} onFeedback={showToast} />}
+            {draftId && <SourceCollector demo={demo} handoverId={draftId} onChange={updateExternalSources} onFeedback={showToast} />}
             <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button
               disabled={(state.attachments.length === 0 && externalSources.readyCount === 0 && externalSources.reviewCount === 0) || hasProcessingFile || externalSources.processing}
               onClick={() => navigate(needsMaskingReview ? '/handovers/new/masking' : '/handovers/new/analyzing')}

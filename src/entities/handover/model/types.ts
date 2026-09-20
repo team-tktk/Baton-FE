@@ -178,7 +178,18 @@ export interface HandoverDraft {
 }
 
 /** 준비도 영역. 보완 요청 경로(/items/{area}/fixes)에 그대로 쓰므로 서버 값을 유지한다. */
-export type ReadinessArea = 'SCOPE' | 'PROCEDURE' | 'COMPLETION' | 'EXCEPTION' | 'SCHEDULE' | 'CONTACTS' | 'ACCESS' | 'EVIDENCE'
+export type ReadinessArea =
+  | 'SCOPE'
+  | 'PROCEDURE'
+  | 'PROGRESS'
+  | 'PRIORITY'
+  | 'COMPLETION'
+  | 'EXCEPTION'
+  | 'SCHEDULE'
+  | 'CONTACTS'
+  /** v1/v2 평가 결과 호환용. v4 평가 대상에서는 제외됐다. */
+  | 'ACCESS'
+  | 'EVIDENCE'
 
 /** 서버 문서 섹션 */
 export type DocumentSection =
