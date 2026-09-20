@@ -151,13 +151,11 @@ function FixBody({ applying, busy, fix, onApply, onClose, onGenerate, onOpenEvid
       </li>
     ))}</ul>
 
+    {/* 수정 후만 보여 준다. 무엇이 달라졌는지는 줄마다 붙는 "새로 추가"·"바뀐 내용" 딱지가 알려 준다. */}
     {changes.length > 0 && <div className={styles.changes}>{changes.map((change) => (
-      <section aria-label={`${change.label} 수정 전후`} key={change.section}>
+      <section aria-label={`${change.label} 수정 후`} key={change.section}>
         <h3>{change.label}</h3>
-        <div className={styles.compare}>
-          <section aria-label="수정 전"><h4>수정 전</h4><SectionValue value={change.before} /></section>
-          <section aria-label="수정 후" className={styles.after}><h4>수정 후</h4><SectionValue compareTo={change.before} value={change.after!} /></section>
-        </div>
+        <div className={styles.after}><SectionValue compareTo={change.before} value={change.after!} /></div>
       </section>
     ))}</div>}
 

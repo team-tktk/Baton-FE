@@ -98,13 +98,15 @@ describe('ReadinessFixDialog', () => {
     expect(onGenerate).toHaveBeenCalledWith([{ questionId: 'q-1', answer: '둘 다 아니고 김도현' }])
   })
 
-  it('shows which items got a proposal, compares the changed sections and applies', async () => {
+  it('shows which items got a proposal, previews the fixed sections and applies', async () => {
     const user = userEvent.setup()
     const { onApply, onGenerate, onOpenEvidence } = renderDialog(session({ fix: generated }))
 
     expect(screen.getByText('항목 3개 중 1개의 수정안을 만들었어요. 확인하고 문서에 적용해 주세요.')).toBeInTheDocument()
-    const changes = within(screen.getByRole('region', { name: '접근 권한과 계정 수정 전후' }))
+    const changes = within(screen.getByRole('region', { name: '접근 권한과 계정 수정 후' }))
     expect(changes.getByText('새로 추가').closest('li')).toHaveTextContent('정산 시스템')
+    // 수정 전은 더 이상 그리지 않는다. 달라진 곳은 줄마다 붙는 딱지로만 알린다.
+    expect(screen.queryByRole('region', { name: '수정 전' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /운영 매뉴얼\.pdf/ }))
     expect(onOpenEvidence).toHaveBeenCalled()
 

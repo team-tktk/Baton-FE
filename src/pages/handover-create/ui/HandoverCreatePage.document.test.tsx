@@ -167,7 +167,7 @@ describe('HandoverCreatePage document step AI fixes', () => {
     await user.click(detail('예외 대응').getByRole('button', { name: 'AI로 보완하기' }))
     const dialog = within(await screen.findByRole('dialog', { name: '예외 대응 보완' }))
     expect(await dialog.findByText('항목 1개 중 1개의 수정안을 만들었어요. 확인하고 문서에 적용해 주세요.')).toBeInTheDocument()
-    expect(dialog.getByRole('region', { name: '업무 기준과 예외 수정 전후' })).toHaveTextContent('예외 상황별 담당자와 처리 순서를 적어 주세요.')
+    expect(dialog.getByRole('region', { name: '업무 기준과 예외 수정 후' })).toHaveTextContent('예외 상황별 담당자와 처리 순서를 적어 주세요.')
 
     await user.click(dialog.getByRole('button', { name: '문서에 적용' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
@@ -197,7 +197,7 @@ describe('HandoverCreatePage document step AI fixes', () => {
     const dialog = within(await screen.findByRole('dialog', { name: '접근 권한 보완' }))
     await user.type(await dialog.findByRole('textbox', { name: /접근 권한과 계정에 들어갈 내용을 알려 주세요/ }), '정산 시스템 조회 권한')
     await user.click(dialog.getByRole('button', { name: /AI로 수정안 만들기/ }))
-    expect(await dialog.findByRole('region', { name: '접근 권한과 계정 수정 전후' })).toHaveTextContent('정산 시스템 조회 권한')
+    expect(await dialog.findByRole('region', { name: '접근 권한과 계정 수정 후' })).toHaveTextContent('정산 시스템 조회 권한')
 
     await user.click(dialog.getByRole('button', { name: '문서에 적용' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
