@@ -25,16 +25,10 @@ export function ReadinessFixReviewPanel({ error, fix, items, onApply, onCancel, 
 
   return <section aria-label="보완 내용 확인" className={styles.panel}>
     <header>
-      <h2>보완 내용 확인</h2>
-      <p>추가할 내용을 확인하고 필요 없는 항목은 문서에서 제외해 주세요.</p>
+      <span className={styles.step}>2단계 / 2단계</span>
+      <h2>문서에 추가할 내용을 확인해 주세요</h2>
+      <p>녹색으로 표시된 변경분을 확인하고 필요 없는 항목은 문서에서 제외해 주세요.</p>
     </header>
-
-    <div className={styles.summary}>
-      <p><strong>{selectedCount}개</strong><span>선택됨</span></p>
-      <span>{sections.length}곳 변경</span>
-    </div>
-
-    <div className={styles.guide}><span />문서에서 녹색으로 표시된 내용이 추가돼요.</div>
 
     <section className={styles.sections}>
       <h3>변경 위치</h3>

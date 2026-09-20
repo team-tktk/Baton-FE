@@ -124,9 +124,16 @@ function FixBody({ applying, busy, fix, onApply, onClose, onGenerate, onOpenEvid
   const generated = hasGenerated(fix)
 
   if (!generated) {
+    const questionAreas = fix.areas.filter((area) => area.questions.length > 0)
+    const sourceAreaCount = fix.areas.length - questionAreas.length
     return <>
-      <p className={styles.lead}>항목 {fix.areas.length}개를 한 번에 보완해요. 자료에 없는 것만 물어볼게요. 답한 뒤 AI가 수정안을 한 번에 만들어요.</p>
-      <div className={styles.areas}>{fix.areas.map((area) => (
+      <div className={styles.stepHeader}>
+        <span>1단계 / 2단계</span>
+        <strong>필요한 내용을 확인해 주세요</strong>
+        <p>자료에서 찾을 수 없는 내용만 답하면, 답변과 자료를 합쳐 수정안을 만들어요.</p>
+      </div>
+      {sourceAreaCount > 0 && <p className={styles.savedNotice}><Icon name="check" />{sourceAreaCount}개 항목은 자료에서 찾아 채울 수 있어요.</p>}
+      <div className={styles.areas}>{questionAreas.map((area) => (
         <section aria-label={`${area.label} 질문`} className={styles.area} key={area.area}>
           <header><strong>{area.label}</strong><span className={chipClass(area)}>{area.statusLabel}</span><small>고칠 곳: {area.sections.map((section) => section.label).join(' · ')}</small></header>
           <AreaQuestions answers={answers} area={area} busy={busy} onAnswer={setAnswer} />
@@ -142,34 +149,44 @@ function FixBody({ applying, busy, fix, onApply, onClose, onGenerate, onOpenEvid
 
   const proposed = fix.areas.filter((area) => area.proposed)
   const unresolved = fix.areas.filter((area) => !area.proposed)
+  const needsAnswer = unresolved.filter((area) => area.questions.length > 0)
   const changes = fix.sections.filter((change) => change.changed && change.after)
-  return <>
-    {proposed.length > 0 ? <div className={styles.proposalSummary}>
-      <span className={styles.proposalIcon}><Icon name="check" /></span>
-      <div>
-        <strong>{proposed.length}개 항목의 수정안이 준비됐어요</strong>
-        <p>기존 내용은 제외하고 새로 추가되거나 바뀌는 내용만 보여드려요.</p>
+
+  if (unresolved.length > 0) {
+    return <>
+      <div className={styles.stepHeader}>
+        <span>1단계 / 2단계</span>
+        <strong>{needsAnswer.length > 0 ? `${needsAnswer.length}가지만 더 확인해 주세요` : '수정안을 모두 만들지 못했어요'}</strong>
+        <p>{needsAnswer.length > 0 ? '답변이 필요한 항목만 남겼어요. 답하면 전체 수정안을 완성해 다음 화면에서 보여드릴게요.' : '자료가 부족한 항목은 문서에서 직접 보완한 뒤 다시 시도해 주세요.'}</p>
       </div>
-      <span className={styles.proposalCount}>{proposed.length}/{fix.areas.length}</span>
-    </div> : <p className={styles.lead}>아직 수정안을 만들지 못했어요. 아래 질문에 답하면 다시 만들어 볼게요.</p>}
-    <ul className={styles.results}>{fix.areas.map((area) => (
-      <li className={area.proposed ? styles.resolved : styles.unresolved} key={area.area}>
-        <header>
-          <Icon name={area.proposed ? 'check' : 'alert'} />
-          <strong>{area.label}</strong>
-          <span>{area.proposed ? '준비됨' : '답이 더 필요해요'}</span>
-        </header>
-        {area.proposed && <EvidenceList items={area.evidence} onOpenEvidence={onOpenEvidence} />}
-        {!area.proposed && <AreaQuestions answers={answers} area={area} busy={busy} onAnswer={setAnswer} />}
-      </li>
-    ))}</ul>
+      {proposed.length > 0 && <p className={styles.savedNotice}><Icon name="check" />{proposed.length}개 항목은 이미 준비되어 있어요.</p>}
+      {needsAnswer.length > 0 && <div className={styles.areas}>{needsAnswer.map((area) => (
+        <section aria-label={`${area.label} 질문`} className={styles.area} key={area.area}>
+          <header><strong>{area.label}</strong><span className={chipClass(area)}>{area.statusLabel}</span><small>반영 위치: {area.sections.map((section) => section.label).join(' · ')}</small></header>
+          <AreaQuestions answers={answers} area={area} busy={busy} onAnswer={setAnswer} />
+        </section>
+      ))}</div>}
+      {fix.stale && <p className={styles.error} role="alert">보완을 시작한 뒤 문서가 바뀌어 계속할 수 없어요. 다시 점검한 뒤 새로 보완해 주세요.</p>}
+      <div className={styles.actions}>
+        <Button disabled={busy} variant="ghost" onClick={onClose}>{needsAnswer.length > 0 ? '취소' : '닫기'}</Button>
+        {needsAnswer.length > 0 && <Button disabled={busy || fix.stale || changed.length === 0} onClick={() => onGenerate(changed)}>답변 반영하고 계속</Button>}
+      </div>
+    </>
+  }
+
+  return <>
+    <div className={styles.stepHeader}>
+      <span>2단계 / 2단계</span>
+      <strong>문서에 추가할 내용을 확인해 주세요</strong>
+      <p>기존 내용은 반복하지 않고 새로 추가되거나 바뀌는 내용만 보여드려요.</p>
+    </div>
+    {proposed.some((area) => area.evidence.length > 0) && <details className={styles.sources}>
+      <summary>참고한 자료 보기</summary>
+      {proposed.map((area) => <EvidenceList items={area.evidence} key={area.area} onOpenEvidence={onOpenEvidence} />)}
+    </details>}
 
     {/* 기존 내용은 반복하지 않고 이번 수정안에서 새로 추가되거나 바뀐 내용만 보여 준다. */}
     {changes.length > 0 && <div className={styles.changes}>
-      <header className={styles.changesHeader}>
-        <strong>문서에 반영될 내용</strong>
-        <p>제목을 먼저 확인하고, 필요한 항목만 펼쳐서 자세히 볼 수 있어요.</p>
-      </header>
       {changes.map((change) => {
         const addedCount = describeSection(change.after!, change.before).filter((line) => line.added).length
         return <section aria-label={`${change.label} 수정 후`} key={change.section}>
@@ -183,10 +200,9 @@ function FixBody({ applying, busy, fix, onApply, onClose, onGenerate, onOpenEvid
     </div>}
 
     {fix.stale && <p className={styles.error} role="alert">보완을 시작한 뒤 문서가 바뀌어 적용할 수 없어요. 다시 점검한 뒤 새로 보완해 주세요.</p>}
-    {proposed.length > 0 && <p className={styles.hint}>적용하면 수정안이 있는 항목의 섹션만 바뀌고, 그 항목을 다시 점검해요. 적용한 뒤에도 문서에서 직접 고칠 수 있어요.</p>}
+    {proposed.length > 0 && <p className={styles.hint}>적용하면 위 내용이 문서에 표시돼요. 적용 후에도 문서에서 직접 수정할 수 있어요.</p>}
     <div className={styles.actions}>
       <Button disabled={busy} variant="ghost" onClick={onClose}>취소</Button>
-      {unresolved.length > 0 && <Button disabled={busy || fix.stale || changed.length === 0} variant="secondary" onClick={() => onGenerate(changed)}>답하고 다시 만들기</Button>}
       {proposed.length > 0 && <Button disabled={busy || fix.stale || fix.status !== 'proposed'} onClick={onApply}>{applying ? '적용하는 중…' : '문서에 적용'}</Button>}
     </div>
   </>

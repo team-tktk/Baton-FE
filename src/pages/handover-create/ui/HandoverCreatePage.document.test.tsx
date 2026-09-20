@@ -166,6 +166,9 @@ describe('HandoverCreatePage document step AI fixes', () => {
     await user.click(keyIssue('예외 대응'))
     await user.click(detail('예외 대응').getByRole('button', { name: 'AI로 보완하기' }))
     const review = within(await screen.findByRole('region', { name: '보완 내용 확인' }))
+    expect(review.getByText('2단계 / 2단계')).toBeInTheDocument()
+    expect(review.getByRole('heading', { name: '문서에 추가할 내용을 확인해 주세요' })).toBeInTheDocument()
+    expect(review.queryByText('선택됨')).not.toBeInTheDocument()
     const rules = window.document.getElementById('draft-section-rules-and-exceptions')!
     expect(rules).toHaveTextContent('예외 상황별 담당자와 처리 순서를 적어 주세요.')
     const proposedRemove = within(rules).getByRole('button', { name: /예외 상황별 담당자와 처리 순서를 적어 주세요.*제외/ })

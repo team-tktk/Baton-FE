@@ -1,14 +1,8 @@
 .panel { display: flex; min-height: 360px; flex-direction: column; gap: 16px; }
 .panel > header { display: block; }
+.step { display: block; margin-bottom: 7px; color: var(--blue-dark); font-size: var(--fs-3xs); font-weight: 850; }
 .panel h2 { margin: 0 0 7px; font-size: var(--fs-xl); letter-spacing: -.03em; }
 .panel header p { margin: 0; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.6; }
-.summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 15px 0; }
-.summary p { display: flex; align-items: baseline; gap: 7px; margin: 0; }
-.summary strong { font-size: var(--fs-3xl); letter-spacing: -.04em; line-height: 1; }
-.summary p span { color: var(--muted); font-size: var(--fs-2xs); font-weight: 650; }
-.summary > span { border-radius: 999px; background: #f2f4f6; color: var(--sub); padding: 5px 9px; font-size: var(--fs-3xs); font-weight: 750; }
-.guide { display: flex; align-items: center; gap: 8px; color: var(--sub); font-size: var(--fs-2xs); }
-.guide span { width: 10px; height: 10px; border-radius: 3px; background: #bfead5; }
 .sections { padding-top: 3px; }
 .sections h3 { margin: 0 0 8px; font-size: var(--fs-sm); }
 .sections ul { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
