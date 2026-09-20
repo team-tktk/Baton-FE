@@ -6,6 +6,7 @@ import type { SubmitCheck } from '@/features/check-readiness'
 import { ReadinessFixDialog, ReadinessFixReviewPanel, ReadinessPanel, ReadinessSubmitDialog, appliedMessage, buildSelectedFixDocument, checkBeforeSubmit, getFixPreviewItems, hasGenerated, sectionElementId, toDraftIssues, useDocumentReadiness, useReadinessFix } from '@/features/check-readiness'
 import { ApiError } from '@/shared/api'
 import { saveBlob } from '@/shared/lib/download'
+import { useDemoDocumentActivity } from '@/shared/lib/demo'
 import { HandoverDraftEditor } from '@/widgets/handover-document'
 
 import styles from './DocumentStep.module.css'
@@ -45,6 +46,7 @@ function locateSection(section: DocumentSection, focus = true) {
 
 export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onReloadDocument, onSubmit, revision, saveDraft, ...editorProps }: DocumentStepProps) {
   const repository = useHandoverRepository()
+  const reportDemoActivity = useDemoDocumentActivity()
   const readiness = useDocumentReadiness({ handoverId, saveDraft })
   const [check, setCheck] = useState<SubmitCheck | null>(null)
   const issues = useMemo(() => toDraftIssues(readiness.readiness), [readiness.readiness])
@@ -70,6 +72,7 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
     if (result.readiness) readiness.replaceReadiness(result.readiness)
     else void readiness.reevaluate()
     editorProps.onFeedback(appliedMessage(result, previous))
+    reportDemoActivity?.('applied')
   }
   const fix = useReadinessFix({
     handoverId,
@@ -103,8 +106,17 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
   }
   const startFix = (areas: ReadinessArea[]) => {
     const targets = readiness.readiness?.areas.filter((item) => areas.includes(item.area) && item.status !== 'sufficient') ?? []
-    if (targets.length > 0 && !fixBlocked) void fix.start(targets)
+    if (targets.length > 0 && !fixBlocked) {
+      reportDemoActivity?.('idle')
+      void fix.start(targets)
+    }
   }
+
+  useEffect(() => {
+    if (reviewFix) reportDemoActivity?.('review')
+  }, [reportDemoActivity, reviewFix])
+
+  useEffect(() => () => reportDemoActivity?.('idle'), [reportDemoActivity])
 
   const submit = () => {
     const next = checkBeforeSubmit(readiness.readiness, readiness.phase, dirty)
@@ -146,7 +158,7 @@ export function DocumentStep({ dirty, handover, handoverId, onDraftReplaced, onR
           phase={fix.session.phase}
           selectedIds={selectedIds}
           onApply={applyProposals}
-          onCancel={fix.close}
+          onCancel={() => { reportDemoActivity?.('idle'); fix.close() }}
           onLocate={(section) => { locateSection(section, false) }}
           onRestoreAll={restoreProposals}
         /> : <ReadinessPanel

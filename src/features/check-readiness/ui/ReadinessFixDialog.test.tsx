@@ -49,6 +49,12 @@ const generated: ReadinessFix = {
   }],
 }
 
+const fullyGenerated: ReadinessFix = {
+  ...generated,
+  unansweredCount: 0,
+  areas: generated.areas.map((area) => ({ ...area, proposed: true, questions: [] })),
+}
+
 const session = (overrides: Partial<FixSession>): FixSession => ({
   areas: [areaResult('CONTACTS', '담당자'), areaResult('ACCESS', '접근 권한'), areaResult('PROCEDURE', '실행 절차')],
   phase: 'ready', fix: started, error: null, ...overrides,
@@ -81,7 +87,7 @@ describe('ReadinessFixDialog', () => {
     const accessBlock = within(screen.getByRole('region', { name: '접근 권한 질문' }))
     expect(accessBlock.getByText('나중에 답하기로 미룬 질문')).toBeInTheDocument()
     await user.type(accessBlock.getByRole('textbox', { name: /정산 시스템 권한은 누가 주나요/ }), '  재무팀 김하나님  ')
-    expect(within(screen.getByRole('region', { name: '실행 절차 질문' })).getByText(/업로드한 자료에서 찾아 채워요/)).toBeInTheDocument()
+    expect(screen.getByText('1개 항목은 자료에서 찾아 채울 수 있어요.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /AI로 수정안 만들기/ }))
     expect(onGenerate).toHaveBeenCalledWith([{ questionId: 'q-1', answer: '윤예린' }, { questionId: 'q-2', answer: '재무팀 김하나님' }])
@@ -98,38 +104,45 @@ describe('ReadinessFixDialog', () => {
     expect(onGenerate).toHaveBeenCalledWith([{ questionId: 'q-1', answer: '둘 다 아니고 김도현' }])
   })
 
-  it('shows which items got a proposal, previews the fixed sections and applies', async () => {
+  it('keeps unresolved questions in the first step without mixing in the preview', async () => {
     const user = userEvent.setup()
-    const { onApply, onGenerate, onOpenEvidence } = renderDialog(session({ fix: generated }))
+    const { onGenerate } = renderDialog(session({ fix: generated }))
 
-    expect(screen.getByText('1개 항목의 수정안이 준비됐어요')).toBeInTheDocument()
-    expect(screen.getByText('기존 내용은 제외하고 새로 추가되거나 바뀌는 내용만 보여드려요.')).toBeInTheDocument()
-    const changes = within(screen.getByRole('region', { name: '접근 권한과 계정 수정 후' }))
-    expect(changes.getByText('추가').closest('li')).toHaveTextContent('정산 시스템')
-    expect(changes.queryByText('운영 어드민')).not.toBeInTheDocument()
-    // 수정 전과 기존 항목은 반복하지 않고 새로 추가된 내용만 보여 준다.
-    expect(screen.queryByRole('region', { name: '수정 전' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /운영 매뉴얼\.pdf/ }))
-    expect(onOpenEvidence).toHaveBeenCalled()
-
-    // 아직 부족한 항목에는 새 질문이 붙는다. 답해야 다시 만들 수 있다.
-    const regenerate = screen.getByRole('button', { name: '답하고 다시 만들기' })
+    expect(screen.getByText('1단계 / 2단계')).toBeInTheDocument()
+    expect(screen.getByText('1가지만 더 확인해 주세요')).toBeInTheDocument()
+    expect(screen.queryByText('문서에 추가할 내용을 확인해 주세요')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '문서에 적용' })).not.toBeInTheDocument()
+    const regenerate = screen.getByRole('button', { name: '답변 반영하고 계속' })
     expect(regenerate).toBeDisabled()
     await user.type(screen.getByRole('textbox', { name: /예산 승인 한도는 얼마인가요/ }), '50만 원')
     await user.click(regenerate)
     expect(onGenerate).toHaveBeenCalledWith([{ questionId: 'q-3', answer: '50만 원' }])
+  })
 
+  it('previews only changed content in the second step and applies', async () => {
+    const user = userEvent.setup()
+    const { onApply, onOpenEvidence } = renderDialog(session({ fix: fullyGenerated }))
+
+    expect(screen.getByText('2단계 / 2단계')).toBeInTheDocument()
+    expect(screen.getByText('문서에 추가할 내용을 확인해 주세요')).toBeInTheDocument()
+    const changes = within(screen.getByRole('region', { name: '접근 권한과 계정 수정 후' }))
+    expect(changes.getByText('추가').closest('li')).toHaveTextContent('정산 시스템')
+    expect(changes.queryByText('운영 어드민')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '수정 전' })).not.toBeInTheDocument()
+    await user.click(screen.getByText('참고한 자료 보기'))
+    await user.click(screen.getByRole('button', { name: /운영 매뉴얼\.pdf/ }))
+    expect(onOpenEvidence).toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: '문서에 적용' }))
     expect(onApply).toHaveBeenCalled()
   })
 
   it('cannot apply a stale fix or be closed while applying', async () => {
     const user = userEvent.setup()
-    const { onClose, rerender } = renderDialog(session({ fix: { ...generated, stale: true } }))
+    const { onClose, rerender } = renderDialog(session({ fix: { ...fullyGenerated, stale: true } }))
     expect(screen.getByRole('button', { name: '문서에 적용' })).toBeDisabled()
     expect(screen.getByRole('alert')).toHaveTextContent('문서가 바뀌어 적용할 수 없어요')
 
-    rerender(session({ fix: generated, phase: 'applying' }))
+    rerender(session({ fix: fullyGenerated, phase: 'applying' }))
     expect(screen.getByRole('button', { name: '적용하는 중…' })).toBeDisabled()
     await user.keyboard('{Escape}')
     expect(onClose).not.toHaveBeenCalled()

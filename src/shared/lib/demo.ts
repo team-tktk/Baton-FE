@@ -4,6 +4,10 @@ import { useNavigate, type NavigateOptions, type To } from 'react-router-dom'
 export const DemoContext = createContext(false)
 export const useDemo = () => useContext(DemoContext)
 
+export type DemoDocumentActivity = 'idle' | 'review' | 'applied'
+export const DemoDocumentActivityContext = createContext<((activity: DemoDocumentActivity) => void) | null>(null)
+export const useDemoDocumentActivity = () => useContext(DemoDocumentActivityContext)
+
 /** Keep all navigation inside the isolated demo route. */
 export function useAppNavigate() {
   const navigate = useNavigate()
