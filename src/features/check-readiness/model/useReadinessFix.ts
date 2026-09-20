@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import type { ReadinessAreaResult, ReadinessFix, ReadinessFixAnswer, ReadinessFixApplied } from '@/entities/handover'
+import type { HandoverDocument, ReadinessAreaResult, ReadinessFix, ReadinessFixAnswer, ReadinessFixApplied } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import { ApiError } from '@/shared/api'
 
@@ -88,13 +88,26 @@ export function useReadinessFix({ handoverId, onApplied, onConflict, revision }:
     await runGenerate(sessionId.current, fix.id, answers)
   }, [runGenerate, session?.fix])
 
-  const apply = useCallback(async () => {
+  const apply = useCallback(async (selectedDocument?: HandoverDocument) => {
     const fix = session?.fix
     if (!handoverId || !fix || revision === null) return
     const id = sessionId.current
     update(id, { phase: 'applying', error: null })
     try {
-      const result = await repository.applyReadinessFix(handoverId, fix.id, revision)
+      let result: ReadinessFixApplied
+      if (selectedDocument) {
+        const nextRevision = await repository.saveDocument(handoverId, selectedDocument, revision)
+        let nextReadiness: ReadinessFixApplied['readiness'] = null
+        try { nextReadiness = await repository.evaluateReadiness(handoverId) } catch { /* 저장은 끝났으므로 화면에서 다시 평가한다. */ }
+        repository.discardReadinessFix(handoverId, fix.id).catch(() => { /* 선택 적용 뒤 보완안 정리 실패는 문서에 영향이 없다. */ })
+        result = {
+          fix: { ...fix, status: 'applied', appliedRevision: nextRevision },
+          draft: { document: selectedDocument, revision: nextRevision },
+          readiness: nextReadiness,
+        }
+      } else {
+        result = await repository.applyReadinessFix(handoverId, fix.id, revision)
+      }
       // 서버 문서는 이미 바뀌었으므로 창 상태와 상관없이 화면에 반영한다.
       if (!alive.current) return
       onApplied(result)

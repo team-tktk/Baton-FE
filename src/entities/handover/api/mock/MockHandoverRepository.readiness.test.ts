@@ -11,6 +11,20 @@ describe('MockHandoverRepository readiness', () => {
     const repository = new MockHandoverRepository()
     await expect(repository.getReadiness(ID)).resolves.toBeNull()
 
+    await expect(repository.getReadinessRubric(ID)).resolves.toMatchObject({
+      version: 'v4',
+      areas: [
+        { area: 'SCOPE', weight: 10 },
+        { area: 'PROCEDURE', weight: 20 },
+        { area: 'PROGRESS', weight: 15 },
+        { area: 'PRIORITY', weight: 10 },
+        { area: 'COMPLETION', weight: 10 },
+        { area: 'EXCEPTION', weight: 15 },
+        { area: 'SCHEDULE', weight: 10 },
+        { area: 'CONTACTS', weight: 10 },
+      ],
+    })
+
     const first = await repository.evaluateReadiness(ID)
     expect(first).toMatchObject({ score: 75, grade: 'needs-improvement', keyIssueCount: 3, stale: false, deferredQuestionCount: 0 })
     expect(first.areas.map((area) => area.area).slice(0, 3)).toEqual(['PROCEDURE', 'EXCEPTION', 'CONTACTS'])
@@ -26,8 +40,9 @@ describe('MockHandoverRepository readiness', () => {
     await expect(repository.startReadinessFix(ID, ['EXCEPTION'])).rejects.toMatchObject({ serverCode: 'READINESS_STALE' })
 
     const second = await repository.evaluateReadiness(ID)
-    expect(second.areas.find((area) => area.area === 'ACCESS')).toMatchObject({ status: 'missing', percent: 0, anchorText: null, questions: [{ options: [] }] })
-    expect(second.score).toBe(65)
+    expect(second.areas.map((area) => area.area)).toEqual(expect.arrayContaining(['PROGRESS', 'PRIORITY']))
+    expect(second.areas.map((area) => area.area)).not.toEqual(expect.arrayContaining(['ACCESS', 'EVIDENCE']))
+    expect(second.score).toBe(75)
   })
 
   it('rejects a save based on an old revision', async () => {
@@ -65,26 +80,26 @@ describe('MockHandoverRepository readiness', () => {
   it('needs an answer before filling an empty section or resolving a conflict', async () => {
     const repository = new MockHandoverRepository()
     const { document, revision } = await repository.getDocument(ID)
-    const saved = await repository.saveDocument(ID, { ...document, accessAccounts: [] }, revision)
+    const saved = await repository.saveDocument(ID, { ...document, activeTasks: [] }, revision)
     await repository.evaluateReadiness(ID)
 
-    const started = await repository.startReadinessFix(ID, ['ACCESS', 'CONTACTS'])
-    const [accessQuestion, contactsQuestion] = started.areas.flatMap((area) => area.questions)
+    const started = await repository.startReadinessFix(ID, ['PROGRESS', 'CONTACTS'])
+    const [progressQuestion, contactsQuestion] = started.areas.flatMap((area) => area.questions)
     await expect(repository.applyReadinessFix(ID, started.id, saved)).rejects.toMatchObject({ serverCode: 'READINESS_FIX_INVALID_STATE' })
     await expect(repository.generateReadinessFix(ID, started.id)).resolves.toMatchObject({ status: 'needs-input' })
 
     const answered = await repository.answerReadinessFix(ID, started.id, [
-      { questionId: accessQuestion!.id, answer: '운영 어드민' },
+      { questionId: progressQuestion!.id, answer: '법무 검토 회신을 기다린 뒤 공급사 코드를 등록합니다.' },
       { questionId: contactsQuestion!.id, answer: '윤예린 · 마케팅팀' },
     ])
     expect(answered.unansweredCount).toBe(0)
     const generated = await repository.generateReadinessFix(ID, started.id)
     expect(generated.areas.every((area) => area.proposed)).toBe(true)
-    expect(generated.sections.find((change) => change.section === 'ACCESS_ACCOUNTS')).toMatchObject({ changed: true, after: { value: [{ tool: '운영 어드민' }] } })
+    expect(generated.sections.find((change) => change.section === 'ONGOING_TASKS')).toMatchObject({ changed: true })
 
     await expect(repository.applyReadinessFix(ID, started.id, saved - 1)).rejects.toMatchObject({ serverCode: 'AI_DRAFT_REVISION_CONFLICT' })
     const applied = await repository.applyReadinessFix(ID, started.id, saved)
-    expect(applied.readiness?.areas.find((area) => area.area === 'ACCESS')?.status).toBe('sufficient')
+    expect(applied.readiness?.areas.find((area) => area.area === 'PROGRESS')?.status).toBe('sufficient')
     await expect(repository.discardReadinessFix(ID, started.id)).rejects.toMatchObject({ serverCode: 'READINESS_FIX_INVALID_STATE' })
   })
 

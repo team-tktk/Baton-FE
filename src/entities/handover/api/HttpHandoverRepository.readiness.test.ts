@@ -138,15 +138,22 @@ describe('HttpHandoverRepository readiness', () => {
     expect(evaluated.mock.calls[0]![1]?.method).toBe('POST')
 
     const rubric = stubFetch(jsonResponse({
-      version: 'v1',
-      areas: [{ area: 'ACCESS', label: '접근 권한', criteria: '권한이 있나요?', weight: 10, sections: ['ACCESS_ACCOUNTS'] }],
+      version: 'v4',
+      areas: [
+        { area: 'PROGRESS', label: '진행 현황', criteria: '현재 상태를 알 수 있나요?', weight: 15, sections: ['ONGOING_TASKS'] },
+        { area: 'PRIORITY', label: '우선순위', criteria: '먼저 할 일을 알 수 있나요?', weight: 10, sections: ['ONGOING_TASKS', 'FIRST_WEEK_CHECKLIST'] },
+      ],
       statusPercent: { SUFFICIENT: 100, PARTIAL: 50, CONFLICT: 25, MISSING: 0 },
       readyScore: 80,
       minimumScore: 50,
       keyIssueCount: 3,
     }))
     await expect(repository.getReadinessRubric('handover-1')).resolves.toMatchObject({
-      areas: [{ area: 'ACCESS', sections: ['ACCESS_ACCOUNTS'] }],
+      version: 'v4',
+      areas: [
+        { area: 'PROGRESS', sections: ['ONGOING_TASKS'] },
+        { area: 'PRIORITY', sections: ['ONGOING_TASKS', 'FIRST_WEEK_CHECKLIST'] },
+      ],
       statusPercent: { sufficient: 100, partial: 50, conflict: 25, missing: 0 },
     })
     expect(rubric.mock.calls[0]![0]).toBe(`${BASE}/rubric`)
