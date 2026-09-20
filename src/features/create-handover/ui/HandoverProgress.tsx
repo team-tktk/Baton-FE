@@ -1,5 +1,3 @@
-import { useEffect, useState } from 'react'
-
 import { Icon } from '@/shared/ui/icon'
 
 import styles from './HandoverProgress.module.css'
@@ -18,24 +16,6 @@ interface HandoverProgressProps {
  * 지나온 단계로 돌아가면 서버 상태(분석·질문 완료)와 어긋나므로 이동 기능은 두지 않는다.
  */
 export function HandoverProgress({ current, onHome }: HandoverProgressProps) {
-  const [hidden, setHidden] = useState(false)
-
-  useEffect(() => {
-    let frame = 0
-    const onScroll = () => {
-      if (frame) return
-      frame = window.requestAnimationFrame(() => {
-        setHidden(window.scrollY > 40)
-        frame = 0
-      })
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      if (frame) window.cancelAnimationFrame(frame)
-    }
-  }, [])
-
   return (
     <nav aria-label="인수인계 진행 상황" className={styles.progress}>
       <div className={styles.shell}>
@@ -45,7 +25,7 @@ export function HandoverProgress({ current, onHome }: HandoverProgressProps) {
             <span aria-hidden="true" className={styles.divider} />
           </>
         )}
-        <div className={`${styles.steps} ${hidden ? styles.hidden : ''}`.trim()} data-hidden={hidden || undefined}>
+        <div className={styles.steps}>
           <div className={styles.summary}>
             <strong><span>{current}</span> / {HANDOVER_STEPS.length}</strong>
             <span>{HANDOVER_STEPS[current - 1]}</span>

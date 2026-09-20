@@ -24,6 +24,8 @@ export const weakReadinessAreas: Partial<Record<ReadinessArea, {
   summary: string
   resolution: string
   anchorText?: string
+  /** 자료만으로 채우기 어려울 때 보완 전에 사용자에게 물을 질문. */
+  question?: string
   /** 충돌이면 서버처럼 "어느 쪽이 맞나요?"와 자료별 값을 묻는다. */
   options?: string[]
 }>> = {
@@ -32,12 +34,16 @@ export const weakReadinessAreas: Partial<Record<ReadinessArea, {
     summary: '주간 주문 현황을 어떤 순서로 정리하는지 빠져 있어요.',
     resolution: '확인 → 정리 → 공유 순서를 단계별로 적어 주세요.',
     anchorText: '주간 주문 현황 정리',
+    question: '주간 주문 현황은 어떤 순서로 확인하고 공유하나요?',
+    options: ['주문 확인 → 예외 건 정리 → 팀에 공유', '담당자 확인 → 전체 주문 공유 → 예외 건 정리'],
   },
   EXCEPTION: {
     status: 'partial',
     summary: '환불 오류가 났을 때 누구에게 넘기는지 적혀 있지 않아요.',
     resolution: '예외 상황별 담당자와 처리 순서를 적어 주세요.',
     anchorText: '쿠폰 할인율이 10%를 넘으면',
+    question: '환불이나 쿠폰 오류가 해결되지 않으면 누구에게, 어떤 순서로 전달하나요?',
+    options: ['운영팀 확인 후 이도현 팀장에게 전달', '고객 안내 후 결제 담당자에게 바로 전달'],
   },
   CONTACTS: {
     status: 'conflict',
