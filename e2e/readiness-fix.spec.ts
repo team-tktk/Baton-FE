@@ -23,8 +23,8 @@ test('fixes every item at once and submits without the readiness warning', async
   await dialog.getByRole('button', { name: /AI로 수정안 만들기/ }).click()
 
   await expect(dialog).toContainText('항목 3개 중 3개의 수정안을 만들었어요')
-  await expect(dialog.getByRole('region', { name: '업무 기준과 예외 수정 전후' }).getByRole('region', { name: '수정 후' })).toContainText('환불 오류는 고객지원팀 윤예린님에게 넘깁니다.')
-  await expect(dialog.getByRole('region', { name: '주요 관계자 수정 전후' })).toContainText('윤예린')
+  await expect(dialog.getByRole('region', { name: '업무 기준과 예외 수정 후' })).toContainText('환불 오류는 고객지원팀 윤예린님에게 넘깁니다.')
+  await expect(dialog.getByRole('region', { name: '주요 관계자 수정 후' })).toContainText('윤예린')
   await dialog.getByRole('button', { name: '문서에 적용' }).click()
 
   await expect(dialog).toBeHidden()
