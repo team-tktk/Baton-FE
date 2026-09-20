@@ -11,6 +11,13 @@
 .spinner { flex: none; width: 20px; height: 20px; margin-top: 2px; border: 2px solid #cfe2fb; border-top-color: var(--blue); border-radius: 50%; animation: spin .8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.stepHeader { margin-bottom: 20px; }
+.stepHeader > span { display: block; margin-bottom: 7px; color: var(--blue-dark); font-size: var(--fs-3xs); font-weight: 850; }
+.stepHeader > strong { display: block; color: var(--text); font-size: var(--fs-xl); line-height: 1.35; }
+.stepHeader > p { margin: 7px 0 0; color: var(--sub); font-size: var(--fs-sm); line-height: 1.6; }
+.savedNotice { display: flex; align-items: center; gap: 7px; margin: -5px 0 14px; color: var(--green); font-size: var(--fs-2xs); font-weight: 750; }
+.savedNotice svg { width: 15px; height: 15px; }
+
 .chip { flex: none; border-radius: 7px; padding: 3px 8px; font-size: var(--fs-3xs); font-weight: 800; white-space: nowrap; }
 .chip.sufficient { background: var(--green-soft); color: var(--green); }
 .chip.partial { background: var(--yellow-soft); color: var(--yellow); }
@@ -37,29 +44,12 @@
 .question textarea { min-height: 60px; resize: vertical; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; color: var(--text); font: inherit; font-size: var(--fs-sm); line-height: 1.5; }
 .question textarea:focus { border-color: var(--blue); outline: 2px solid var(--blue-soft); }
 
-/* 결과 화면 */
-.proposalSummary { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin-bottom: 14px; border: 1px solid #d9e7fa; border-radius: 16px; background: #f7faff; padding: 16px; }
-.proposalSummary > div { min-width: 0; }
-.proposalSummary strong { display: block; color: var(--text); font-size: var(--fs-base); line-height: 1.4; }
-.proposalSummary p { margin: 3px 0 0; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.5; }
-.proposalIcon { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 50%; background: var(--blue); color: #fff; }
-.proposalIcon svg { width: 17px; height: 17px; }
-.proposalCount { border-radius: 999px; background: #fff; color: var(--blue-dark); padding: 5px 9px; font-size: var(--fs-3xs); font-weight: 850; box-shadow: 0 1px 2px rgb(23 32 51 / 7%); }
-.results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 24px; padding: 0; list-style: none; }
-.results > li { display: flex; min-width: 0; flex-direction: column; gap: 8px; border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 11px 12px; }
-.results > li > header { display: flex; align-items: center; gap: 8px; }
-.results > li > header svg { flex: none; width: 15px; height: 15px; color: var(--blue); }
-.results > li > header strong { font-size: var(--fs-sm); }
-.results > li > header span { margin-left: auto; color: var(--muted); font-size: var(--fs-3xs); font-weight: 800; }
-.results > li > p { margin: 0; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.55; }
-.resolved > header { color: var(--text); }
-.unresolved { border: 1px solid #f5dfb5; background: #fffaf0; }
-.unresolved > header { color: #7a4a00; }
+.sources { margin: -4px 0 20px; color: var(--sub); font-size: var(--fs-2xs); }
+.sources summary { width: fit-content; cursor: pointer; color: var(--sub); font-weight: 750; }
+.sources[open] summary { margin-bottom: 8px; color: var(--blue-dark); }
+.sources .evidence + .evidence { margin-top: 6px; }
 
 .changes { display: flex; flex-direction: column; gap: 18px; }
-.changesHeader { margin-bottom: -2px; }
-.changesHeader strong { color: var(--text); font-size: var(--fs-lg); }
-.changesHeader p { margin: 4px 0 0; color: var(--muted); font-size: var(--fs-2xs); line-height: 1.5; }
 .sectionHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .sectionHeader h3 { margin: 0; font-size: var(--fs-sm); }
 .sectionHeader span { flex: none; border-radius: 999px; background: var(--blue-faint); color: var(--blue-dark); padding: 4px 8px; font-size: var(--fs-3xs); font-weight: 800; }
@@ -87,9 +77,6 @@
 .evidence small { color: var(--muted); font-size: var(--fs-3xs); }
 
 @media (max-width: 760px) {
-  .proposalSummary { grid-template-columns: auto 1fr; }
-  .proposalCount { display: none; }
-  .results { grid-template-columns: 1fr; }
   .actions { bottom: -22px; flex-direction: column-reverse; margin-bottom: -22px; padding-bottom: 22px; }
 }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }

@@ -3,4 +3,6 @@
 .modal h2 { margin: 0 0 20px; font-size: var(--fs-4xl); letter-spacing: -0.045em; }
 @media (max-width: 760px) { .modal { padding: 32px 24px 26px; } }
 .wide { width: min(960px, 100%); max-height: calc(100vh - 56px); overflow-y: auto; overscroll-behavior: contain; }
+.guide { width: min(520px, 100%); border-radius: 20px; padding: 28px; }
+.guide h2 { margin-bottom: 18px; color: #2876df; font-size: 13px; font-weight: 800; letter-spacing: 0; }
 @media (max-width: 760px) { .wide { max-height: calc(100vh - 56px); padding: 26px 18px 22px; } }
