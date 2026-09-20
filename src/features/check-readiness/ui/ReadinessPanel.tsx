@@ -13,15 +13,15 @@ interface ReadinessPanelProps {
   error: string | null
   /** 문서 내용. "문서에서 수정하기"를 보여 줄지 정한다. */
   document: HandoverDocument
-  /** 화면에서 고친 내용이 아직 점수에 반영되지 않았는지 */
+  /** 화면에서 고친 내용이 아직 점검에 반영되지 않았는지 */
   dirty?: boolean
   /** 아래 콜백이 없으면 해당 버튼을 그리지 않는다(검토자용 읽기 전용 패널). */
   onReevaluate?: () => void
   onLocate?: (section: DocumentSection) => void
   onOpenEvidence?: (evidence: ReadinessEvidence) => void
-  /** 부족한 영역의 AI 보완을 시작한다. */
-  onFix?: (area: ReadinessAreaResult) => void
-  /** 평가가 지금 문서와 맞지 않으면 보완을 시작할 수 없다(서버가 거절한다). */
+  /** 부족한 영역의 AI 보완을 시작한다. 배열 계약을 사용해 일괄 보완 흐름과 호환한다. */
+  onFix?: (areas: ReadinessAreaResult[]) => void
+  /** 점검 결과가 지금 문서와 맞지 않으면 보완을 시작할 수 없다(서버가 거절한다). */
   fixBlocked?: boolean
 }
 
@@ -56,6 +56,14 @@ function AreaDetail({ area, document, fixBlocked, onFix, onLocate, onOpenEvidenc
   return <div className={styles.detail}>
     {area.summary && <p>{area.summary}</p>}
     {area.resolution && <p className={styles.resolution}><strong>해결 방법</strong>{area.resolution}</p>}
+    {area.questions.length > 0 && <div className={styles.subList}>
+      <strong>보완할 때 확인할 질문 {area.questions.length}개</strong>
+      <ul>{area.questions.map((question) => <li key={question.question}>{question.question}</li>)}</ul>
+    </div>}
+    {area.deferredQuestions.length > 0 && <div className={`${styles.subList} ${styles.deferred}`}>
+      <strong>나중에 답하기로 미룬 질문 {area.deferredQuestions.length}개</strong>
+      <ul>{area.deferredQuestions.map((question) => <li key={question.id}>{question.question}</li>)}</ul>
+    </div>}
     {evidence.length > 0 && <div className={styles.evidence}>
       <strong>관련 근거</strong>
       <ul>{evidence.map((item) => <li key={item.fileId}>
@@ -65,15 +73,15 @@ function AreaDetail({ area, document, fixBlocked, onFix, onLocate, onOpenEvidenc
       </li>)}</ul>
     </div>}
     {(onFix || onLocate) && <div className={styles.actions}>
-      {onFix && <button className={styles.fix} disabled={fixBlocked} type="button" onClick={() => onFix(area)}><Icon name="spark" />AI로 보완하기</button>}
+      {onFix && <button className={styles.fix} disabled={fixBlocked} type="button" onClick={() => onFix([area])}><Icon name="spark" />AI로 보완하기</button>}
       {onLocate && <button type="button" onClick={() => onLocate(area.section)}>{editable ? '문서에서 수정하기' : '문서에서 위치 보기'}</button>}
     </div>}
-    {onFix && fixBlocked && <p className={styles.blockedNote}>문서가 평가 뒤에 바뀌었어요. 저장하고 다시 평가한 뒤 보완할 수 있어요.</p>}
+    {onFix && fixBlocked && <p className={styles.blockedNote}>문서가 점검 뒤에 바뀌었어요. 저장하고 다시 점검한 뒤 보완할 수 있어요.</p>}
   </div>
 }
 
 export function ReadinessPanel(props: ReadinessPanelProps) {
-  const { dirty = false, error, onReevaluate, phase, readiness } = props
+  const { dirty = false, error, onFix, onReevaluate, phase, readiness } = props
   const titleId = useId()
   // undefined는 최초 진입의 기본 선택, null은 사용자가 항목을 다시 눌러 명시적으로 닫은 상태다.
   const [selectedArea, setSelectedArea] = useState<ReadinessArea | null | undefined>(undefined)
@@ -118,13 +126,11 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
       <p><strong>{readiness.score}</strong><span>점</span></p>
       <span className={`${styles.grade} ${GRADE_CLASS[readiness.grade]}`}>{readiness.gradeLabel}</span>
     </div>
-    {readiness.potentialScore > readiness.score && <p className={styles.potential}>중요한 확인을 해결하면 <strong>{readiness.potentialScore}점</strong>까지 올라가요</p>}
-
     {evaluating && <p aria-live="polite" className={styles.working} role="status"><span className={styles.spinner} />다시 점검하고 있어요. 수십 초 걸릴 수 있어요.</p>}
     {error && <p className={styles.error} role="alert">{error}</p>}
     {outdated && !evaluating && <div className={styles.notice}>
-      <p><Icon name="alert" />{dirty ? '고친 내용은 아직 점수에 반영되지 않았어요.' : '평가한 뒤 문서나 자료가 바뀌었어요.'} 저장하고 다시 평가하면 점수가 새로 계산돼요.</p>
-      {onReevaluate && <button className={styles.primary} type="button" onClick={onReevaluate}>저장하고 다시 평가</button>}
+      <p><Icon name="alert" />{dirty ? '고친 내용은 아직 점검에 반영되지 않았어요.' : '점검한 뒤 문서나 자료가 바뀌었어요.'} 저장하고 다시 점검하면 결과가 새로 정리돼요.</p>
+      {onReevaluate && <button className={styles.primary} type="button" onClick={onReevaluate}>저장하고 다시 점검</button>}
     </div>}
 
     <section aria-label="영역별 준비도" className={styles.areaList}>
@@ -132,7 +138,7 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
         <div><h3>영역별 점검 결과</h3><p>항목을 선택하면 보완 방법과 관련 근거를 확인할 수 있어요.</p></div>
       </header>
       {keyIssues.length > 0 && <section aria-label="중요 항목" className={styles.priority}>
-        <header><h4>중요 항목</h4><span>{keyIssues.length}개 확인 필요</span></header>
+        <header><h4>중요 항목</h4><div className={styles.priorityActions}><span>{keyIssues.length}개 확인 필요</span>{onFix && <button disabled={props.fixBlocked} type="button" onClick={() => onFix(keyIssues)}><Icon name="spark" />한 번에 보완</button>}</div></header>
         <ul>{keyIssues.map((area) => <li key={area.area}>
           {selectable(area)}
           {activeArea === area.area && <article aria-label={`${area.label} 자세히`} className={styles.card}>

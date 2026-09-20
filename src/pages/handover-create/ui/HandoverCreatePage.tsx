@@ -62,7 +62,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [saving, setSaving] = useState(false)
   const [analysis, setAnalysis] = useState<AnalysisJob | null>(null)
   const [finalizing, setFinalizing] = useState(false)
-  const [externalSources, setExternalSources] = useState({ readyCount: 0, processing: false })
+  const [externalSources, setExternalSources] = useState({ readyCount: 0, reviewCount: 0, processing: false })
   const params = useParams()
 
   useEffect(() => {
@@ -100,11 +100,14 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     return () => clearInterval(timer)
   }, [hasProcessingFile, refreshFiles, tracksFiles])
 
+  // 파일이 있거나, 웹 링크·Slack 자료가 민감정보 확인을 기다리면 확인 단계를 거친다.
+  const needsMaskingReview = state.attachments.length > 0 || externalSources.reviewCount > 0
+
   const replaceAttachments = useCallback((attachments: HandoverAttachment[]) => {
     dispatch({ type: 'attachments/loaded', attachments })
   }, [dispatch])
 
-  const updateExternalSources = useCallback((next: { readyCount: number; processing: boolean }) => {
+  const updateExternalSources = useCallback((next: { readyCount: number; reviewCount: number; processing: boolean }) => {
     setExternalSources(next)
   }, [])
 
@@ -417,9 +420,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
             </section>
             {draftId && !demo && <SourceCollector handoverId={draftId} onChange={updateExternalSources} onFeedback={showToast} />}
             <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button
-              disabled={(state.attachments.length === 0 && externalSources.readyCount === 0) || hasProcessingFile || externalSources.processing}
-              onClick={() => navigate(state.attachments.length > 0 ? '/handovers/new/masking' : '/handovers/new/analyzing')}
-            >{hasProcessingFile ? '파일을 읽는 중…' : externalSources.processing ? '연동 자료를 읽는 중…' : state.attachments.length > 0 ? '민감정보 확인하기' : 'AI 분석 시작하기'} <Icon name="arrow" /></Button></footer>
+              disabled={(state.attachments.length === 0 && externalSources.readyCount === 0 && externalSources.reviewCount === 0) || hasProcessingFile || externalSources.processing}
+              onClick={() => navigate(needsMaskingReview ? '/handovers/new/masking' : '/handovers/new/analyzing')}
+            >{hasProcessingFile ? '파일을 읽는 중…' : externalSources.processing ? '연동 자료를 읽는 중…' : needsMaskingReview ? '민감정보 확인하기' : 'AI 분석 시작하기'} <Icon name="arrow" /></Button></footer>
           </section>
         )}
       </main>

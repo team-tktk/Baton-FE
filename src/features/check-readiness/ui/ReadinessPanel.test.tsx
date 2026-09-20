@@ -16,7 +16,7 @@ async function evaluated() {
 }
 
 describe('ReadinessPanel', () => {
-  it('shows the score, the expected score and the key issues with their evidence', async () => {
+  it('shows the score and the key issues with their evidence', async () => {
     const user = userEvent.setup()
     const { document, evidence, readiness } = await evaluated()
     const onLocate = vi.fn()
@@ -26,10 +26,9 @@ describe('ReadinessPanel', () => {
 
     expect(screen.getByText('75')).toBeInTheDocument()
     expect(screen.getByText('보완 필요')).toBeInTheDocument()
-    expect(screen.getByText(/까지 올라가요/)).toHaveTextContent('중요한 확인을 해결하면 100점까지 올라가요')
-    expect(screen.queryByRole('button', { name: '저장하고 다시 평가' })).not.toBeInTheDocument()
-    // 평가가 최신이면 다시 평가해도 같은 결과라 버튼을 두지 않는다.
-    expect(screen.queryByRole('button', { name: /다시 평가/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '저장하고 다시 점검' })).not.toBeInTheDocument()
+    // 점검이 최신이면 다시 점검해도 같은 결과라 버튼을 두지 않는다.
+    expect(screen.queryByRole('button', { name: /다시 점검/ })).not.toBeInTheDocument()
     expect(onReevaluate).not.toHaveBeenCalled()
 
     const areas = within(screen.getByRole('region', { name: '영역별 준비도' }))
@@ -77,14 +76,14 @@ describe('ReadinessPanel', () => {
     const onReevaluate = vi.fn()
     const { rerender } = render(<ReadinessPanel dirty document={document} error={null} phase="ready" readiness={readiness} onReevaluate={onReevaluate} />)
 
-    expect(screen.getByText(/고친 내용은 아직 점수에 반영되지 않았어요/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '저장하고 다시 평가' }))
+    expect(screen.getByText(/고친 내용은 아직 점검에 반영되지 않았어요/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '저장하고 다시 점검' }))
     expect(onReevaluate).toHaveBeenCalledTimes(1)
 
     rerender(<ReadinessPanel document={document} error="평가 서버가 바빠요" phase="evaluating" readiness={{ ...readiness, stale: true }} onReevaluate={onReevaluate} />)
     expect(screen.getByRole('status')).toHaveTextContent('다시 점검하고 있어요')
     expect(screen.getByRole('alert')).toHaveTextContent('평가 서버가 바빠요')
-    expect(screen.queryByRole('button', { name: '저장하고 다시 평가' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '저장하고 다시 점검' })).not.toBeInTheDocument()
   })
 
   it('explains the first evaluation and lets a failed one be retried', async () => {
@@ -104,7 +103,7 @@ describe('ReadinessPanel', () => {
     const { document, evidence, readiness } = await evaluated()
     render(<ReadinessPanel dirty document={document} error={null} phase="ready" readiness={readiness} />)
 
-    expect(screen.queryByRole('button', { name: /다시 평가|문서에서|다시 시도/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /다시 점검|문서에서|다시 시도/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: new RegExp(evidence.fileName) })).not.toBeInTheDocument()
     expect(screen.getByRole('article', { name: '실행 절차 자세히' })).toHaveTextContent(evidence.fileName)
   })

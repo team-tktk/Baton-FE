@@ -39,7 +39,12 @@
 .priority, .remaining { display: flex; flex-direction: column; gap: 6px; }
 .priority > header, .remaining > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .priority h4, .remaining h4 { margin: 0; font-size: var(--fs-2xs); font-weight: 850; }
-.priority > header > span, .remaining > header > span { flex: none; border-radius: 99px; background: var(--blue-faint); color: var(--blue-dark); padding: 5px 8px; font-size: var(--fs-3xs); font-weight: 800; }
+.priorityActions { display: flex; align-items: center; gap: 6px; }
+.priorityActions > span, .remaining > header > span { flex: none; border-radius: 99px; background: var(--blue-faint); color: var(--blue-dark); padding: 5px 8px; font-size: var(--fs-3xs); font-weight: 800; }
+.priorityActions button { display: inline-flex; min-height: 28px; align-items: center; gap: 4px; border: 0; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer; padding: 0 9px; font-size: var(--fs-3xs); font-weight: 800; }
+.priorityActions button:hover:not(:disabled) { background: var(--blue-dark); }
+.priorityActions button:disabled { background: #eef1f4; color: var(--muted); cursor: default; }
+.priorityActions svg { width: 13px; height: 13px; }
 .priority > ul, .remaining > ul { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .remaining { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 14px; }
 .card { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 8px; border: 1px solid #cfe0f7; border-radius: 14px; background: #fff; padding: 13px 14px; box-shadow: 0 8px 20px rgb(49 130 246 / 6%); }
@@ -62,6 +67,10 @@
 .detail > p { margin: 0; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.6; }
 .detail .resolution { display: flex; flex-direction: column; gap: 3px; border-radius: 10px; background: #f7f8fa; padding: 10px 12px; }
 .resolution strong, .evidence > strong { color: var(--text); font-size: var(--fs-3xs); font-weight: 800; }
+.subList { border-radius: 10px; background: #f7f8fa; padding: 10px 12px; }
+.subList > strong { font-size: var(--fs-3xs); }
+.subList ul { margin: 6px 0 0; padding-left: 16px; color: var(--sub); font-size: var(--fs-3xs); line-height: 1.55; }
+.subList.deferred { background: #fffaf0; }
 .evidence { display: flex; flex-direction: column; gap: 6px; }
 .evidence ul { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .evidence button, .evidenceText { display: flex; width: 100%; align-items: center; gap: 7px; border: 0; border-radius: 9px; background: var(--blue-faint); color: var(--blue-dark); padding: 7px 10px; font-size: var(--fs-2xs); font-weight: 700; text-align: left; }

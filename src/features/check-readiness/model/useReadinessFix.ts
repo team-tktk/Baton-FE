@@ -4,10 +4,15 @@ import type { ReadinessAreaResult, ReadinessFix, ReadinessFixAnswer, ReadinessFi
 import { useHandoverRepository } from '@/entities/handover'
 import { ApiError } from '@/shared/api'
 
-export type FixPhase = 'creating' | 'answering' | 'applying' | 'ready' | 'error'
+/**
+ * starting: 질문을 모으는 중(AI 없음) · generating: 수정안을 만드는 중(AI 1회) · applying: 문서에 적용하는 중
+ * ready: 사용자가 답하거나 결과를 볼 차례 · error: 보완안 없이 실패
+ */
+export type FixPhase = 'starting' | 'generating' | 'applying' | 'ready' | 'error'
 
 export interface FixSession {
-  area: ReadinessAreaResult
+  /** 보완하기로 고른 영역(요청 순서) */
+  areas: ReadinessAreaResult[]
   phase: FixPhase
   fix: ReadinessFix | null
   error: string | null
@@ -24,9 +29,14 @@ interface UseReadinessFixOptions {
 
 const messageOf = (caught: unknown, fallback: string) => caught instanceof ApiError ? caught.message : fallback
 
+/** 수정안을 한 번이라도 만들었는지. 만들기 전에는 질문 화면, 만든 뒤에는 결과 화면을 보여 준다. */
+export const hasGenerated = (fix: ReadinessFix) => fix.areas.some((area) => area.proposed) || fix.sections.some((change) => change.after !== null)
+
+const isOpen = (fix: ReadinessFix) => fix.status === 'needs-input' || fix.status === 'proposed'
+
 /**
- * 부족한 영역 하나의 AI 보완 흐름: 보완안 생성 → (추가 질문 답변) → 수정 전/후 확인 → 적용 또는 취소.
- * 생성·답변·적용 모두 동기 AI 호출이라 수십 초 걸린다. 창을 닫은 뒤 도착한 생성·답변 결과는 버린다.
+ * 여러 영역을 한 번에 보완한다: 보완 시작(질문 모으기) → 답변 저장 → 수정안 만들기(AI 1회) → 적용.
+ * 물을 질문이 하나도 없으면 바로 수정안을 만든다. 창을 닫은 뒤 도착한 응답은 버린다.
  */
 export function useReadinessFix({ handoverId, onApplied, onConflict, revision }: UseReadinessFixOptions) {
   const repository = useHandoverRepository()
@@ -45,29 +55,38 @@ export function useReadinessFix({ handoverId, onApplied, onConflict, revision }:
     setSession((current) => current ? { ...current, ...next } : current)
   }, [])
 
-  const start = useCallback(async (area: ReadinessAreaResult) => {
+  const runGenerate = useCallback(async (id: number, fixId: string, answers: ReadinessFixAnswer[]) => {
     if (!handoverId) return
-    const id = ++sessionId.current
-    setSession({ area, phase: 'creating', fix: null, error: null })
+    update(id, { phase: 'generating', error: null })
     try {
-      update(id, { phase: 'ready', fix: await repository.createReadinessFix(handoverId, area.area) })
+      if (answers.length > 0) update(id, { fix: await repository.answerReadinessFix(handoverId, fixId, answers) })
+      update(id, { phase: 'ready', fix: await repository.generateReadinessFix(handoverId, fixId) })
     } catch (caught) {
-      update(id, { phase: 'error', error: messageOf(caught, '보완안을 만들지 못했어요. 잠시 후 다시 시도해 주세요') })
+      // 보완안은 그대로 두고 화면을 유지해 다시 시도할 수 있게 한다.
+      update(id, { phase: 'ready', error: messageOf(caught, '수정안을 만들지 못했어요. 잠시 후 다시 시도해 주세요') })
     }
   }, [handoverId, repository, update])
 
-  const answer = useCallback(async (answers: ReadinessFixAnswer[]) => {
-    const fix = session?.fix
-    if (!handoverId || !fix) return
-    const id = sessionId.current
-    update(id, { phase: 'answering', error: null })
+  const start = useCallback(async (areas: ReadinessAreaResult[]) => {
+    if (!handoverId || areas.length === 0) return
+    const id = ++sessionId.current
+    setSession({ areas, phase: 'starting', fix: null, error: null })
     try {
-      update(id, { phase: 'ready', fix: await repository.answerReadinessFix(handoverId, fix.id, answers) })
+      const fix = await repository.startReadinessFix(handoverId, areas.map((area) => area.area))
+      update(id, { phase: 'ready', fix })
+      // 물을 것이 없으면 자료만으로 채울 수 있다. 사용자가 이미 보완을 눌렀으니 바로 만든다.
+      if (fix.areas.every((area) => area.questions.length === 0)) await runGenerate(id, fix.id, [])
     } catch (caught) {
-      // 답변 화면을 유지해 다시 보낼 수 있게 한다.
-      update(id, { phase: 'ready', error: messageOf(caught, '답변을 반영하지 못했어요. 잠시 후 다시 시도해 주세요') })
+      update(id, { phase: 'error', error: messageOf(caught, '보완을 시작하지 못했어요. 잠시 후 다시 시도해 주세요') })
     }
-  }, [handoverId, repository, session?.fix, update])
+  }, [handoverId, repository, runGenerate, update])
+
+  /** 새로 입력한 답을 저장하고 수정안을 (다시) 만든다. */
+  const generate = useCallback(async (answers: ReadinessFixAnswer[]) => {
+    const fix = session?.fix
+    if (!fix) return
+    await runGenerate(sessionId.current, fix.id, answers)
+  }, [runGenerate, session?.fix])
 
   const apply = useCallback(async () => {
     const fix = session?.fix
@@ -83,10 +102,11 @@ export function useReadinessFix({ handoverId, onApplied, onConflict, revision }:
     } catch (caught) {
       const conflict = caught instanceof ApiError && caught.serverCode === 'AI_DRAFT_REVISION_CONFLICT'
       update(id, {
-        phase: 'error',
+        phase: 'ready',
         error: conflict
-          ? '보완안을 만든 뒤 문서가 바뀌어 적용하지 않았어요. 최신 문서를 다시 불러왔으니 다시 평가한 뒤 새로 보완해 주세요.'
+          ? '보완을 시작한 뒤 문서가 바뀌어 적용하지 않았어요. 최신 문서를 다시 불러왔으니 다시 점검한 뒤 새로 보완해 주세요.'
           : messageOf(caught, '문서에 적용하지 못했어요. 잠시 후 다시 시도해 주세요'),
+        ...(conflict ? { fix: { ...fix, stale: true } } : {}),
       })
       if (conflict && alive.current) onConflict()
     }
@@ -97,10 +117,10 @@ export function useReadinessFix({ handoverId, onApplied, onConflict, revision }:
     const fix = session?.fix
     sessionId.current += 1
     setSession(null)
-    if (handoverId && fix && (fix.status === 'needs-input' || fix.status === 'proposed')) {
+    if (handoverId && fix && isOpen(fix)) {
       repository.discardReadinessFix(handoverId, fix.id).catch(() => { /* 닫기만 실패한 보완안은 적용되지 않으므로 무시한다 */ })
     }
   }, [handoverId, repository, session?.fix])
 
-  return { session, start, answer, apply, close }
+  return { session, start, generate, apply, close }
 }

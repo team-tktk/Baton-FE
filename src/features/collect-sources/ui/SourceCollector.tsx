@@ -12,6 +12,8 @@ import styles from './SourceCollector.module.css'
 
 interface SourceCollectorState {
   readyCount: number
+  /** 마스킹 검수가 켜진 서버에서 민감정보 확인을 기다리는 자료 수 */
+  reviewCount: number
   processing: boolean
 }
 
@@ -72,8 +74,9 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
   const externalSources = useMemo(() => sources.filter((source) => source.type !== 'FILE'), [sources])
   const processing = externalSources.some((source) => source.status === 'EXTRACTING' || source.status === 'INDEXING')
   const readyCount = externalSources.filter((source) => source.enabled && source.status === 'INDEXED').length
+  const reviewCount = externalSources.filter((source) => source.enabled && source.status === 'MASKING_REVIEW').length
 
-  useEffect(() => { onChange({ readyCount, processing }) }, [onChange, processing, readyCount])
+  useEffect(() => { onChange({ readyCount, reviewCount, processing }) }, [onChange, processing, readyCount, reviewCount])
 
   useEffect(() => {
     if (!processing) return
