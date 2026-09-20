@@ -19,9 +19,8 @@ export function SentHandoverPage() {
     return () => { ignore = true }
   }, [repository])
 
-  return <>
-    <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button>
-    <main className={styles.main}>
+  return <main className={styles.main}>
+      <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button>
       <header>
         <div><span><Icon name="briefcase" /> 내 인수인계</span><h1>내가 만든 인수인계</h1><p>내가 인계자로 만든 인수인계와 책임자 코멘트를 확인하세요.</p></div>
         <div className={styles.total}><strong>{handovers?.length ?? 0}</strong><span>전체</span></div>
@@ -41,5 +40,4 @@ export function SentHandoverPage() {
           : <div className={styles.empty}>아직 만든 인수인계가 없어요. 홈에서 ‘인수인계 하기’로 시작해 보세요.</div>
       ) : <div className={styles.loading}>인수인계를 불러오고 있어요…</div>}
     </main>
-  </>
 }
