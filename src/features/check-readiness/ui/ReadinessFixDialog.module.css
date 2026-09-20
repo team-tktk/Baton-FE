@@ -52,11 +52,7 @@
 
 .changes { display: flex; flex-direction: column; gap: 14px; }
 .changes h3 { margin: 0 0 8px; font-size: var(--fs-sm); }
-.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.compare section { min-width: 0; border: 1px solid var(--line); border-radius: 16px; background: #f9fafb; padding: 12px 14px; }
-.compare section.after { border-color: #bcd7fb; background: #fff; }
-.compare h4 { margin: 0 0 8px; color: var(--sub); font-size: var(--fs-2xs); font-weight: 800; }
-.after h4 { color: var(--blue-dark); }
+.after { min-width: 0; border: 1px solid #bcd7fb; border-radius: 16px; background: #fff; padding: 12px 14px; }
 .lines { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .lines li { display: flex; flex-direction: column; gap: 3px; border-radius: 10px; padding: 8px 10px; background: #fff; font-size: var(--fs-2xs); line-height: 1.55; }
 .after .lines li { background: #f7f9fc; }
@@ -73,5 +69,5 @@
 .evidence span span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .evidence small { color: var(--muted); font-size: var(--fs-3xs); }
 
-@media (max-width: 760px) { .compare { grid-template-columns: 1fr; } .actions { bottom: -22px; flex-direction: column-reverse; margin-bottom: -22px; padding-bottom: 22px; } }
+@media (max-width: 760px) { .actions { bottom: -22px; flex-direction: column-reverse; margin-bottom: -22px; padding-bottom: 22px; } }
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } }
