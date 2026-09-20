@@ -8,6 +8,13 @@ import { getReceivedHandovers } from '@/test/handoverFactory'
 import { HandoverInbox } from './HandoverInbox'
 
 describe('HandoverInbox', () => {
+  it('does not render an empty list container when there are no handovers', () => {
+    render(<MemoryRouter><HandoverInbox handovers={[]} onOpen={vi.fn()} /></MemoryRouter>)
+
+    expect(screen.getByText('해당 상태의 인수인계가 없어요')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '받은 인수인계 목록' })).not.toBeInTheDocument()
+  })
+
   it('shows all fixture rows and filters them through the status query', async () => {
     const user = userEvent.setup()
     render(<MemoryRouter><HandoverInbox handovers={await getReceivedHandovers()} onOpen={vi.fn()} /></MemoryRouter>)

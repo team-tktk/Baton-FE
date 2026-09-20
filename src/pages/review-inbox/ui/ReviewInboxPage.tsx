@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
+import { useAppNavigate as useNavigate } from '@/shared/lib/demo'
 
 import type { ReviewSummary } from "@/entities/handover";
 import { useHandoverRepository } from "@/entities/handover";

@@ -1,4 +1,4 @@
-.finalizing { display: grid; min-height: 62vh; place-content: center; justify-items: center; gap: 18px; text-align: center; }
+.finalizing { box-sizing: border-box; display: grid; width: 100%; min-height: 62vh; place-content: start center; justify-items: center; gap: 18px; padding-top: clamp(90px, 14vh, 150px); text-align: center; }
 .badge { display: inline-flex; align-items: center; gap: 8px; border-radius: 99px; background: var(--blue-soft); color: var(--blue-dark); padding: 8px 14px; font-size: 12px; font-weight: 800; }
 .badge i { display: block; width: 7px; height: 7px; border-radius: 50%; background: var(--blue); animation: finalizing-pulse 1.4s ease-in-out infinite; }
 .finalizing h1 { margin: 0; font-size: 40px; line-height: 1.2; letter-spacing: -.05em; }
@@ -14,5 +14,6 @@
 }
 
 @media (max-width: 720px) {
+  .finalizing { min-height: 48vh; padding-top: 70px; }
   .finalizing h1 { font-size: 28px; }
 }

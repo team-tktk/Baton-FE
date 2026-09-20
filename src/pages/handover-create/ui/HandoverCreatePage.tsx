@@ -1,15 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useAppNavigate as useNavigate } from '@/shared/lib/demo'
 
 import type { AnalysisJob, Handover, HandoverAttachment, HandoverDraft, HandoverParticipant, InterviewQuestion } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
 import { AnalysisProgress, DraftFinalizing, FileUploader, HandoverProgress, InterviewWizard, MemberPicker, WorkScopeEditor, useCreateHandover } from '@/features/create-handover'
 import { useAuth } from '@/features/auth'
 import { SourceCollector } from '@/features/collect-sources'
+import { useDemo } from '@/shared/lib/demo'
+import { demoSamples } from '@/shared/lib/demoSamples'
 import { ApiError } from '@/shared/api'
 import { mergeDocumentChanges } from '@/features/edit-handover'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
+import { Modal } from '@/shared/ui/modal'
 import { useToast } from '@/shared/ui/toast'
 import { AppHeader } from '@/widgets/app-header'
 
@@ -38,6 +42,7 @@ const STEP_NUMBER: Record<Exclude<CreateStep, 'complete'>, number> = {
 const HOME_BUTTON_STEPS: CreateStep[] = ['setup', 'upload', 'masking', 'document']
 
 export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
+  const demo = useDemo()
   const navigate = useNavigate()
   const repository = useHandoverRepository()
   const { showToast } = useToast()
@@ -47,6 +52,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   const [recipientQuery, setRecipientQuery] = useState('')
   const [reviewerQuery, setReviewerQuery] = useState('')
   const [pending, setPending] = useState(false)
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false)
   const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null)
   const [draft, setDraft] = useState<Handover | null>(null)
   /** 서버 문서 버전. 저장할 때 돌려보내 그사이 바뀐 문서를 덮어쓰지 않게 한다. */
@@ -145,10 +151,24 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
     if (!draftId) return
     setPending(true)
     try {
-      for (const file of files) {
+      const queuedFiles = files.map((file, index) => ({
+        id: `uploading-${Date.now()}-${index}`,
+        name: file.name,
+        mimeType: file.type,
+        size: file.size,
+        status: 'processing' as const,
+      }))
+      // 요청이 끝날 때까지 기다리면 사용자는 아무 일도 일어나지 않는다고 느낀다.
+      // 먼저 목록에 올리고, 서버가 돌려준 실제 파일 정보로 즉시 교체한다.
+      queuedFiles.forEach((attachment) => dispatch({ type: 'attachment/added', attachment }))
+      for (const [index, file] of files.entries()) {
+        const queued = queuedFiles[index]
         try {
-          dispatch({ type: 'attachment/added', attachment: await repository.uploadFile(draftId, file) })
+          const uploaded = await repository.uploadFile(draftId, file)
+          dispatch({ type: 'attachment/removed', attachmentId: queued.id })
+          dispatch({ type: 'attachment/added', attachment: uploaded })
         } catch {
+          dispatch({ type: 'attachment/removed', attachmentId: queued.id })
           showToast(`${file.name} 업로드에 실패했어요`)
         }
       }
@@ -225,6 +245,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       dispatch({ type: 'draft/created', draft: { ...draft, attachments: state.attachments } })
       navigate('/handovers/new/upload')
       showToast(`${draft.owner.name}님의 ${workItems[0]} 업무로 시작했어요`)
+    } catch (caught) {
+      // 참여자 지정 규칙 위반(겸임 등)은 서버가 이유를 문구로 준다. 그대로 보여 주지 않으면 버튼이 먹통처럼 보인다.
+      showToast(caught instanceof ApiError ? caught.message : '인수인계를 시작하지 못했어요. 잠시 후 다시 시도해 주세요')
     } finally { setPending(false) }
   }
 
@@ -355,8 +378,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
 
   return (
     <>
-      {HOME_BUTTON_STEPS.includes(step) ? <button className={styles.homeBack} type="button" onClick={() => navigate('/')}><Icon name="back" /> 홈으로</button> : step !== 'complete' ? <AppHeader /> : null}
-      {step !== 'complete' && <HandoverProgress besideHomeButton={HOME_BUTTON_STEPS.includes(step)} current={STEP_NUMBER[step]} />}
+      {!HOME_BUTTON_STEPS.includes(step) && step !== 'complete' && step !== 'analyzing' ? <AppHeader /> : null}
+      {step !== 'complete' && step !== 'analyzing' && !(step === 'interview' && finalizing) && <HandoverProgress current={STEP_NUMBER[step]} onHome={HOME_BUTTON_STEPS.includes(step) ? () => setExitConfirmOpen(true) : undefined} />}
       {step === 'masking' && <MaskingStep attachments={state.attachments} handoverId={draftId} onAttachmentsChange={replaceAttachments} onBack={() => navigate('/handovers/new/upload')} onFeedback={showToast} onProceed={() => navigate('/handovers/new/analyzing')} />}
       {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} job={analysis} onRetry={retryAnalysis} /></main>}
       {step === 'interview' && finalizing && <main className={styles.analysisMain}><DraftFinalizing answered={answeredCount} /></main>}
@@ -385,17 +408,20 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           <section>
             <header className={styles.heading}><div className={styles.kicker}><Icon name="users" /> 인수인계 하기 · 시작</div><h1>누구에게 어떤 업무를 넘기나요?</h1><p>받는 사람과 대표 업무를 알려주면 AI가 필요한 자료를 더 정확히 찾아요.</p></header>
             <div aria-label="인수인계 기본 정보" className={styles.card} role="region">
-              <MemberPicker description="이름이나 팀으로 검색하세요." members={members} query={recipientQuery} selectedIds={state.recipientIds} title="업무를 받는 사람" onQueryChange={setRecipientQuery} onToggle={(recipientId) => dispatch({ type: 'recipient/toggled', recipientId })} />
-              <MemberPicker separated description="인수인계 문서를 검토하고 승인할 사람이에요." members={members} query={reviewerQuery} selectedIds={state.reviewerIds} title="검토하는 사람" onQueryChange={setReviewerQuery} onToggle={(reviewerId) => dispatch({ type: 'reviewer/toggled', reviewerId })} />
+              <MemberPicker description="이름이나 팀으로 검색하세요." disabledIds={state.reviewerIds} disabledReason="검토하는 사람으로 선택됨" members={members} query={recipientQuery} selectedIds={state.recipientIds} title="업무를 받는 사람" onQueryChange={setRecipientQuery} onToggle={(recipientId) => dispatch({ type: 'recipient/toggled', recipientId })} />
+              <MemberPicker separated description="인수인계 문서를 검토하고 승인할 사람이에요." disabledIds={state.recipientIds} disabledReason="받는 사람으로 선택됨" members={members} query={reviewerQuery} selectedIds={state.reviewerIds} title="검토하는 사람" onQueryChange={setReviewerQuery} onToggle={(reviewerId) => dispatch({ type: 'reviewer/toggled', reviewerId })} />
               <WorkScopeEditor items={state.workItems} onAdd={() => dispatch({ type: 'work/added' })} onChange={(index, value) => dispatch({ type: 'work/changed', index, value })} onRemove={(index) => dispatch({ type: 'work/removed', index })} />
             </div>
             <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/')}>이전으로</Button><Button disabled={pending} onClick={createDraft}>업무 자료 올리기 <Icon name="arrow" /></Button></footer>
           </section>
         ) : (
           <section>
-            <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 자료 모으기</div><h1>{user?.name ?? '내'}님의 업무 파일을 올려주세요</h1><p>파일뿐 아니라 웹 링크와 Slack 대화도 연결하면 AI가 함께 읽고 인수인계 초안을 만들어드려요.</p></header>
-            <FileUploader attachments={state.attachments} uploading={pending} onReject={showToast} onRemove={(attachmentId) => void removeFile(attachmentId)} onSelect={(files) => void uploadFiles(files)} />
-            {draftId && <SourceCollector handoverId={draftId} onChange={updateExternalSources} onFeedback={showToast} />}
+            <header className={styles.heading}><div className={styles.kicker}><Icon name="upload" /> 인수인계 하기 · 자료 모으기</div><h1>{user?.name ?? '내'}님의 업무 자료를 모아주세요</h1><p>먼저 파일을 추가하고, 필요하면 웹 링크나 Slack 대화도 연결하세요.</p></header>
+            <section className={styles.primarySource} aria-labelledby="file-source-title">
+              <div className={styles.sectionHeading}><div><span>먼저 해주세요</span><h2 id="file-source-title">업무 파일 추가</h2><p>AI가 초안을 만들 때 참고할 문서를 올려주세요.</p></div><strong>PDF · DOCX · XLSX · PPTX</strong></div>
+              <FileUploader attachments={state.attachments} uploading={pending} onReject={showToast} onRemove={(attachmentId) => void removeFile(attachmentId)} onSelect={(files) => void uploadFiles(files)} onSampleSelect={demo ? () => void uploadFiles(demoSamples.filter(sample => !state.attachments.some(file => file.name === sample.name)).map(sample => new File([sample.text], sample.name, { type: 'text/plain' }))) : undefined} />
+            </section>
+            {draftId && !demo && <SourceCollector handoverId={draftId} onChange={updateExternalSources} onFeedback={showToast} />}
             <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/handovers/new/setup')}>이전으로</Button><Button
               disabled={(state.attachments.length === 0 && externalSources.readyCount === 0 && externalSources.reviewCount === 0) || hasProcessingFile || externalSources.processing}
               onClick={() => navigate(needsMaskingReview ? '/handovers/new/masking' : '/handovers/new/analyzing')}
@@ -404,6 +430,13 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
         )}
       </main>
       )}
+      <Modal open={exitConfirmOpen} title="인수인계 작성을 그만둘까요?" onClose={() => setExitConfirmOpen(false)}>
+        <p className={styles.exitDescription}>지금 홈으로 나가면 아직 저장하지 않은 변경사항은 사라질 수 있어요.</p>
+        <div className={styles.exitActions}>
+          <Button variant="ghost" onClick={() => navigate('/')}>홈으로 나가기</Button>
+          <Button autoFocus onClick={() => setExitConfirmOpen(false)}>계속 작성하기</Button>
+        </div>
+      </Modal>
     </>
   )
 }

@@ -28,6 +28,11 @@
 .people button i { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 50%; background: #dfe4e9; color: #fff; }
 .people button.selected i { background: var(--blue); }
 .people button i svg { width: 13px; height: 13px; stroke-width: 2.5; }
+/* 다른 역할에 이미 뽑힌 사람: 목록에는 남기되 못 고르게 하고 이유를 옆에 적는다. */
+.people button:disabled { cursor: default; }
+.people button:disabled:hover { background: #fff; }
+.people button:disabled span strong { color: var(--muted); }
+.reason { min-width: 0; overflow: hidden; color: var(--sub); font-size: var(--fs-3xs); font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
 .empty { margin: 0; padding: 24px 12px; color: var(--muted); font-size: var(--fs-2xs); text-align: center; }
 
 @media (max-width: 560px) {

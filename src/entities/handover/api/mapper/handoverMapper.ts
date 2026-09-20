@@ -92,12 +92,13 @@ const QUESTION_STATUS_BY_DTO: Record<ClarificationQuestionResponse['status'], Qu
 }
 
 export function toInterviewQuestion(question: ClarificationQuestionResponse): InterviewQuestion {
-  // reason과 evidence 모두 "왜 묻는지"를 설명한다. 화면에는 한 줄로 합쳐 보여 준다.
-  const help = [question.reason, question.evidence].map((part) => part?.trim()).filter(Boolean).join(' · ')
+  const reason = question.reason?.trim()
+  const evidence = question.evidence?.trim()
   return {
     id: question.id,
     question: question.questionText,
-    help: help || '자료에서 확인하지 못한 내용이라 직접 여쭤봐요.',
+    help: reason || '자료에서 확인하지 못한 내용이라 직접 여쭤봐요.',
+    evidence: evidence || undefined,
     options: (question.options ?? []).map((option) => ({ label: option.label, description: option.description ?? '' })),
     status: QUESTION_STATUS_BY_DTO[question.status] ?? 'pending',
     answer: question.answer ?? null,

@@ -32,8 +32,9 @@ export function AnalysisProgress({ attachments, job, onRetry }: AnalysisProgress
       </div>
       <div aria-hidden="true" className={styles.files}>
         <span className={styles.scanLine} />
+        <header><span>분석 중인 자료</span><strong>{attachments.length}개</strong></header>
         {attachments.map((attachment, index) => (
-          <div className={styles.file} key={attachment.id} style={{ '--file-delay': `${index * 0.25}s` } as CSSProperties}>
+          <div className={styles.file} key={attachment.id}>
             <span className={styles.fileIcon}><Icon name="file" /></span>
             <span><strong>{attachment.name}</strong><small>{analysisLabels[Math.min(index, analysisLabels.length - 1)]}</small></span>
             <i />

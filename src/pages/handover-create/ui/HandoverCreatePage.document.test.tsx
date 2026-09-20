@@ -41,8 +41,8 @@ function renderFlow(repository: MockHandoverRepository) {
   return router
 }
 
-/** 기본 정보를 채워 초안을 만든 뒤 바로 초안 확인 단계로 간다. 첫 점검(확인할 항목 3개)이 끝날 때까지 기다린다. */
-async function reachDocument(user: UserEvent, router: ReturnType<typeof renderFlow>, options: { prepare?: () => Promise<void>; openItems?: number } = {}) {
+/** 기본 정보를 채워 초안을 만든 뒤 바로 초안 확인 단계로 간다. 첫 평가(75점)가 끝날 때까지 기다린다. */
+async function reachDocument(user: UserEvent, router: ReturnType<typeof renderFlow>, options: { prepare?: () => Promise<void>; score?: string } = {}) {
   const recipients = within(screen.getByRole('region', { name: '업무를 받는 사람' }))
   await user.click(recipients.getByRole('combobox'))
   await user.click(await recipients.findByRole('option', { name: /정하늘/ }))
@@ -51,10 +51,10 @@ async function reachDocument(user: UserEvent, router: ReturnType<typeof renderFl
   await waitFor(() => expect(router.state.location.pathname).toBe('/handovers/new/upload'))
   await options.prepare?.()
   await act(() => router.navigate('/handovers/new/document'))
-  expect(await screen.findByText(`${options.openItems ?? 3}개`)).toBeInTheDocument()
+  expect(await screen.findByText(options.score ?? '75')).toBeInTheDocument()
 }
 
-const checklist = () => within(screen.getByRole('region', { name: '확인할 항목' }))
+const keyIssue = (label: string) => within(screen.getByRole('region', { name: '중요 항목' })).getByRole('button', { name: new RegExp(label) })
 const detail = (label: string) => within(screen.getByRole('article', { name: `${label} 자세히` }))
 
 function editPurpose(text: string) {
@@ -64,7 +64,7 @@ function editPurpose(text: string) {
 }
 
 describe('HandoverCreatePage document step readiness', () => {
-  it('checks on arrival and saves edits with the base revision before checking again', async () => {
+  it('evaluates on arrival and saves edits with the base revision before evaluating again', async () => {
     const user = userEvent.setup()
     const repository = new MockHandoverRepository()
     const evaluate = vi.spyOn(repository, 'evaluateReadiness')
@@ -73,7 +73,6 @@ describe('HandoverCreatePage document step readiness', () => {
     await reachDocument(user, router)
     expect(evaluate).toHaveBeenCalledTimes(1)
     expect(save).not.toHaveBeenCalled()
-    expect(screen.queryByText('75')).not.toBeInTheDocument()
 
     editPurpose('정하늘님이 프로모션 운영을 혼자 이어 갈 수 있게 합니다.')
     expect(await screen.findByText(/고친 내용은 아직 점검에 반영되지 않았어요/)).toBeInTheDocument()
@@ -138,8 +137,8 @@ describe('HandoverCreatePage document step readiness', () => {
     const router = renderFlow(repository)
     await reachDocument(user, router)
 
-    await user.click(checklist().getByRole('button', { name: /예외 대응/ }))
-    await user.click(detail('예외 대응').getByRole('button', { name: '문서에서 수정하기' }))
+    await user.click(within(screen.getByRole('region', { name: '중요 항목' })).getByRole('button', { name: /예외 대응/ }))
+    await user.click(within(screen.getByRole('article', { name: '예외 대응 자세히' })).getByRole('button', { name: '문서에서 수정하기' }))
     expect(screen.getByLabelText('쿠폰 할인 승인 순서 내용 편집')).toHaveFocus()
 
     await user.click(screen.getByRole('button', { name: /제출하기/ }))
@@ -157,58 +156,35 @@ describe('HandoverCreatePage document step readiness', () => {
 })
 
 describe('HandoverCreatePage document step AI fixes', () => {
-  it('fixes every item at once after answering the conflict question, then submits without a warning', async () => {
+  it('applies a proposed fix to the document and refreshes the checked items', async () => {
     const user = userEvent.setup()
     const repository = new MockHandoverRepository()
-    const start = vi.spyOn(repository, 'startReadinessFix')
-    const generate = vi.spyOn(repository, 'generateReadinessFix')
     const apply = vi.spyOn(repository, 'applyReadinessFix')
     const router = renderFlow(repository)
     await reachDocument(user, router)
 
-    await user.click(checklist().getByRole('button', { name: '확인할 항목 3개 AI로 보완하기' }))
-    const dialog = within(await screen.findByRole('dialog', { name: '항목 3개 보완' }))
-    expect(start).toHaveBeenCalledWith(ID, ['PROCEDURE', 'EXCEPTION', 'CONTACTS'])
-    expect(generate).not.toHaveBeenCalled()
-    await user.click(within(dialog.getByRole('region', { name: '담당자 질문' })).getByRole('radio', { name: '윤예린 · 마케팅팀' }))
-    await user.click(dialog.getByRole('button', { name: /AI로 수정안 만들기/ }))
-
-    expect(await dialog.findByText('항목 3개 중 3개의 수정안을 만들었어요. 확인하고 문서에 적용해 주세요.')).toBeInTheDocument()
-    expect(generate).toHaveBeenCalledTimes(1)
-    expect(dialog.getByRole('region', { name: '주요 관계자 수정 전후' })).toHaveTextContent('윤예린 · 마케팅팀')
+    await user.click(keyIssue('예외 대응'))
+    await user.click(detail('예외 대응').getByRole('button', { name: 'AI로 보완하기' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '예외 대응 보완' }))
+    expect(await dialog.findByText('항목 1개 중 1개의 수정안을 만들었어요. 확인하고 문서에 적용해 주세요.')).toBeInTheDocument()
+    expect(dialog.getByRole('region', { name: '업무 기준과 예외 수정 전후' })).toHaveTextContent('예외 상황별 담당자와 처리 순서를 적어 주세요.')
 
     await user.click(dialog.getByRole('button', { name: '문서에 적용' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(apply).toHaveBeenCalledWith(ID, 'fix-1', 1)
-    expect(await screen.findByText('반복 업무·업무 기준과 예외·주요 관계자에 반영했어요 · 확인할 항목 3개 → 0개')).toBeInTheDocument()
-    expect(window.document.getElementById('draft-section-recurring-tasks')).toHaveAttribute('data-just-applied', 'true')
-    expect(screen.getByText('모든 영역이 충분해요. 바로 전달해도 좋아요.')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('button', { name: /제출하기/ }))
-    await waitFor(() => expect(router.state.location.pathname).toBe('/handovers/new/complete'))
+    expect(await screen.findByText('업무 기준과 예외에 반영했어요 · 확인할 항목 3개 → 2개')).toBeInTheDocument()
+    expect(window.document.getElementById('draft-section-rules-and-exceptions')).toHaveAttribute('data-just-applied', 'true')
+    expect(screen.getByLabelText('업무 기준 4 내용 편집')).toHaveTextContent('예외 상황별 담당자와 처리 순서를 적어 주세요.')
+    expect(screen.getByText('83')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: '중요 항목' })).queryByRole('button', { name: /예외 대응/ })).not.toBeInTheDocument()
   })
 
-  it('makes a proposal right away for a single item that needs no answers', async () => {
-    const user = userEvent.setup()
-    const repository = new MockHandoverRepository()
-    const router = renderFlow(repository)
-    await reachDocument(user, router)
-
-    await user.click(detail('실행 절차').getByRole('button', { name: '이 항목만 AI로 보완' }))
-    const dialog = within(await screen.findByRole('dialog', { name: '실행 절차 보완' }))
-    expect(await dialog.findByText('항목 1개 중 1개의 수정안을 만들었어요. 확인하고 문서에 적용해 주세요.')).toBeInTheDocument()
-
-    await user.click(dialog.getByRole('button', { name: '문서에 적용' }))
-    expect(await screen.findByText('반복 업무에 반영했어요 · 확인할 항목 3개 → 2개')).toBeInTheDocument()
-    expect(checklist().queryByRole('button', { name: /실행 절차/ })).not.toBeInTheDocument()
-  })
-
-  it('fills an empty section from the answer to its question', async () => {
+  it('fills an empty section from answers to follow-up questions', async () => {
     const user = userEvent.setup()
     const repository = new MockHandoverRepository()
     const router = renderFlow(repository)
     await reachDocument(user, router, {
-      openItems: 4,
+      score: '65',
       prepare: async () => {
         const { document } = await repository.getDocument(ID)
         await repository.saveDocument(ID, { ...document, accessAccounts: [] })
@@ -229,7 +205,7 @@ describe('HandoverCreatePage document step AI fixes', () => {
     expect(await screen.findByText('접근 권한과 계정에 반영했어요 · 확인할 항목 4개 → 3개')).toBeInTheDocument()
   })
 
-  it('does not start a fix while the check is outdated and discards a cancelled one', async () => {
+  it('does not start a fix while the evaluation is outdated and discards a cancelled one', async () => {
     const user = userEvent.setup()
     const repository = new MockHandoverRepository()
     const discard = vi.spyOn(repository, 'discardReadinessFix')
@@ -237,15 +213,16 @@ describe('HandoverCreatePage document step AI fixes', () => {
     const router = renderFlow(repository)
     await reachDocument(user, router)
 
-    await user.click(detail('실행 절차').getByRole('button', { name: '이 항목만 AI로 보완' }))
+    await user.click(keyIssue('실행 절차'))
+    await user.click(detail('실행 절차').getByRole('button', { name: 'AI로 보완하기' }))
     const dialog = within(await screen.findByRole('dialog'))
     await dialog.findByText(/수정안을 만들었어요/)
     await user.click(dialog.getByRole('button', { name: '취소' }))
     await waitFor(() => expect(discard).toHaveBeenCalledWith(ID, 'fix-1'))
 
     editPurpose('새로 고친 목적')
-    expect(await detail('실행 절차').findByRole('button', { name: '이 항목만 AI로 보완' })).toBeDisabled()
-    expect(checklist().getByRole('button', { name: /AI로 보완하기/ })).toBeDisabled()
+    expect(await detail('실행 절차').findByRole('button', { name: 'AI로 보완하기' })).toBeDisabled()
+    expect(detail('실행 절차').getByText(/저장하고 다시 점검한 뒤 보완할 수 있어요/)).toBeInTheDocument()
     expect(start).toHaveBeenCalledTimes(1)
   })
 
@@ -255,15 +232,15 @@ describe('HandoverCreatePage document step AI fixes', () => {
     const router = renderFlow(repository)
     await reachDocument(user, router)
 
-    await user.click(detail('실행 절차').getByRole('button', { name: '이 항목만 AI로 보완' }))
+    await user.click(keyIssue('실행 절차'))
+    await user.click(detail('실행 절차').getByRole('button', { name: 'AI로 보완하기' }))
     const dialog = within(await screen.findByRole('dialog', { name: '실행 절차 보완' }))
     await dialog.findByText(/수정안을 만들었어요/)
     const { document } = await repository.getDocument(ID)
     await repository.saveDocument(ID, { ...document, purpose: '다른 창에서 바꾼 목적' })
 
     await user.click(dialog.getByRole('button', { name: '문서에 적용' }))
-    expect(await dialog.findByText(/문서가 바뀌어 적용하지 않았어요/)).toBeInTheDocument()
-    expect(dialog.getByRole('button', { name: '문서에 적용' })).toBeDisabled()
+    expect((await dialog.findAllByRole('alert'))[0]).toHaveTextContent('문서가 바뀌어 적용하지 않았어요')
     await waitFor(() => expect(screen.getByLabelText('업무 목적 편집')).toHaveTextContent('다른 창에서 바꾼 목적'))
     expect(await screen.findByText(/점검한 뒤 문서나 자료가 바뀌었어요/)).toBeInTheDocument()
   })
