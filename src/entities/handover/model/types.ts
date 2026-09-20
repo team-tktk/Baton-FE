@@ -106,6 +106,7 @@ export interface InterviewQuestion {
   id: string
   question: string
   help: string
+  evidence?: string
   options: InterviewOption[]
   status: QuestionStatus
   answer: string | null

@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { HandoverAnswer, HandoverChatExchange, HandoverRepository } from '@/entities/handover'
@@ -21,8 +21,12 @@ describe('useHandoverChat', () => {
     const { result } = renderHook(() => useHandoverChat('handover-moastore-operations'), { wrapper })
 
     expect(result.current.messages[0]?.text).toContain('궁금한 내용을 물어보세요')
+    await waitFor(() => expect(result.current.suggestions).toHaveLength(3))
+    const firstSuggestions = result.current.suggestions
     let first!: Promise<boolean>
     await act(async () => { first = result.current.send('배송이 늦으면 어떻게 해요?') })
+    expect(result.current.suggestions).toHaveLength(3)
+    expect(result.current.suggestions).not.toEqual(firstSuggestions)
     expect(result.current.messages.at(-1)).toMatchObject({ role: 'user', text: '배송이 늦으면 어떻게 해요?' })
     expect(result.current.status).toBe('sending')
     await act(async () => { expect(await result.current.send('중복 질문')).toBe(false) })

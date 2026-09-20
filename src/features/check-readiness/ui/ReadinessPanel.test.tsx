@@ -35,7 +35,10 @@ describe('ReadinessPanel', () => {
     expect(areas.getByRole('heading', { name: '영역별 점검 결과' })).toBeInTheDocument()
     const rows = areas.getAllByRole('button', { name: /실행 절차|예외 대응|담당자/ })
     expect(rows.slice(0, 3).map((row) => row.textContent)).toEqual(['실행 절차20점일부 부족', '예외 대응15점일부 부족', '담당자10점충돌'])
-    expect(rows[0]).toHaveAttribute('aria-expanded', 'true')
+    expect(rows[0]).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('article', { name: '실행 절차 자세히' })).not.toBeInTheDocument()
+
+    await user.click(rows[0]!)
     expect(screen.getByRole('article', { name: '실행 절차 자세히' })).toHaveTextContent('주간 주문 현황')
 
     await user.click(rows[1]!)
@@ -53,20 +56,24 @@ describe('ReadinessPanel', () => {
   })
 
   it('shows a repeated evidence file only once', async () => {
+    const user = userEvent.setup()
     const { document, readiness } = await evaluated()
     const area = readiness.areas.find((item) => item.keyIssue)!
     const duplicateEvidence = [...area.evidence, { ...area.evidence[0]!, locator: '4쪽' }]
     render(<ReadinessPanel document={document} error={null} phase="ready" readiness={{ ...readiness, areas: readiness.areas.map((item) => item.area === area.area ? { ...item, evidence: duplicateEvidence } : item) }} />)
 
+    await user.click(screen.getByRole('button', { name: new RegExp(area.label) }))
     expect(screen.getAllByText(area.evidence[0]!.fileName)).toHaveLength(1)
     expect(screen.getByText(`${area.evidence[0]!.locator} · 4쪽`)).toBeInTheDocument()
   })
 
   it('offers locating instead of editing for a section the editor cannot change', async () => {
+    const user = userEvent.setup()
     const { document, readiness } = await evaluated()
     const access = { ...readiness.areas.find((area) => area.area === 'ACCESS')!, status: 'missing' as const, statusLabel: '누락', percent: 0, keyIssue: true }
     render(<ReadinessPanel document={document} error={null} phase="ready" readiness={{ ...readiness, areas: [access] }} onLocate={vi.fn()} />)
 
+    await user.click(screen.getByRole('button', { name: new RegExp(access.label) }))
     expect(screen.getByRole('button', { name: '문서에서 위치 보기' })).toBeInTheDocument()
   })
 
@@ -100,11 +107,13 @@ describe('ReadinessPanel', () => {
   })
 
   it('renders read-only without actions that change or open anything', async () => {
+    const user = userEvent.setup()
     const { document, evidence, readiness } = await evaluated()
     render(<ReadinessPanel dirty document={document} error={null} phase="ready" readiness={readiness} />)
 
     expect(screen.queryByRole('button', { name: /다시 점검|문서에서|다시 시도/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: new RegExp(evidence.fileName) })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /실행 절차/ }))
     expect(screen.getByRole('article', { name: '실행 절차 자세히' })).toHaveTextContent(evidence.fileName)
   })
 })

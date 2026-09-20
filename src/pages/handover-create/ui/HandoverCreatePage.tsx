@@ -376,7 +376,7 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
   return (
     <>
       {!HOME_BUTTON_STEPS.includes(step) && step !== 'complete' && step !== 'analyzing' ? <AppHeader /> : null}
-      {step !== 'complete' && step !== 'analyzing' && <HandoverProgress current={STEP_NUMBER[step]} onHome={HOME_BUTTON_STEPS.includes(step) ? () => setExitConfirmOpen(true) : undefined} />}
+      {step !== 'complete' && step !== 'analyzing' && !(step === 'interview' && finalizing) && <HandoverProgress current={STEP_NUMBER[step]} onHome={HOME_BUTTON_STEPS.includes(step) ? () => setExitConfirmOpen(true) : undefined} />}
       {step === 'masking' && <MaskingStep attachments={state.attachments} handoverId={draftId} onAttachmentsChange={replaceAttachments} onBack={() => navigate('/handovers/new/upload')} onFeedback={showToast} onProceed={() => navigate('/handovers/new/analyzing')} />}
       {step === 'analyzing' && <main className={styles.analysisMain}><AnalysisProgress attachments={state.attachments} job={analysis} onRetry={retryAnalysis} /></main>}
       {step === 'interview' && finalizing && <main className={styles.analysisMain}><DraftFinalizing answered={answeredCount} /></main>}

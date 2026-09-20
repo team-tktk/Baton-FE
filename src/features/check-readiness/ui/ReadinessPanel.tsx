@@ -83,13 +83,11 @@ function AreaDetail({ area, document, fixBlocked, onFix, onLocate, onOpenEvidenc
 export function ReadinessPanel(props: ReadinessPanelProps) {
   const { dirty = false, error, onFix, onReevaluate, phase, readiness } = props
   const titleId = useId()
-  // undefined는 최초 진입의 기본 선택, null은 사용자가 항목을 다시 눌러 명시적으로 닫은 상태다.
-  const [selectedArea, setSelectedArea] = useState<ReadinessArea | null | undefined>(undefined)
+  const [selectedArea, setSelectedArea] = useState<ReadinessArea | null>(null)
   const evaluating = phase === 'evaluating'
 
   const header = <header className={styles.header}>
-    <span className={styles.icon}><Icon name="target" /></span>
-    <div><h2 id={titleId}>인수인계 준비도</h2><p>AI가 영역별로 판단하고, 점수는 정해진 배점으로 계산해요. 같은 내용이면 점수도 같아요.</p></div>
+    <div><h2 id={titleId}>인수인계 준비도</h2><p>AI가 영역별로 판단하고, 점수는 정해진 배점으로 계산해요.</p></div>
   </header>
 
   if (!readiness) {
@@ -109,11 +107,8 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
   }
 
   const keyIssues = readiness.areas.filter((area) => area.keyIssue)
-  const weakAreas = readiness.areas.filter((area) => area.status !== 'sufficient')
   const remainingAreas = readiness.areas.filter((area) => !area.keyIssue)
-  // 재평가로 고른 영역이 충분해지면 다음 부족한 영역을 기본으로 연다.
-  const defaultArea = keyIssues[0]?.area ?? weakAreas[0]?.area ?? readiness.areas[0]?.area ?? null
-  const activeArea = selectedArea === undefined ? defaultArea : selectedArea
+  const activeArea = selectedArea
   const outdated = readiness.stale || dirty
   const selectable = (area: ReadinessAreaResult) => (
     <button aria-expanded={activeArea === area.area} className={styles.row} type="button" onClick={() => setSelectedArea((current) => current === area.area ? null : area.area)}>
@@ -138,7 +133,7 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
         <div><h3>영역별 점검 결과</h3><p>항목을 선택하면 보완 방법과 관련 근거를 확인할 수 있어요.</p></div>
       </header>
       {keyIssues.length > 0 && <section aria-label="중요 항목" className={styles.priority}>
-        <header><h4>중요 항목</h4><div className={styles.priorityActions}><span>{keyIssues.length}개 확인 필요</span>{onFix && <button disabled={props.fixBlocked} type="button" onClick={() => onFix(keyIssues)}><Icon name="spark" />한 번에 보완</button>}</div></header>
+        <header><h4>중요 항목</h4><div className={styles.priorityActions}><span>{keyIssues.length}개 확인 필요</span></div></header>
         <ul>{keyIssues.map((area) => <li key={area.area}>
           {selectable(area)}
           {activeArea === area.area && <article aria-label={`${area.label} 자세히`} className={styles.card}>
@@ -155,6 +150,7 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
         </article>}
         </li>)}</ul>
       </section>}
+      {keyIssues.length > 0 && onFix && <button className={styles.bulkFix} disabled={props.fixBlocked} type="button" onClick={() => onFix(keyIssues)}><Icon name="spark" />한 번에 보완</button>}
     </section>
   </section>
 }

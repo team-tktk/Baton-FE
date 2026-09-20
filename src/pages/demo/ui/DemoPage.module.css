@@ -6,6 +6,16 @@
 .demo :global(nav[aria-label='인수인계 진행 상황']) { top: 88px; }
 .demo :global(aside) { top: 94px; max-height: calc(100svh - 115px); }
 .demo :global(button[class*='homeBack']) { top: 124px; }
-.guideText { color: var(--sub); font-size: 16px; line-height: 1.8; }.primary { border: 0; border-radius: 12px; padding: 13px 20px; background: var(--blue); color: #fff; font-weight: 750; cursor: pointer; }
+.guideContent { display: flex; flex-direction: column; gap: 26px; }
+.guideText { margin: 0; color: var(--sub); font-size: 15px; line-height: 1.75; letter-spacing: -.012em; word-break: keep-all; }
+.guideActions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 2px; }
+.guideActions button { min-width: 126px; min-height: 48px; border-radius: 12px; padding: 0 20px; font: inherit; font-size: 14px; font-weight: 750; cursor: pointer; transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
+.guideActions button:hover { transform: translateY(-1px); }
+.guideActions button:active { transform: translateY(0); }
+.primary { border: 0; background: var(--blue); color: #fff; box-shadow: 0 8px 18px rgb(49 130 246 / 18%); }
+.primary:hover { background: var(--blue-dark); box-shadow: 0 10px 24px rgb(49 130 246 / 24%); }
+.secondary { border: 1px solid var(--line); background: #fff; color: var(--sub); }
+.secondary:hover { border-color: #c8d0da; background: #f7f8fa; color: var(--text); }
 .success { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin: 20px; border-radius: 16px; padding: 22px; background: #e6f5ed; color: #14643d; }.success span { font-size: 13px; }.success button { padding: 10px 15px; border: 0; border-radius: 8px; background: white; color: #14643d; cursor: pointer; }
 @media(max-width: 850px) { .demo { padding-top: 132px; }.bar { min-height: 132px; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }.bar nav { order: 3; width: 100%; }.bar nav button { flex: 1; padding: 9px 5px; font-size: 11px; }.demo :global(button[class*='homeBack']) { top: 175px; }.demo :global(nav[aria-label='인수인계 진행 상황']) { top: 144px; }.demo :global(aside) { top: 144px; max-height: none; } }
+@media(max-width: 520px) { .guideContent { gap: 22px; }.guideText { font-size: 14px; line-height: 1.7; }.guideActions { flex-direction: column-reverse; align-items: stretch; }.guideActions button { width: 100%; } }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 
 import type { HandoverAnswerCitation } from '@/entities/handover'
 import { useHandoverRepository } from '@/entities/handover'
@@ -32,7 +32,19 @@ function reducer(state: State, action: Action): State {
 }
 
 /** 추천 질문을 못 불러왔을 때 쓰는 문구. 특정 인수인계 내용에 기대지 않는다. */
-const FALLBACK_SUGGESTIONS = ['첫날 가장 먼저 할 일은?', '업무 기준 중 꼭 알아야 할 게 있나요?', '막히면 누구에게 물어보면 되나요?']
+const FALLBACK_SUGGESTIONS = [
+  '첫날 가장 먼저 할 일은?',
+  '업무 기준 중 꼭 알아야 할 게 있나요?',
+  '막히면 누구에게 물어보면 되나요?',
+  '가장 먼저 확인할 일정은 무엇인가요?',
+  '반복 업무는 언제 진행하나요?',
+  '예외 상황이 생기면 어떻게 대응하나요?',
+]
+const VISIBLE_SUGGESTION_COUNT = 3
+
+function mergeSuggestions(items: string[]) {
+  return [...new Set([...items.map((item) => item.trim()).filter(Boolean), ...FALLBACK_SUGGESTIONS])]
+}
 
 /**
  * 대화와 추천 질문은 인수인계 하나에 묶인다.
@@ -41,14 +53,15 @@ const FALLBACK_SUGGESTIONS = ['첫날 가장 먼저 할 일은?', '업무 기준
 export function useHandoverChat(handoverId: string) {
   const repository = useHandoverRepository()
   const [state, dispatch] = useReducer(reducer, initialState)
-  const [suggestions, setSuggestions] = useState<string[]>(FALLBACK_SUGGESTIONS)
+  const [suggestionPool, setSuggestionPool] = useState<string[]>(FALLBACK_SUGGESTIONS)
+  const [suggestionOffset, setSuggestionOffset] = useState(0)
   const pendingRef = useRef(false)
   const sequenceRef = useRef(0)
 
   useEffect(() => {
     let ignore = false
     repository.listSuggestedQuestions(handoverId)
-      .then((items) => { if (!ignore && items.length > 0) setSuggestions(items) })
+      .then((items) => { if (!ignore && items.length > 0) setSuggestionPool(mergeSuggestions(items)) })
       .catch(() => { /* 추천 질문이 없어도 직접 물어볼 수 있다 */ })
     return () => { ignore = true }
   }, [handoverId, repository])
@@ -74,6 +87,7 @@ export function useHandoverChat(handoverId: string) {
     sequenceRef.current += 1
     const sequence = sequenceRef.current
     dispatch({ type: 'user', message: { id: `user-${sequence}`, role: 'user', text: value } })
+    setSuggestionOffset((current) => current + VISIBLE_SUGGESTION_COUNT)
     try {
       const answer = await repository.askQuestion(handoverId, value)
       dispatch({ type: 'answer', message: { id: `assistant-${sequence}`, role: 'assistant', text: answer.text, citations: answer.citations } })
@@ -85,6 +99,11 @@ export function useHandoverChat(handoverId: string) {
       pendingRef.current = false
     }
   }, [handoverId, repository])
+
+  const suggestions = useMemo(() => Array.from(
+    { length: Math.min(VISIBLE_SUGGESTION_COUNT, suggestionPool.length) },
+    (_, index) => suggestionPool[(suggestionOffset + index) % suggestionPool.length],
+  ), [suggestionOffset, suggestionPool])
 
   return { messages: state.messages, send, status: state.status, suggestions }
 }

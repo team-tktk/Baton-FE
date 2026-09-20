@@ -18,13 +18,13 @@ interface FileUploaderProps {
 
 const STATUS_LABEL: Record<AttachmentStatus, string> = {
   processing: '처리 중',
-  review: '민감정보 확인 필요',
+  review: '업로드 완료',
   ready: '업로드 완료',
   failed: '처리 실패',
 }
 const STATUS_TONE: Record<AttachmentStatus, 'yellow' | 'blue' | 'green' | 'neutral'> = {
   processing: 'yellow',
-  review: 'blue',
+  review: 'green',
   ready: 'green',
   failed: 'neutral',
 }
