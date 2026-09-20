@@ -22,7 +22,9 @@ it('writes, submits, answers and approves the same document without network call
   expect(await screen.findByText('가을_할인전_준비_메모.txt')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: '민감정보 확인하기' }))
   await dismiss()
-  await user.click(await screen.findByRole('button', { name: 'AI 분석 시작' }))
+  await user.click(await screen.findByRole('checkbox', { name: '이메일 se***@example.com 가리기' }))
+  await user.click(await screen.findByRole('button', { name: '확정하고 AI 분석 시작' }))
+  await user.click(screen.getByRole('button', { name: '확정하고 분석 시작' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '직접 해보기' })).toBeInTheDocument(), { timeout: 8000 })
   await dismiss()
   // 질문 수가 바뀌어도 마지막 문항까지 실제 화면 상태를 따라간다.
