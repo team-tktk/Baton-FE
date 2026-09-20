@@ -68,7 +68,7 @@ async function fillSetup(user: UserEvent, workItem = '프로모션 운영') {
 }
 
 describe('HandoverCreatePage setup and upload', () => {
-  it('uses the six-step setup chrome and returns home', async () => {
+  it('uses the six-step setup chrome and confirms before returning home', async () => {
     const user = userEvent.setup()
     const router = renderFlow('/handovers/new/setup')
 
@@ -77,6 +77,9 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(screen.queryByRole('link', { name: 'BATON 홈' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '홈으로' }))
+    expect(screen.getByRole('dialog', { name: '인수인계 작성을 그만둘까요?' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/handovers/new/setup')
+    await user.click(screen.getByRole('button', { name: '홈으로 나가기' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   })
 
@@ -221,7 +224,7 @@ describe('HandoverCreatePage setup and upload', () => {
     await fillSetup(user)
     await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
 
-    expect(await screen.findByRole('heading', { name: '최서윤님의 업무 파일을 올려주세요' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '최서윤님의 업무 자료를 모아주세요' })).toBeInTheDocument()
   })
 
   it('uploads files dropped onto the drop zone', async () => {
@@ -235,11 +238,11 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
 
     const dropped = new File(['mock'], '끌어온_자료.pdf', { type: 'application/pdf' })
-    const zone = screen.getByRole('button', { name: /파일을 여기에 끌어다 놓으세요/ })
-    fireEvent.drop(zone, { dataTransfer: { files: [dropped] } })
+    await waitFor(() => expect(screen.getByRole('button', { name: /파일을 여기에 끌어다 놓으세요/ })).toBeEnabled())
+    fireEvent.drop(screen.getByRole('button', { name: /파일을 여기에 끌어다 놓으세요/ }), { dataTransfer: { files: [dropped] } })
 
+    await waitFor(() => expect(uploadFile).toHaveBeenCalledWith('handover-moastore-operations', dropped))
     expect(await screen.findByText('끌어온_자료.pdf')).toBeInTheDocument()
-    expect(uploadFile).toHaveBeenCalledWith('handover-moastore-operations', dropped)
   })
 
   it('rejects an unsupported file without calling the repository', async () => {

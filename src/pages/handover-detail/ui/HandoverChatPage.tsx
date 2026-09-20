@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+
+import { useAppNavigate as useNavigate } from '@/shared/lib/demo'
 
 import { Icon } from '@/shared/ui/icon'
 import { AppHeader } from '@/widgets/app-header'

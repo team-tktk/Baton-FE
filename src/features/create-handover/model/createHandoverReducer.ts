@@ -30,6 +30,10 @@ export type CreateHandoverAction =
   | { type: 'submission/completed'; handover: Handover }
   | { type: 'reset' }
 
+const isOptimisticAttachment = (attachment: HandoverAttachment) => attachment.id.startsWith('uploading-')
+const matchesUploadedFile = (local: HandoverAttachment, remote: HandoverAttachment) =>
+  local.name === remote.name && local.size === remote.size
+
 export function createInitialCreateHandoverState(): CreateHandoverState {
   return {
     draftId: null,
@@ -70,10 +74,18 @@ export function createHandoverReducer(
       return state.workItems.length === 1
         ? state
         : { ...state, workItems: state.workItems.filter((_, index) => index !== action.index) }
-    case 'attachments/loaded':
-      return { ...state, attachments: structuredClone(action.attachments) }
+    case 'attachments/loaded': {
+      // 목록을 다시 읽는 동안에도 화면에 먼저 보인 전송 중 파일은 남긴다.
+      // 서버의 같은 파일이 도착한 뒤에만 임시 항목을 빼야 목록이 깜빡이지 않는다.
+      const waitingUploads = state.attachments.filter((local) =>
+        isOptimisticAttachment(local) && !action.attachments.some((remote) => matchesUploadedFile(local, remote)),
+      )
+      return { ...state, attachments: [...structuredClone(action.attachments), ...waitingUploads] }
+    }
     case 'attachment/added':
-      return { ...state, attachments: [...state.attachments, action.attachment] }
+      return state.attachments.some((file) => file.id === action.attachment.id)
+        ? state
+        : { ...state, attachments: [...state.attachments, action.attachment] }
     case 'attachment/removed':
       return { ...state, attachments: state.attachments.filter((file) => file.id !== action.attachmentId) }
     case 'draft/created':

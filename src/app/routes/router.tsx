@@ -1,4 +1,7 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Outlet } from 'react-router-dom'
+import { AppProviders } from '@/app/providers'
+import { ToastProvider } from '@/shared/ui/toast'
+import { DemoPage } from '@/pages/demo/ui/DemoPage'
 
 import { RequireAuth } from '@/features/auth'
 import { HomePage } from '@/pages/home'
@@ -12,6 +15,8 @@ import { ReviewInboxPage } from '@/pages/review-inbox'
 import { SlackOAuthCallbackPage } from '@/pages/slack-oauth-callback'
 
 export const router = createBrowserRouter([
+  { path: '/demo/*', element: <ToastProvider><DemoPage /></ToastProvider> },
+  { element: <AppProviders><Outlet /></AppProviders>, children: [
   {
     path: '/',
     element: <HomePage />,
@@ -38,4 +43,5 @@ export const router = createBrowserRouter([
     path: '*',
     element: <NotFoundPage />,
   },
+  ] },
 ])

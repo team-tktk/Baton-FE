@@ -84,7 +84,6 @@
   border-radius: 18px;
   background: rgb(255 255 255 / 92%);
   padding: 19px 20px;
-  animation: analysis-file-breathe 2.4s var(--file-delay) ease-in-out infinite;
 }
 
 .fileIcon {
@@ -103,24 +102,15 @@
 .file small { color: var(--muted); font-size: var(--fs-2xs); }
 
 .file > i {
-  width: 18px;
-  height: 18px;
-  border: 2px solid #dbe9fb;
-  border-top-color: var(--blue);
+  width: 9px;
+  height: 9px;
+  border: 0;
   border-radius: 50%;
-  animation: analysis-spin .9s linear infinite;
+  background: #8bbdf5;
 }
 
 .scanLine {
-  position: absolute;
-  z-index: 1;
-  right: 42px;
-  left: 42px;
-  top: 31%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #7db5ff, transparent);
-  filter: drop-shadow(0 0 7px #79b1fa);
-  animation: analysis-scan 2.7s ease-in-out infinite;
+  display: none;
 }
 
 .progress {
@@ -132,6 +122,17 @@
   margin-top: 12px;
   border-radius: 99px;
   background: #dfe8f3;
+}
+
+.progress::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0 auto 0 -34%;
+  width: 34%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, rgb(49 130 246 / 35%) 55%, transparent);
+  content: '';
+  animation: analysis-progress 1.8s linear infinite;
 }
 
 .progress i {
@@ -157,12 +158,9 @@
 @keyframes analysis-progress { 0% { left: -30%; } 100% { left: 100%; } }
 @keyframes analysis-hint { 0%, 33% { opacity: 0; transform: translateY(7px); } 6%, 27% { opacity: 1; transform: translateY(0); } }
 @keyframes analysis-pulse { 0% { box-shadow: 0 0 0 0 rgb(49 130 246 / 28%); } 70% { box-shadow: 0 0 0 10px rgb(49 130 246 / 0%); } 100% { box-shadow: 0 0 0 0 rgb(49 130 246 / 0%); } }
-@keyframes analysis-spin { to { transform: rotate(360deg); } }
-@keyframes analysis-scan { 0%, 100% { top: 24%; opacity: .3; } 50% { top: 76%; opacity: 1; } }
-@keyframes analysis-file-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .progress i, .status i, .file, .file > i, .scanLine { animation: none; }
+  .progress i, .progress::after, .status i { animation: none; }
   .hints p { opacity: 0; transform: none; animation: none; }
   .hints p:first-child { opacity: 1; }
 }
