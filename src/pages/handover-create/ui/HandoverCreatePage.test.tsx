@@ -284,6 +284,38 @@ describe('HandoverCreatePage setup and upload', () => {
     expect(await screen.findByText('가을_할인전_준비_메모.docx')).toBeInTheDocument()
   })
 
+  it('blocks picking the same person as both recipient and reviewer', async () => {
+    const user = userEvent.setup()
+    renderFlow('/handovers/new/setup')
+
+    await pickMember(user, RECIPIENTS, /정하늘/)
+    const reviewers = picker(REVIEWERS)
+    await user.click(reviewers.getByRole('combobox'))
+
+    const blocked = await reviewers.findByRole('option', { name: /정하늘/ })
+    expect(blocked).toBeDisabled()
+    expect(blocked).toHaveTextContent('받는 사람으로 선택됨')
+
+    await user.click(blocked)
+    expect(reviewers.getByRole('combobox')).toHaveAccessibleName('검토하는 사람 검색')
+    expect(picker(REVIEWERS).getByText('0명 선택')).toBeInTheDocument()
+  })
+
+  it('shows the server reason when creating a draft fails', async () => {
+    const user = userEvent.setup()
+    const repository = new MockHandoverRepository()
+    vi.spyOn(repository, 'createDraft').mockRejectedValue(
+      new ApiError('같은 사람을 인수자와 관리자로 동시에 지정할 수 없습니다.', { code: 'http', serverCode: 'HANDOVER_INVALID_PARTICIPANT', status: 400 }),
+    )
+    const router = renderFlow('/handovers/new/setup', repository)
+
+    await fillSetup(user)
+    await user.click(screen.getByRole('button', { name: '업무 자료 올리기' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent('같은 사람을 인수자와 관리자로 동시에 지정할 수 없습니다.')
+    expect(router.state.location.pathname).toBe('/handovers/new/setup')
+  })
+
   it('asks for a recipient before creating a draft', async () => {
     const user = userEvent.setup()
     const router = renderFlow('/handovers/new/setup')
