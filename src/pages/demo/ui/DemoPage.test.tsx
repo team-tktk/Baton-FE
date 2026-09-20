@@ -25,9 +25,17 @@ it('writes, submits, answers and approves the same document without network call
   await user.click(await screen.findByRole('button', { name: 'AI 분석 시작' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '직접 해보기' })).toBeInTheDocument(), { timeout: 8000 })
   await dismiss()
-  for (let index = 0; index < 3; index++) {
+  // 질문 수가 바뀌어도 마지막 문항까지 실제 화면 상태를 따라간다.
+  for (let guard = 0; guard < 10; guard++) {
     await user.click((await screen.findAllByRole('radio'))[0])
-    await user.click(screen.getByRole('button', { name: index === 2 ? /답변 반영하고 초안 보기/ : /다음 질문/ }))
+    const finish = screen.queryByRole('button', { name: /답변 반영하고 초안 보기/ })
+    if (finish) {
+      await user.click(finish)
+      break
+    }
+    const currentQuestion = screen.getByRole('heading', { level: 2 }).textContent
+    await user.click(screen.getByRole('button', { name: /다음 질문/ }))
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2 })).not.toHaveTextContent(currentQuestion ?? ''))
   }
   await dismiss()
   await user.click(await screen.findByRole('button', { name: '제출하기' }))
