@@ -12,12 +12,16 @@ interface MemberPickerProps {
   description: string
   members: HandoverParticipant[]
   selectedIds: string[]
+  /** 다른 역할에 이미 뽑혀 고를 수 없는 사람. 서버가 같은 사람의 겸임을 400으로 막는다. */
+  disabledIds?: string[]
+  /** 왜 못 고르는지 목록에 적어 준다. 숨기면 "왜 안 눌리지?"가 되어 그대로 보여 준다. */
+  disabledReason?: string
   query: string
   onQueryChange: (query: string) => void
   onToggle: (id: string) => void
 }
 
-export function MemberPicker({ description, members, onQueryChange, onToggle, query, selectedIds, separated = false, title }: MemberPickerProps) {
+export function MemberPicker({ description, disabledIds = [], disabledReason = '선택할 수 없어요', members, onQueryChange, onToggle, query, selectedIds, separated = false, title }: MemberPickerProps) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const rootRef = useRef<HTMLElement>(null)
@@ -25,6 +29,18 @@ export function MemberPicker({ description, members, onQueryChange, onToggle, qu
   const listboxId = useId()
   const visible = members.filter((member) => `${member.name} ${member.team}`.toLowerCase().includes(query.toLowerCase()))
   const selectedMembers = members.filter((member) => selectedIds.includes(member.id))
+  const isBlocked = (id: string) => disabledIds.includes(id)
+
+  /** 못 고르는 사람은 건너뛰고 다음으로 고를 수 있는 항목을 찾는다. 하나도 없으면 -1. */
+  const nextSelectable = (from: number, delta: number) => {
+    if (visible.length === 0) return -1
+    let index = from
+    for (let moved = 0; moved < visible.length; moved += 1) {
+      index = (index + delta + visible.length) % visible.length
+      if (!isBlocked(visible[index].id)) return index
+    }
+    return -1
+  }
 
   useEffect(() => {
     const closeOnOutsidePress = (event: PointerEvent) => {
@@ -60,11 +76,10 @@ export function MemberPicker({ description, members, onQueryChange, onToggle, qu
       event.preventDefault()
       setOpen(true)
       setActiveIndex((current) => {
-        if (visible.length === 0) return -1
-        if (event.key === 'Home') return 0
-        if (event.key === 'End') return visible.length - 1
-        if (event.key === 'ArrowDown') return current < visible.length - 1 ? current + 1 : 0
-        return current > 0 ? current - 1 : visible.length - 1
+        if (event.key === 'Home') return nextSelectable(visible.length - 1, 1)
+        if (event.key === 'End') return nextSelectable(0, -1)
+        if (event.key === 'ArrowDown') return nextSelectable(current, 1)
+        return nextSelectable(current < 0 ? 0 : current, -1)
       })
       return
     }
@@ -117,9 +132,11 @@ export function MemberPicker({ description, members, onQueryChange, onToggle, qu
             <div className={styles.people}>
               {visible.map((member, index) => {
                 const selected = selectedIds.includes(member.id)
+                const blocked = isBlocked(member.id)
                 return (
-                  <button aria-selected={selected} className={`${selected ? styles.selected : ''} ${activeIndex === index ? styles.active : ''}`.trim()} id={`${listboxId}-member-option-${member.id}`} key={member.id} role="option" tabIndex={-1} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => toggleMember(member.id)}>
-                    <span><strong>{member.name}</strong><small>{member.position} · {member.team}</small></span><i><Icon name="check" /></i>
+                  <button aria-disabled={blocked || undefined} aria-selected={selected} className={`${selected ? styles.selected : ''} ${activeIndex === index ? styles.active : ''}`.trim()} disabled={blocked} id={`${listboxId}-member-option-${member.id}`} key={member.id} role="option" tabIndex={-1} type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => toggleMember(member.id)}>
+                    <span><strong>{member.name}</strong><small>{member.position} · {member.team}</small></span>
+                    {blocked ? <em className={styles.reason}>{disabledReason}</em> : <i><Icon name="check" /></i>}
                   </button>
                 )
               })}

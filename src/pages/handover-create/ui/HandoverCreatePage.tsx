@@ -245,6 +245,9 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
       dispatch({ type: 'draft/created', draft: { ...draft, attachments: state.attachments } })
       navigate('/handovers/new/upload')
       showToast(`${draft.owner.name}님의 ${workItems[0]} 업무로 시작했어요`)
+    } catch (caught) {
+      // 참여자 지정 규칙 위반(겸임 등)은 서버가 이유를 문구로 준다. 그대로 보여 주지 않으면 버튼이 먹통처럼 보인다.
+      showToast(caught instanceof ApiError ? caught.message : '인수인계를 시작하지 못했어요. 잠시 후 다시 시도해 주세요')
     } finally { setPending(false) }
   }
 
@@ -405,8 +408,8 @@ export function HandoverCreatePage({ step }: HandoverCreatePageProps) {
           <section>
             <header className={styles.heading}><div className={styles.kicker}><Icon name="users" /> 인수인계 하기 · 시작</div><h1>누구에게 어떤 업무를 넘기나요?</h1><p>받는 사람과 대표 업무를 알려주면 AI가 필요한 자료를 더 정확히 찾아요.</p></header>
             <div aria-label="인수인계 기본 정보" className={styles.card} role="region">
-              <MemberPicker description="이름이나 팀으로 검색하세요." members={members} query={recipientQuery} selectedIds={state.recipientIds} title="업무를 받는 사람" onQueryChange={setRecipientQuery} onToggle={(recipientId) => dispatch({ type: 'recipient/toggled', recipientId })} />
-              <MemberPicker separated description="인수인계 문서를 검토하고 승인할 사람이에요." members={members} query={reviewerQuery} selectedIds={state.reviewerIds} title="검토하는 사람" onQueryChange={setReviewerQuery} onToggle={(reviewerId) => dispatch({ type: 'reviewer/toggled', reviewerId })} />
+              <MemberPicker description="이름이나 팀으로 검색하세요." disabledIds={state.reviewerIds} disabledReason="검토하는 사람으로 선택됨" members={members} query={recipientQuery} selectedIds={state.recipientIds} title="업무를 받는 사람" onQueryChange={setRecipientQuery} onToggle={(recipientId) => dispatch({ type: 'recipient/toggled', recipientId })} />
+              <MemberPicker separated description="인수인계 문서를 검토하고 승인할 사람이에요." disabledIds={state.recipientIds} disabledReason="받는 사람으로 선택됨" members={members} query={reviewerQuery} selectedIds={state.reviewerIds} title="검토하는 사람" onQueryChange={setReviewerQuery} onToggle={(reviewerId) => dispatch({ type: 'reviewer/toggled', reviewerId })} />
               <WorkScopeEditor items={state.workItems} onAdd={() => dispatch({ type: 'work/added' })} onChange={(index, value) => dispatch({ type: 'work/changed', index, value })} onRemove={(index) => dispatch({ type: 'work/removed', index })} />
             </div>
             <footer className={styles.actions}><Button variant="ghost" onClick={() => navigate('/')}>이전으로</Button><Button disabled={pending} onClick={createDraft}>업무 자료 올리기 <Icon name="arrow" /></Button></footer>

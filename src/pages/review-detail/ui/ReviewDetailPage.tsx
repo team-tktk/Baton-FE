@@ -79,7 +79,7 @@ export function ReviewDetailPage() {
   return <main className={styles.main}>
     <header>
       <button type="button" onClick={() => navigate('/reviews')}><Icon name="back" /> 검토 목록</button>
-      <div><Badge tone={approved ? 'green' : 'yellow'}>{approved ? '승인 완료' : '승인 대기'}</Badge><strong>{handover.title}</strong><small>{handover.owner.name} → {handover.recipient.name} · {handover.deliveredAtLabel} 제출</small></div>
+      <div><Badge tone={approved ? 'green' : 'yellow'}>{approved ? '승인 완료' : '승인 대기'}</Badge><strong>{handover.title}</strong><small>{handover.owner.name} → {handover.recipients.map((person) => person.name).join(', ') || handover.recipient.name} · {handover.deliveredAtLabel} 제출</small></div>
     </header>
     <ReviewWorkspace handover={handover} pending={pending} onAttachmentOpen={downloadAttachment} onComment={(comment) => mutate(async () => { const created = await repository.addReviewComment(handoverId, comment); setHandover((current) => current ? { ...current, review: { ...current.review, comments: [...current.review.comments, created] } } : current); showToast('검토 코멘트를 남겼어요') })} onToggleChecklist={toggleChecklist} onApprove={() => mutate(async () => { setHandover(await repository.approveHandover(handoverId)); showToast('인수인계를 승인했어요') })} />
   </main>
