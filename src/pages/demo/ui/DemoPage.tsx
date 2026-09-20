@@ -97,8 +97,23 @@ function DemoSession({ onRestart }: { onRestart: () => void }) {
             <Route path="*" element={<Navigate to="/demo" replace />} />
           </Routes>
         </div>
-        <Modal open={open} title={guide?.[0] ?? ''} onClose={closeGuide}><p className={styles.guideText}>{guide?.[1]}</p><button className={styles.primary} autoFocus onClick={closeGuide}>직접 해보기</button></Modal>
-        <Modal open={exitOpen} title="데모 체험을 종료할까요?" onClose={() => setExitOpen(false)}><p className={styles.guideText}>체험 중 작성한 내용은 사라져요. 실제 계정의 자료에는 영향을 주지 않아요.</p><button onClick={() => setExitOpen(false)}>계속 체험하기</button> <button className={styles.primary} onClick={() => navigate('/')}>홈으로 나가기</button></Modal>
+        <Modal open={open} title={guide?.[0] ?? ''} onClose={closeGuide}>
+          <div className={styles.guideContent}>
+            <p className={styles.guideText}>{guide?.[1]}</p>
+            <footer className={styles.guideActions}>
+              <button className={styles.primary} autoFocus onClick={closeGuide}>직접 해보기</button>
+            </footer>
+          </div>
+        </Modal>
+        <Modal open={exitOpen} title="데모 체험을 종료할까요?" onClose={() => setExitOpen(false)}>
+          <div className={styles.guideContent}>
+            <p className={styles.guideText}>체험 중 작성한 내용은 사라져요. 실제 계정의 자료에는 영향을 주지 않아요.</p>
+            <footer className={styles.guideActions}>
+              <button className={styles.secondary} onClick={() => setExitOpen(false)}>계속 체험하기</button>
+              <button className={styles.primary} onClick={() => navigate('/')}>홈으로 나가기</button>
+            </footer>
+          </div>
+        </Modal>
       </CreateHandoverProvider>
     </AuthContext>
   </HandoverRepositoryProvider></DemoContext>

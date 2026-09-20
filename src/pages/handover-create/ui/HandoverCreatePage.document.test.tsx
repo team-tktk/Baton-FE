@@ -213,6 +213,7 @@ describe('HandoverCreatePage document step AI fixes', () => {
     const router = renderFlow(repository)
     await reachDocument(user, router)
 
+    await user.click(keyIssue('실행 절차'))
     await user.click(detail('실행 절차').getByRole('button', { name: 'AI로 보완하기' }))
     const dialog = within(await screen.findByRole('dialog'))
     await dialog.findByText(/수정안을 만들었어요/)
@@ -231,6 +232,7 @@ describe('HandoverCreatePage document step AI fixes', () => {
     const router = renderFlow(repository)
     await reachDocument(user, router)
 
+    await user.click(keyIssue('실행 절차'))
     await user.click(detail('실행 절차').getByRole('button', { name: 'AI로 보완하기' }))
     const dialog = within(await screen.findByRole('dialog', { name: '실행 절차 보완' }))
     await dialog.findByText(/수정안을 만들었어요/)

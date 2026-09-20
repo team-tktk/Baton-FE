@@ -1,7 +1,5 @@
 .panel { display: flex; flex-direction: column; gap: 16px; }
-.header { display: flex; align-items: flex-start; gap: 12px; }
-.icon { display: grid; flex: none; width: 40px; height: 40px; place-items: center; border-radius: 13px; background: var(--blue-soft); color: var(--blue); }
-.icon svg { width: 22px; height: 22px; }
+.header { display: block; }
 .header h2 { margin: 2px 0 6px; font-size: var(--fs-xl); letter-spacing: -.03em; }
 .header p { margin: 0; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.6; }
 
@@ -41,10 +39,6 @@
 .priority h4, .remaining h4 { margin: 0; font-size: var(--fs-2xs); font-weight: 850; }
 .priorityActions { display: flex; align-items: center; gap: 6px; }
 .priorityActions > span, .remaining > header > span { flex: none; border-radius: 99px; background: var(--blue-faint); color: var(--blue-dark); padding: 5px 8px; font-size: var(--fs-3xs); font-weight: 800; }
-.priorityActions button { display: inline-flex; min-height: 28px; align-items: center; gap: 4px; border: 0; border-radius: 9px; background: var(--blue); color: #fff; cursor: pointer; padding: 0 9px; font-size: var(--fs-3xs); font-weight: 800; }
-.priorityActions button:hover:not(:disabled) { background: var(--blue-dark); }
-.priorityActions button:disabled { background: #eef1f4; color: var(--muted); cursor: default; }
-.priorityActions svg { width: 13px; height: 13px; }
 .priority > ul, .remaining > ul { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .remaining { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 14px; }
 .card { display: flex; flex-direction: column; gap: 10px; margin: 4px 0 8px; border: 1px solid #cfe0f7; border-radius: 14px; background: #fff; padding: 13px 14px; box-shadow: 0 8px 20px rgb(49 130 246 / 6%); }
@@ -91,6 +85,10 @@ button.row > svg { width: 14px; height: 14px; color: var(--muted); }
 button.row[aria-expanded='true'] > svg { transform: rotate(90deg); }
 .rowLabel { display: flex; align-items: baseline; gap: 6px; font-size: var(--fs-2xs); font-weight: 750; }
 .rowLabel small { color: var(--muted); font-size: var(--fs-3xs); font-weight: 600; }
+.bulkFix { display: flex; width: 100%; min-height: 46px; align-items: center; justify-content: center; gap: 7px; margin-top: 10px; border: 0; border-radius: 13px; background: var(--blue); color: #fff; cursor: pointer; font-size: var(--fs-sm); font-weight: 850; box-shadow: 0 8px 18px rgb(49 130 246 / 18%); }
+.bulkFix:hover:not(:disabled) { background: var(--blue-dark); }
+.bulkFix:disabled { background: #eef1f4; color: var(--muted); cursor: default; box-shadow: none; }
+.bulkFix svg { width: 16px; height: 16px; }
 
 @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2.4s; } .card { animation: none; } }
 .actions button.fix { display: inline-flex; align-items: center; gap: 6px; border-color: var(--blue); background: var(--blue); color: #fff; }

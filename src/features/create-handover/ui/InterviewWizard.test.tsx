@@ -36,4 +36,18 @@ describe('InterviewWizard', () => {
 
     expect(onSubmit).toHaveBeenCalledWith('팀장 확인')
   })
+
+  it('shows evidence separately and keeps the last action disabled until there is an answer', async () => {
+    const user = userEvent.setup()
+    const onSubmit = vi.fn()
+    render(<InterviewWizard answer="" currentStep={3} question={{ ...question, evidence: '운영 매뉴얼.pdf: 3쪽 · 연락망' }} total={3} onBack={vi.fn()} onSkip={vi.fn()} onSubmit={onSubmit} />)
+
+    expect(screen.getByRole('complementary', { name: '근거 자료' })).toHaveTextContent('운영 매뉴얼.pdf')
+    expect(screen.getByRole('button', { name: /답변 반영하고 초안 보기/ })).toBeDisabled()
+
+    await user.type(screen.getByRole('textbox', { name: '직접 답변' }), '운영 채널에서 확인합니다')
+    await user.click(screen.getByRole('button', { name: /답변 반영하고 초안 보기/ }))
+
+    expect(onSubmit).toHaveBeenCalledWith('운영 채널에서 확인합니다')
+  })
 })

@@ -146,7 +146,7 @@ export function MaskingStep({ attachments, handoverId, onAttachmentsChange, onBa
           <header>
             <Icon name={iconOf(activeFile?.origin)} />
             <strong>{activeFile?.name}</strong>
-            <span>드래그해서 직접 가릴 수 있어요 · AI가 읽은 텍스트 기준</span>
+            <span className={styles.dragHint}><Icon name="spark" />텍스트를 드래그해 직접 가리기</span>
           </header>
           {!activeReview ? (
             <p className={styles.placeholder}>검수 내용을 불러오는 중이에요…</p>
@@ -185,7 +185,6 @@ export function MaskingStep({ attachments, handoverId, onAttachmentsChange, onBa
               disabled={busy}
               savingIds={review.savingIds}
               selectedId={selectedCandidateId}
-              summary={activeReview.summary}
               onSelect={selectFromList}
               onRemove={(candidateId) => { void review.removeCandidate(activeFile.id, candidateId) }}
               onToggle={(candidateId, applied) => { void review.toggle(activeFile.id, candidateId, applied) }}
@@ -213,11 +212,10 @@ export function MaskingStep({ attachments, handoverId, onAttachmentsChange, onBa
       </footer>
 
       <Modal open={confirmOpen} returnFocusRef={confirmButtonRef} title="민감정보 검수를 확정할까요?" onClose={() => setConfirmOpen(false)}>
-        <ul className={styles.confirmFacts}>
-          <li>자료 {review.openFileCount}개, 가려질 항목 {review.applied}개</li>
-          <li>확정하면 원문은 서버에서 삭제되어 되돌릴 수 없어요</li>
-          <li>AI 분석과 질의응답에는 가린 내용만 쓰여요</li>
-        </ul>
+        <div className={styles.confirmCopy}>
+          <p>현재 마스킹된 상태로 서버에 업로드돼요</p>
+          <small>AI 분석과 질의응답에는 가린 내용만 쓰여요.</small>
+        </div>
         <div className={styles.modalActions}>
           <Button variant="ghost" onClick={() => setConfirmOpen(false)}>취소</Button>
           <Button onClick={() => { void confirm() }}>확정하고 분석 시작</Button>

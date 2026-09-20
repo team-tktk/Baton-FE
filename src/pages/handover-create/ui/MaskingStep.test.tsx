@@ -99,8 +99,7 @@ describe('MaskingStep', () => {
     await user.click(confirmButton())
 
     const dialog = screen.getByRole('dialog', { name: '민감정보 검수를 확정할까요?' })
-    expect(dialog).toHaveTextContent('자료 1개, 가려질 항목 2개')
-    expect(dialog).toHaveTextContent('되돌릴 수 없어요')
+    expect(dialog).toHaveTextContent('현재 마스킹된 상태로 서버에 업로드돼요')
     expect(confirmMasking).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole('button', { name: '확정하고 분석 시작' }))
@@ -142,13 +141,12 @@ describe('MaskingStep', () => {
     expect(add).toHaveBeenCalledWith(HANDOVER_ID, 'file-1', { start: emailEnd + 1, end: emailEnd + 6 })
     expect(TEXT.slice(emailEnd + 1, emailEnd + 6)).toBe('지급 계좌')
     const removeButton = await screen.findByRole('button', { name: '직접 추가한 *** 삭제' })
-    expect(screen.getByText('직접 추가')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '이 부분 가리기' })).not.toBeInTheDocument()
 
     await user.click(removeButton)
 
     expect(remove).toHaveBeenCalledWith(HANDOVER_ID, 'file-1', 'manual-3')
-    await waitFor(() => expect(screen.queryByText('직접 추가')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('button', { name: '직접 추가한 *** 삭제' })).not.toBeInTheDocument())
   })
 
   it('offers the action for a touch selection that never sends mouseup', async () => {
@@ -224,7 +222,7 @@ describe('MaskingStep', () => {
     await user.click(accountCheckbox())
     await waitFor(() => expect(confirmButton()).toBeEnabled())
     await user.click(confirmButton())
-    expect(screen.getByRole('dialog', { name: '민감정보 검수를 확정할까요?' })).toHaveTextContent('자료 3개, 가려질 항목 2개')
+    expect(screen.getByRole('dialog', { name: '민감정보 검수를 확정할까요?' })).toHaveTextContent('현재 마스킹된 상태로 서버에 업로드돼요')
     await user.click(screen.getByRole('button', { name: '확정하고 분석 시작' }))
 
     await waitFor(() => expect(onProceed).toHaveBeenCalledTimes(1))

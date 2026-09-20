@@ -14,15 +14,17 @@
 .files em.fileAttention { background: #ffe9e9; color: #b42318; }
 
 /* 원문은 넓게, 검수 목록은 고정 폭. 둘 다 화면 높이에 맞춰 각자 스크롤한다. */
-.grid { display: grid; grid-template-columns: minmax(0, 1fr) 420px; align-items: stretch; gap: 20px; height: min(720px, calc(100vh - 250px)); min-height: 520px; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) 420px; align-items: start; gap: 20px; height: min(720px, calc(100vh - 250px)); min-height: 520px; }
 .viewer, .side { display: flex; min-height: 0; flex-direction: column; overflow: hidden; border: 1px solid #dfe7f0; border-radius: 24px; background: #fff; box-shadow: 0 18px 44px rgb(31 50 80 / 7%); }
+.viewer { height: 100%; }
 .viewer > header { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); padding: 16px 22px; }
 .viewer > header svg { width: 17px; height: 17px; color: var(--muted); }
 .viewer > header strong { overflow: hidden; font-size: var(--fs-sm); text-overflow: ellipsis; white-space: nowrap; }
-.viewer > header span { margin-left: auto; color: var(--muted); font-size: var(--fs-3xs); white-space: nowrap; }
+.viewer > header .dragHint { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 7px 10px; font-size: var(--fs-3xs); font-weight: 800; white-space: nowrap; }
+.viewer > header .dragHint svg { width: 14px; height: 14px; color: currentcolor; }
 .viewer > div { flex: 1; min-height: 0; background: linear-gradient(#fff, #fbfcfe); }
-.side { padding: 22px; }
-.side > section { flex: 1; }
+.side { max-height: 100%; padding: 22px; }
+.side > section { min-height: 0; }
 .placeholder { margin: auto; max-width: 320px; padding: 30px; color: var(--muted); font-size: var(--fs-2xs); line-height: 1.7; text-align: center; }
 
 .notice { display: flex; flex-direction: column; align-items: center; gap: 10px; border: 1px solid #dfe7f0; border-radius: 26px; background: #fff; padding: 52px 28px; text-align: center; box-shadow: 0 18px 44px rgb(31 50 80 / 7%); }
@@ -34,8 +36,9 @@
 .actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
 .confirmArea { display: flex; align-items: center; gap: 14px; }
 .hint { margin: 0; color: var(--muted); font-size: var(--fs-2xs); }
-.confirmFacts { display: flex; flex-direction: column; gap: 8px; margin: 0 0 24px; padding-left: 18px; color: var(--sub); font-size: var(--fs-sm); line-height: 1.6; }
-.confirmFacts li:nth-child(2) { color: #b42318; font-weight: 700; }
+.confirmCopy { margin: -3px 0 28px; }
+.confirmCopy p { margin: 0 0 7px; color: var(--sub); font-size: var(--fs-sm); font-weight: 600; line-height: 1.6; }
+.confirmCopy small { display: block; color: var(--sub); font-size: var(--fs-2xs); line-height: 1.55; }
 .modalActions { display: flex; justify-content: flex-end; gap: 10px; }
 
 @media (max-width: 1100px) {
@@ -46,6 +49,8 @@
 
 @media (max-width: 560px) {
   .main, .wide { width: calc(100% - 28px); padding-top: 36px; }
+  .viewer > header { align-items: flex-start; flex-wrap: wrap; }
+  .viewer > header .dragHint { width: 100%; justify-content: center; margin-left: 0; }
   .actions, .confirmArea { align-items: stretch; flex-direction: column-reverse; }
   .actions button { width: 100%; }
   .hint { text-align: center; }
