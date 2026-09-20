@@ -1,10 +1,22 @@
-.collector { display: grid; gap: 22px; margin-top: 34px; }
-.panel { border: 1px solid var(--line); border-radius: 24px; background: #fff; padding: 26px; box-shadow: 0 12px 34px rgb(31 50 80 / 5%); }
-.panel > header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 22px; }
-.panel h2 { margin: 0 0 5px; font-size: var(--fs-lg); }
-.panel header p { margin: 0; color: var(--muted); font-size: var(--fs-3xs); line-height: 1.55; }
+.collector { display: grid; gap: 16px; margin-top: 34px; }
+.collectorHeader { display: flex; align-items: end; gap: 20px; }
+.collectorHeader h2 { margin: 5px 0 5px; font-size: var(--fs-xl); letter-spacing: -.025em; }
+.collectorHeader p, .panel header p { margin: 0; color: var(--muted); font-size: var(--fs-3xs); line-height: 1.55; }
+.eyebrow { color: var(--blue-dark); font-size: 11px; font-weight: 850; letter-spacing: .04em; }
+.tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.tabs > button { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; border: 1px solid #e1e8f0; border-radius: 18px; background: rgb(255 255 255 / 68%); color: var(--text); cursor: pointer; padding: 15px 17px; text-align: left; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.tabs > button:hover { border-color: #bfd5f2; background: #fff; transform: translateY(-1px); }
+.tabs > .activeTab { border-color: #8ebcf8; background: #f4f8ff; box-shadow: inset 0 0 0 1px rgb(49 130 246 / 12%); }
+.tabs strong, .tabs small { display: block; }
+.tabs strong { margin-bottom: 3px; font-size: var(--fs-2xs); }
+.tabs small { overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.tabs em { display: grid; min-width: 25px; height: 25px; place-items: center; border-radius: 999px; background: var(--blue); color: #fff; font-size: 11px; font-style: normal; font-weight: 800; }
+.panel { border: 1px solid #e1e8f0; border-radius: 20px; background: #fff; padding: 25px 26px 26px; box-shadow: 0 12px 32px rgb(31 50 80 / 5%); }
+.panel > header { margin-bottom: 20px; }
+.panel h3 { margin: 0 0 5px; font-size: var(--fs-base); letter-spacing: -.02em; }
 .icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border-radius: 13px; background: #eaf3ff; color: var(--blue-dark); }
-.slackIcon { background: #4a154b; color: #fff; font-size: 20px; font-weight: 900; }
+.slackIcon { background: #fff; }
+.slackIcon img { width: 25px; height: 25px; object-fit: contain; }
 .webForm { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) auto; align-items: end; gap: 12px; }
 .webForm label, .workspaceRow label { display: grid; gap: 7px; color: var(--sub); font-size: var(--fs-3xs); font-weight: 800; }
 .webForm label > span small { color: var(--muted); font-weight: 600; }
@@ -37,6 +49,8 @@
 .empty { margin: 0; color: var(--muted); padding: 24px; text-align: center; }
 
 @media (max-width: 720px) {
+  .collectorHeader { align-items: flex-start; }
+  .tabs { grid-template-columns: 1fr; }
   .panel { padding: 21px 18px; }
   .webForm { grid-template-columns: 1fr; }
   .webForm .description { grid-column: auto; }

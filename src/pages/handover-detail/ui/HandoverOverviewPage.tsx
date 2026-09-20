@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+
+import { useAppNavigate as useNavigate } from '@/shared/lib/demo'
 
 import { PersonSummary, TaskSummary } from '@/entities/handover'
 import { Button } from '@/shared/ui/button'

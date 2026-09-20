@@ -54,7 +54,7 @@ async function reachDocument(user: UserEvent, router: ReturnType<typeof renderFl
   expect(await screen.findByText(options.score ?? '75')).toBeInTheDocument()
 }
 
-const keyIssue = (label: string) => within(screen.getByRole('region', { name: '중요한 확인' })).getByRole('button', { name: new RegExp(label) })
+const keyIssue = (label: string) => within(screen.getByRole('region', { name: '중요 항목' })).getByRole('button', { name: new RegExp(label) })
 const detail = (label: string) => within(screen.getByRole('article', { name: `${label} 자세히` }))
 
 function editPurpose(text: string) {
@@ -137,7 +137,7 @@ describe('HandoverCreatePage document step readiness', () => {
     const router = renderFlow(repository)
     await reachDocument(user, router)
 
-    await user.click(within(screen.getByRole('region', { name: '중요한 확인' })).getByRole('button', { name: /예외 대응/ }))
+    await user.click(within(screen.getByRole('region', { name: '중요 항목' })).getByRole('button', { name: /예외 대응/ }))
     await user.click(within(screen.getByRole('article', { name: '예외 대응 자세히' })).getByRole('button', { name: '문서에서 수정하기' }))
     expect(screen.getByLabelText('쿠폰 할인 승인 순서 내용 편집')).toHaveFocus()
 
@@ -176,7 +176,7 @@ describe('HandoverCreatePage document step AI fixes', () => {
     expect(window.document.getElementById('draft-section-rules-and-exceptions')).toHaveAttribute('data-just-applied', 'true')
     expect(screen.getByLabelText('업무 기준 4 내용 편집')).toHaveTextContent('예외 상황별 담당자와 처리 순서를 적어 주세요.')
     expect(screen.getByText('83')).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: '중요한 확인' })).queryByRole('button', { name: /예외 대응/ })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: '중요 항목' })).queryByRole('button', { name: /예외 대응/ })).not.toBeInTheDocument()
   })
 
   it('fills an empty section from answers to follow-up questions', async () => {

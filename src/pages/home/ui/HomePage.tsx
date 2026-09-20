@@ -43,6 +43,7 @@ export function HomePage() {
           <span><small>업무 자동 인수인계 서비스</small><strong>BATON</strong></span>
         </div>
         <nav aria-label="계정" className={styles.auth}>
+          <button className={styles.login} type="button" onClick={() => navigate('/demo')}>데모 체험하기</button>
           {status === 'loading' ? (
             <span aria-label="로그인 상태 확인 중" className={styles.authLoading} role="status" />
           ) : status === 'anonymous' ? (

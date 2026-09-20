@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+
+import { useAppNavigate as useNavigate } from '@/shared/lib/demo'
 
 import type { SentSummary } from '@/entities/handover'
 import { HandoverStatusBadge, useHandoverRepository } from '@/entities/handover'

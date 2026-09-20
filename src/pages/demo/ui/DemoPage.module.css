@@ -1,0 +1,11 @@
+.demo { padding-top: 76px; padding-bottom: 28px; }
+.bar { position: fixed; z-index: 45; inset: 0 0 auto; display: flex; min-height: 76px; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 24px; color: #fff; background: #172033; box-shadow: 0 4px 20px #17203320; }
+.bar strong { display: block; letter-spacing: .025em; }.bar strong span { margin-left: 6px; color: #92bdff; font-size: 11px; }.bar small { display: block; margin-top: 5px; color: #c0cddd; font-size: 12px; }
+.bar nav, .tools { display: flex; gap: 6px; flex-wrap: wrap; }.bar button { border: 0; border-radius: 9px; padding: 10px 13px; background: transparent; color: #d9e4f1; font: inherit; font-size: 13px; cursor: pointer; }.bar button[aria-current] { background: #337cf0; color: white; }.bar button:disabled { opacity: .38; cursor: default; }.bar button:hover:not(:disabled) { background: #ffffff22; }.bar button[aria-current]:hover { background: #337cf0; }
+.notice { margin: 0; background: #eaf2ff; color: #456082; padding: 10px 24px; font-size: 12px; text-align: center; }
+.demo :global(nav[aria-label='인수인계 진행 상황']) { top: 88px; }
+.demo :global(aside) { top: 94px; max-height: calc(100svh - 115px); }
+.demo :global(button[class*='homeBack']) { top: 124px; }
+.guideText { color: var(--sub); font-size: 16px; line-height: 1.8; }.primary { border: 0; border-radius: 12px; padding: 13px 20px; background: var(--blue); color: #fff; font-weight: 750; cursor: pointer; }
+.success { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin: 20px; border-radius: 16px; padding: 22px; background: #e6f5ed; color: #14643d; }.success span { font-size: 13px; }.success button { padding: 10px 15px; border: 0; border-radius: 8px; background: white; color: #14643d; cursor: pointer; }
+@media(max-width: 850px) { .demo { padding-top: 132px; }.bar { min-height: 132px; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }.bar nav { order: 3; width: 100%; }.bar nav button { flex: 1; padding: 9px 5px; font-size: 11px; }.demo :global(button[class*='homeBack']) { top: 175px; }.demo :global(nav[aria-label='인수인계 진행 상황']) { top: 144px; }.demo :global(aside) { top: 144px; max-height: none; } }

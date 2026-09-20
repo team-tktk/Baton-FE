@@ -32,20 +32,35 @@ describe('ReadinessPanel', () => {
     expect(screen.queryByRole('button', { name: /다시 평가/ })).not.toBeInTheDocument()
     expect(onReevaluate).not.toHaveBeenCalled()
 
-    const keyIssues = within(screen.getByRole('region', { name: '중요한 확인' }))
-    expect(keyIssues.getByRole('heading', { name: '중요한 확인 3건' })).toBeInTheDocument()
-    const rows = keyIssues.getAllByRole('button')
-    expect(rows.map((row) => row.textContent)).toEqual(['실행 절차일부 부족', '예외 대응일부 부족', '담당자충돌'])
-    expect(rows[0]).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('article', { name: '실행 절차 자세히' })).toHaveTextContent('반복 업무')
+    const areas = within(screen.getByRole('region', { name: '영역별 준비도' }))
+    expect(areas.getByRole('heading', { name: '영역별 점검 결과' })).toBeInTheDocument()
+    const rows = areas.getAllByRole('button', { name: /실행 절차|예외 대응|담당자/ })
+    expect(rows.slice(0, 3).map((row) => row.textContent)).toEqual(['실행 절차20점일부 부족', '예외 대응15점일부 부족', '담당자10점충돌'])
+    expect(rows[0]).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('article', { name: '실행 절차 자세히' })).toHaveTextContent('주간 주문 현황')
 
     await user.click(rows[1]!)
-    expect(rows[1]).toHaveAttribute('aria-pressed', 'true')
+    expect(rows[1]).toHaveAttribute('aria-expanded', 'true')
+    expect(rows[0]).toHaveAttribute('aria-expanded', 'false')
     const detail = within(screen.getByRole('article', { name: '예외 대응 자세히' }))
     await user.click(detail.getByRole('button', { name: new RegExp(evidence.fileName) }))
     expect(onOpenEvidence).toHaveBeenCalledWith(evidence)
     await user.click(detail.getByRole('button', { name: '문서에서 수정하기' }))
     expect(onLocate).toHaveBeenCalledWith('RULES_AND_EXCEPTIONS')
+
+    await user.click(rows[1]!)
+    expect(rows[1]).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('article', { name: '예외 대응 자세히' })).not.toBeInTheDocument()
+  })
+
+  it('shows a repeated evidence file only once', async () => {
+    const { document, readiness } = await evaluated()
+    const area = readiness.areas.find((item) => item.keyIssue)!
+    const duplicateEvidence = [...area.evidence, { ...area.evidence[0]!, locator: '4쪽' }]
+    render(<ReadinessPanel document={document} error={null} phase="ready" readiness={{ ...readiness, areas: readiness.areas.map((item) => item.area === area.area ? { ...item, evidence: duplicateEvidence } : item) }} />)
+
+    expect(screen.getAllByText(area.evidence[0]!.fileName)).toHaveLength(1)
+    expect(screen.getByText(`${area.evidence[0]!.locator} · 4쪽`)).toBeInTheDocument()
   })
 
   it('offers locating instead of editing for a section the editor cannot change', async () => {

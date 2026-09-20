@@ -6,6 +6,7 @@ import { ApiError } from '@/shared/api'
 import { Badge } from '@/shared/ui/badge'
 import { Button } from '@/shared/ui/button'
 import { Icon } from '@/shared/ui/icon'
+import slackLogo from '@/shared/assets/slack-logo.svg'
 
 import styles from './SourceCollector.module.css'
 
@@ -33,6 +34,7 @@ function message(caught: unknown, fallback: string) {
 }
 
 export function SourceCollector({ handoverId, onChange, onFeedback }: SourceCollectorProps) {
+  const [activePanel, setActivePanel] = useState<'web' | 'slack' | null>(null)
   const [sources, setSources] = useState<SourceEvidence[]>([])
   const [connections, setConnections] = useState<SlackConnection[]>([])
   const [connectionId, setConnectionId] = useState('')
@@ -141,6 +143,7 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
   }
 
   const activeSubscriptions = subscriptions.filter((item) => item.enabled)
+  const webLinkCount = externalSources.filter((source) => source.type === 'WEB_LINK').length
   const toggleChannel = async (channel: SlackChannel) => {
     const existing = activeSubscriptions.find((item) => item.connectionId === connectionId && item.channelId === channel.id)
     setBusy(`channel-${channel.id}`)
@@ -156,8 +159,25 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
 
   return (
     <section className={styles.collector} aria-label="외부 업무 자료">
-      <div className={styles.panel}>
-        <header><span className={styles.icon}><Icon name="link" /></span><div><h2>웹 링크</h2><p>공개 페이지는 내용을 자동으로 읽고, 로그인 링크는 설명과 함께 저장해요.</p></div></header>
+      <header className={styles.collectorHeader}>
+        <div><span className={styles.eyebrow}>선택 사항</span><h2>다른 자료도 연결할 수 있어요</h2><p>웹페이지나 Slack 대화가 업무 이해에 필요할 때 추가하세요.</p></div>
+      </header>
+
+      <div className={styles.tabs} aria-label="추가 자료 종류">
+        <button aria-expanded={activePanel === 'web'} className={activePanel === 'web' ? styles.activeTab : ''} type="button" onClick={() => setActivePanel((current) => current === 'web' ? null : 'web')}>
+          <span className={styles.icon}><Icon name="link" /></span>
+          <span><strong>웹 링크</strong><small>문서·대시보드·가이드</small></span>
+          {webLinkCount > 0 && <em>{webLinkCount}</em>}
+        </button>
+        <button aria-expanded={activePanel === 'slack'} className={activePanel === 'slack' ? styles.activeTab : ''} type="button" onClick={() => setActivePanel((current) => current === 'slack' ? null : 'slack')}>
+          <span className={`${styles.icon} ${styles.slackIcon}`}><img alt="" src={slackLogo} /></span>
+          <span><strong>Slack 대화</strong><small>채널의 이전·새 메시지</small></span>
+          {activeSubscriptions.length > 0 && <em>{activeSubscriptions.length}</em>}
+        </button>
+      </div>
+
+      {activePanel === 'web' && <div className={styles.panel}>
+        <header><div><h3>웹 링크 추가</h3><p>공개 페이지는 자동으로 읽어요. 로그인 링크라면 설명도 함께 적어주세요.</p></div></header>
         <form className={styles.webForm} onSubmit={(event) => void addWebLink(event)}>
           <label><span>URL</span><input required type="url" value={url} placeholder="https://..." onChange={(event) => setUrl(event.target.value)} /></label>
           <label><span>제목 <small>선택</small></span><input value={title} placeholder="예: 운영 대시보드" onChange={(event) => setTitle(event.target.value)} /></label>
@@ -177,10 +197,10 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
-      <div className={styles.panel}>
-        <header><span className={`${styles.icon} ${styles.slackIcon}`}>S</span><div><h2>Slack 자동 수집</h2><p>내가 볼 수 있는 채널을 선택하면 이전 대화와 이후 메시지를 계속 가져와요.</p></div></header>
+      {activePanel === 'slack' && <div className={styles.panel}>
+        <header><div><h3>Slack 채널 연결</h3><p>내가 볼 수 있는 채널을 선택하면 이전 대화와 이후 메시지를 계속 가져와요.</p></div></header>
         {connections.length === 0 ? (
           <div className={styles.connect}><p>Slack에 로그인해 워크스페이스를 연결해 주세요. 봇을 채널에 초대할 필요가 없어요.</p><Button disabled={busy === 'connect'} onClick={() => void connectSlack()}>{busy === 'connect' ? '연결하는 중…' : 'Slack으로 연결'}</Button></div>
         ) : (
@@ -204,7 +224,7 @@ export function SourceCollector({ handoverId, onChange, onFeedback }: SourceColl
             </div>
           </>
         )}
-      </div>
+      </div>}
     </section>
   )
 }

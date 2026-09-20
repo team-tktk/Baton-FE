@@ -1,4 +1,4 @@
-import { type ReactNode, useId, useState } from 'react'
+import { useId, useState } from 'react'
 
 import type { DocumentSection, HandoverDocument, HandoverReadiness, ReadinessArea, ReadinessAreaResult, ReadinessEvidence } from '@/entities/handover'
 import { Icon } from '@/shared/ui/icon'
@@ -36,14 +36,29 @@ function StatusBar({ area }: { area: ReadinessAreaResult }) {
   return <span aria-hidden="true" className={styles.bar}><i className={styles[area.status]} style={{ width: `${area.percent}%` }} /></span>
 }
 
+function uniqueEvidence(evidence: ReadinessEvidence[]) {
+  const grouped = new Map<string, ReadinessEvidence>()
+  for (const item of evidence) {
+    const existing = grouped.get(item.fileId)
+    if (!existing) {
+      grouped.set(item.fileId, item)
+      continue
+    }
+    const locators = [...new Set([existing.locator, item.locator].filter(Boolean))]
+    grouped.set(item.fileId, { ...existing, locator: locators.join(' · ') })
+  }
+  return [...grouped.values()]
+}
+
 function AreaDetail({ area, document, fixBlocked, onFix, onLocate, onOpenEvidence }: { area: ReadinessAreaResult } & Pick<ReadinessPanelProps, 'document' | 'fixBlocked' | 'onFix' | 'onLocate' | 'onOpenEvidence'>) {
   const editable = canEditInDocument(document, area.section)
+  const evidence = uniqueEvidence(area.evidence)
   return <div className={styles.detail}>
     {area.summary && <p>{area.summary}</p>}
     {area.resolution && <p className={styles.resolution}><strong>해결 방법</strong>{area.resolution}</p>}
-    {area.evidence.length > 0 && <div className={styles.evidence}>
+    {evidence.length > 0 && <div className={styles.evidence}>
       <strong>관련 근거</strong>
-      <ul>{area.evidence.map((item) => <li key={`${item.fileId}-${item.locator}`}>
+      <ul>{evidence.map((item) => <li key={item.fileId}>
         {onOpenEvidence
           ? <button type="button" onClick={() => onOpenEvidence(item)}><Icon name="file" /><span>{item.fileName}</span>{item.locator && <small>{item.locator}</small>}</button>
           : <span className={styles.evidenceText}><Icon name="file" /><span>{item.fileName}</span>{item.locator && <small>{item.locator}</small>}</span>}
@@ -60,7 +75,8 @@ function AreaDetail({ area, document, fixBlocked, onFix, onLocate, onOpenEvidenc
 export function ReadinessPanel(props: ReadinessPanelProps) {
   const { dirty = false, error, onReevaluate, phase, readiness } = props
   const titleId = useId()
-  const [selected, setSelected] = useState<ReadinessArea | null>(null)
+  // undefined는 최초 진입의 기본 선택, null은 사용자가 항목을 다시 눌러 명시적으로 닫은 상태다.
+  const [selectedArea, setSelectedArea] = useState<ReadinessArea | null | undefined>(undefined)
   const evaluating = phase === 'evaluating'
 
   const header = <header className={styles.header}>
@@ -86,15 +102,14 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
 
   const keyIssues = readiness.areas.filter((area) => area.keyIssue)
   const weakAreas = readiness.areas.filter((area) => area.status !== 'sufficient')
-  // 재평가로 고른 영역이 충분해지면 다음 부족한 영역을 보여 준다.
-  const current = weakAreas.find((area) => area.area === selected) ?? keyIssues[0] ?? weakAreas[0] ?? null
+  const remainingAreas = readiness.areas.filter((area) => !area.keyIssue)
+  // 재평가로 고른 영역이 충분해지면 다음 부족한 영역을 기본으로 연다.
+  const defaultArea = keyIssues[0]?.area ?? weakAreas[0]?.area ?? readiness.areas[0]?.area ?? null
+  const activeArea = selectedArea === undefined ? defaultArea : selectedArea
   const outdated = readiness.stale || dirty
-  const areaRow = (area: ReadinessAreaResult, extra?: ReactNode) => <>
-    <span className={styles.rowLabel}>{area.label}{extra}</span><StatusBar area={area} /><StatusChip area={area} />
-  </>
-  const selectable = (area: ReadinessAreaResult, extra?: ReactNode) => (
-    <button aria-pressed={current?.area === area.area} className={styles.row} type="button" onClick={() => setSelected(area.area)}>
-      {areaRow(area, extra)}<Icon name="chevron" />
+  const selectable = (area: ReadinessAreaResult) => (
+    <button aria-expanded={activeArea === area.area} className={styles.row} type="button" onClick={() => setSelectedArea((current) => current === area.area ? null : area.area)}>
+      <span className={styles.rowLabel}>{area.label}<small>{area.weight}점</small></span><StatusBar area={area} /><StatusChip area={area} /><Icon name="chevron" />
     </button>
   )
   return <section aria-busy={evaluating} aria-labelledby={titleId} className={styles.panel}>
@@ -112,26 +127,28 @@ export function ReadinessPanel(props: ReadinessPanelProps) {
       {onReevaluate && <button className={styles.primary} type="button" onClick={onReevaluate}>저장하고 다시 평가</button>}
     </div>}
 
-    <section aria-label="중요한 확인" className={styles.keyIssues}>
-      <h3>중요한 확인 <span>{keyIssues.length}건</span></h3>
-      {keyIssues.length === 0
-        ? <p className={styles.clear}>중요하게 확인할 부분이 없어요.</p>
-        : <ol>{keyIssues.map((area) => <li key={area.area}>{selectable(area)}</li>)}</ol>}
+    <section aria-label="영역별 준비도" className={styles.areaList}>
+      <header>
+        <div><h3>영역별 점검 결과</h3><p>항목을 선택하면 보완 방법과 관련 근거를 확인할 수 있어요.</p></div>
+      </header>
+      {keyIssues.length > 0 && <section aria-label="중요 항목" className={styles.priority}>
+        <header><h4>중요 항목</h4><span>{keyIssues.length}개 확인 필요</span></header>
+        <ul>{keyIssues.map((area) => <li key={area.area}>
+          {selectable(area)}
+          {activeArea === area.area && <article aria-label={`${area.label} 자세히`} className={styles.card}>
+            <AreaDetail area={area} document={props.document} fixBlocked={props.fixBlocked} onFix={props.onFix} onLocate={props.onLocate} onOpenEvidence={props.onOpenEvidence} />
+          </article>}
+        </li>)}</ul>
+      </section>}
+      {remainingAreas.length > 0 && <section aria-label="나머지 영역" className={styles.remaining}>
+        <header><h4>나머지 영역</h4><span>{remainingAreas.length}개</span></header>
+        <ul>{remainingAreas.map((area) => <li key={area.area}>
+        {selectable(area)}
+        {activeArea === area.area && <article aria-label={`${area.label} 자세히`} className={styles.card}>
+          <AreaDetail area={area} document={props.document} fixBlocked={props.fixBlocked} onFix={props.onFix} onLocate={props.onLocate} onOpenEvidence={props.onOpenEvidence} />
+        </article>}
+        </li>)}</ul>
+      </section>}
     </section>
-
-    {current && <article aria-label={`${current.label} 자세히`} className={styles.card}>
-      <header><strong>{current.label}</strong><small>{current.sectionLabel}</small><StatusChip area={current} /></header>
-      <AreaDetail area={current} document={props.document} fixBlocked={props.fixBlocked} onFix={props.onFix} onLocate={props.onLocate} onOpenEvidence={props.onOpenEvidence} />
-    </article>}
-
-    <details className={styles.all}>
-      <summary>전체 영역 {readiness.areas.length}개 보기 <Icon name="chevron" /></summary>
-      <ul>{readiness.areas.map((area) => {
-        const weight = <small>{area.weight}점</small>
-        return <li key={area.area}>
-          {area.status === 'sufficient' ? <div className={styles.row}>{areaRow(area, weight)}</div> : selectable(area, weight)}
-        </li>
-      })}</ul>
-    </details>
   </section>
 }

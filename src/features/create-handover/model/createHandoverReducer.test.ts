@@ -73,4 +73,21 @@ describe('createHandoverReducer', () => {
     expect(loaded.attachments).toEqual([attachment])
     expect(removed.attachments).toEqual([])
   })
+
+  it('keeps an uploading file visible until the server returns its real attachment', () => {
+    const uploading: HandoverAttachment = {
+      id: 'uploading-123',
+      name: '신규_운영_메모.pdf',
+      mimeType: 'application/pdf',
+      size: 1_200,
+      status: 'processing',
+    }
+    const pending = createHandoverReducer(createInitialCreateHandoverState(), { type: 'attachment/added', attachment: uploading })
+    const refreshedBeforeCompletion = createHandoverReducer(pending, { type: 'attachments/loaded', attachments: [] })
+    const uploaded: HandoverAttachment = { ...uploading, id: 'attachment-2', status: 'ready' }
+    const refreshedAfterCompletion = createHandoverReducer(refreshedBeforeCompletion, { type: 'attachments/loaded', attachments: [uploaded] })
+
+    expect(refreshedBeforeCompletion.attachments).toEqual([uploading])
+    expect(refreshedAfterCompletion.attachments).toEqual([uploaded])
+  })
 })
