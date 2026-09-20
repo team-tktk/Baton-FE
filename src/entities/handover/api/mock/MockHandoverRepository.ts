@@ -83,6 +83,8 @@ function appendToContent(section: Section, current: unknown, addition: string): 
 }
 
 export class MockHandoverRepository implements HandoverRepository {
+  /** 실제 데모처럼 일부 부족 항목도 사용자 확인을 거칠 때만 켠다. 기본 목업 동작은 유지한다. */
+  protected includePartialReadinessQuestions = false
   private readonly members = clone(memberFixtures)
   private readonly handovers = new Map<HandoverId, Handover>([
     [primaryHandoverFixture.id, clone(primaryHandoverFixture)],
@@ -611,7 +613,9 @@ export class MockHandoverRepository implements HandoverRepository {
         // 서버처럼 자료에 답이 없는 경우만 묻는다: 충돌은 어느 쪽이 맞는지, 빈 섹션은 채울 내용을.
         questions: status === 'conflict' && weak?.options
           ? [{ question: `자료마다 다르게 적힌 ${rubric.label} 기준 중 어느 쪽이 맞나요?`, reason: weak.summary, options: [...weak.options] }]
-          : empty ? [{ question: `${SECTION_LABELS[section]}에 들어갈 내용을 알려 주세요.`, reason: `${SECTION_LABELS[section]} 내용이 없어요.`, options: [] }] : [],
+          : status === 'partial' && this.includePartialReadinessQuestions && weak?.question
+            ? [{ question: weak.question, reason: weak.summary, options: [...(weak.options ?? [])] }]
+            : empty ? [{ question: `${SECTION_LABELS[section]}에 들어갈 내용을 알려 주세요.`, reason: `${SECTION_LABELS[section]} 내용이 없어요.`, options: [] }] : [],
         deferredQuestions: [],
       }
       return { result, lost: rubric.weight * (100 - result.percent) / 100 }

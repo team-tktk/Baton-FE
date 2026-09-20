@@ -1,11 +1,15 @@
-import { MockHandoverRepository, summarizeMasking, type CreateHandoverInput, type HandoverChatExchange } from '@/entities/handover'
+import { MockHandoverRepository, summarizeMasking, type CreateHandoverInput, type HandoverChatExchange, type ReadinessArea } from '@/entities/handover'
 import { demoSamples } from '@/shared/lib/demoSamples'
 
 export const DEMO_ID = 'handover-moastore-operations'
 export type DemoMilestone = 'writing' | 'submitted' | 'asked' | 'approved'
 
+/** 데모에서도 실제 비동기 작업처럼 중간 상태를 충분히 알아볼 수 있게 한다. */
+const pause = (milliseconds: number) => new Promise((resolve) => { window.setTimeout(resolve, milliseconds) })
+
 /** One session, one handover. Every operation stays in this repository's memory. */
 export class DemoRepository extends MockHandoverRepository {
+  protected override includePartialReadinessQuestions = true
   private exchanges: HandoverChatExchange[] = []
   private submitted = false
   private readonly onMilestone: (value: DemoMilestone) => void
@@ -27,6 +31,8 @@ export class DemoRepository extends MockHandoverRepository {
   }
 
   override async uploadFile(id: string, file: File) {
+    // 낙관적으로 추가된 '업로드 중' 행을 본 뒤 파일별로 완료되는 흐름을 보여 준다.
+    await pause(420)
     const attachment = await super.uploadFile(id, file)
     const sample = demoSamples.find((item) => item.name === file.name)
     const email = 'seoyun.demo@example.com'
@@ -49,6 +55,7 @@ export class DemoRepository extends MockHandoverRepository {
   }
 
   override async submitHandover(id: string) {
+    await pause(650)
     const result = await super.submitHandover(id)
     this.submitted = true
     this.onMilestone('submitted')
@@ -60,7 +67,18 @@ export class DemoRepository extends MockHandoverRepository {
   }
 
   override async listSentHandovers() {
-    return this.submitted ? (await super.listSentHandovers()).filter(item => item.id === DEMO_ID) : []
+    if (!this.submitted) return []
+    const handover = await this.getHandover(DEMO_ID)
+    return [{
+      id: handover.id,
+      title: handover.title,
+      scope: handover.document.scope,
+      date: handover.deliveredAtLabel,
+      status: handover.status,
+      tasks: handover.document.activeTasks.length + handover.document.recurringTasks.length,
+      files: handover.attachments.length,
+      recipients: handover.recipients.length,
+    }]
   }
 
   override async listReviews() {
@@ -72,10 +90,38 @@ export class DemoRepository extends MockHandoverRepository {
     const questions = await this.listQuestions(id)
     const { document } = await this.getDocument(id)
     await this.saveDocument(id, { ...document, confirmedCriteria: questions.filter(item => item.status === 'answered').map(item => ({ label: item.question, value: item.answer ?? '' })) })
+    // DraftFinalizing 화면에서 답변이 문서에 반영되는 과정을 확인할 시간을 준다.
+    await pause(1400)
+  }
+
+  override async confirmMasking(id: string, fileId: string) {
+    await pause(650)
+    return super.confirmMasking(id, fileId)
+  }
+
+  override async evaluateReadiness(id: string) {
+    await pause(900)
+    return super.evaluateReadiness(id)
+  }
+
+  override async startReadinessFix(id: string, areas: ReadinessArea[]) {
+    await pause(650)
+    return super.startReadinessFix(id, areas)
+  }
+
+  override async generateReadinessFix(id: string, fixId: string) {
+    await pause(1400)
+    return super.generateReadinessFix(id, fixId)
+  }
+
+  override async applyReadinessFix(id: string, fixId: string, baseRevision: number) {
+    await pause(700)
+    return super.applyReadinessFix(id, fixId, baseRevision)
   }
 
   override async listChatMessages() { return structuredClone(this.exchanges) }
   override async askQuestion(id: string, question: string) {
+    await pause(850)
     const answer = await super.askQuestion(id, question)
     this.exchanges.push({ id: `demo-chat-${this.exchanges.length}`, question, answer })
     this.onMilestone('asked')
@@ -85,6 +131,7 @@ export class DemoRepository extends MockHandoverRepository {
   override async approveHandover(id: string) {
     const handover = await this.getHandover(id)
     if (!handover.review.checklist.length || handover.review.checklist.some(item => !item.checked)) throw new Error('모든 검토 항목을 확인해 주세요')
+    await pause(650)
     const result = await super.approveHandover(id)
     this.onMilestone('approved')
     return result

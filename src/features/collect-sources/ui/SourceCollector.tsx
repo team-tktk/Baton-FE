@@ -46,6 +46,8 @@ function message(caught: unknown, fallback: string) {
   return caught instanceof ApiError ? caught.message : fallback
 }
 
+const pause = (milliseconds: number) => new Promise((resolve) => { window.setTimeout(resolve, milliseconds) })
+
 export function SourceCollector({ handoverId, demo = false, onChange, onFeedback }: SourceCollectorProps) {
   const [activePanel, setActivePanel] = useState<'web' | 'slack' | null>(null)
   const [sources, setSources] = useState<SourceEvidence[]>([])
@@ -129,17 +131,20 @@ export function SourceCollector({ handoverId, demo = false, onChange, onFeedback
     try {
       if (demo) {
         const value = url.trim()
+        const sourceId = `demo-web-${Date.now()}`
         setSources((current) => [...current, {
-          sourceId: `demo-web-${current.length + 1}`,
+          sourceId,
           type: 'WEB_LINK', title: title.trim() || '추가한 웹 링크', locator: value,
           updatedAt: '2026-09-20T00:00:00Z', accessPath: value,
           description: description.trim() || null, conversationName: null, occurredAt: null,
-          enabled: true, status: 'INDEXED',
+          enabled: true, status: 'EXTRACTING',
         }])
         setUrl('')
         setTitle('')
         setDescription('')
-        onFeedback('웹 링크를 AI 자료에 추가했어요')
+        await pause(650)
+        setSources((current) => current.map((item) => item.sourceId === sourceId ? { ...item, status: 'INDEXED' } : item))
+        onFeedback('웹 링크를 읽고 AI 자료에 추가했어요')
         return
       }
       await sourceApi.createWebLink(handoverId, {
@@ -205,8 +210,10 @@ export function SourceCollector({ handoverId, demo = false, onChange, onFeedback
             sourceId: `demo-slack-${channel.id}`, type: 'SLACK_MESSAGE', title: `#${channel.name} 대화`,
             locator: channel.id, updatedAt: '2026-09-20T00:00:00Z', accessPath: `#${channel.name}`,
             description: null, conversationName: channel.name, occurredAt: '2026-09-19T09:00:00Z',
-            enabled: true, status: 'INDEXED',
+            enabled: true, status: 'EXTRACTING',
           }])
+          await pause(550)
+          setSources((current) => current.map((item) => item.sourceId === `demo-slack-${channel.id}` ? { ...item, status: 'INDEXED' } : item))
         }
         onFeedback(existing ? `#${channel.name} 자동 수집을 중지했어요` : `#${channel.name}의 이전 대화와 새 메시지를 수집해요`)
         return

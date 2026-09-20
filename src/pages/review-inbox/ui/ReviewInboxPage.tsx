@@ -41,7 +41,7 @@ export function ReviewInboxPage() {
   const countOf = (target: Filter) =>
     reviews?.filter((item) => matches(item, target)).length ?? 0;
   return (
-    <>
+    <main className={styles.main}>
       <button
         className={styles.homeBack}
         type="button"
@@ -49,7 +49,6 @@ export function ReviewInboxPage() {
       >
         <Icon name="back" /> 홈으로
       </button>
-      <main className={styles.main}>
         <header>
           <div>
             <span>
@@ -106,7 +105,6 @@ export function ReviewInboxPage() {
         ) : (
           <div className={styles.loading}>검토 목록을 불러오고 있어요…</div>
         )}
-      </main>
-    </>
+    </main>
   );
 }
